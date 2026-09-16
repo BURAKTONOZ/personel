@@ -24,17 +24,21 @@
         .smoke-blob { width: 45vw; height: 45vh; background: #0ea5e9; top: 25%; left: 30%; animation-delay: -10s; }
         @keyframes float { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(15%, 15%) scale(1.15); } }
 
+        /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 4px; }
         ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.5); }
 
+        /* Glassmorphism */
         .glass-panel { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.6); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2); }
         .glass-modal { background: rgba(248, 250, 252, 0.93); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35); }
         .glass-input { background: rgba(255, 255, 255, 0.9); border: 1px solid #cbd5e1; color: #1e293b; transition: all 0.3s ease; }
         .glass-input:focus { background: #ffffff; border-color: #4f46e5; outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
+        
         .force-upper { text-transform: uppercase; }
 
+        /* Modallar & Animasyonlar */
         .modal-overlay { opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(0px); }
         .modal-overlay.show { opacity: 1; visibility: visible; backdrop-filter: blur(8px); }
         .modal-content { transform: scale(0.95) translateY(15px); opacity: 0; transition: all 0.3s ease; }
@@ -43,6 +47,7 @@
         @keyframes fadeInCustom { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeIn { animation: fadeInCustom 0.3s ease-out forwards; }
 
+        /* Timeline (İzin Çizelgesi) */
         .tl-row-header { position: sticky; top: 0; z-index: 30; background: #f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .tl-name { position: sticky; left: 0; z-index: 20; min-width: 170px; max-width: 170px; padding: 0 10px; font-weight: 700; font-size: 11px; border-right: 2px solid #cbd5e1; background: #ffffff; display:flex; align-items:center; }
         .tl-name-header { z-index: 40 !important; background: #f1f5f9; }
@@ -56,14 +61,17 @@
         .izin-i { background-color: #fef9c3; color: #a16207; border: 1px solid #fde047; }
         .izin-s { background-color: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
 
+        /* Tooltip & Satır Hover */
         #global-tooltip { position: fixed; display: none; z-index: 99999; pointer-events: none; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(4px); color: white; padding: 10px 14px; border-radius: 8px; font-size: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); line-height: 1.4; max-width: 250px; border: 1px solid rgba(255,255,255,0.15); }
         .row-hover { transition: all 0.2s ease; }
         .row-hover:hover { background-color: rgba(255, 255, 255, 1); box-shadow: inset 4px 0 0 0 #3b82f6; transform: translateX(2px); z-index:1; position:relative; }
 
+        /* Settings Toggle */
         .toggle-checkbox { left: 0; transition: transform 0.3s ease; }
         .toggle-checkbox:checked { transform: translateX(100%); border-color: #4f46e5; }
         .toggle-checkbox:checked + .toggle-label { background-color: #4f46e5; }
 
+        /* Toast & Spinner */
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
         .toast { padding: 12px 20px; border-radius: 12px; color: white; font-weight: 700; font-size: 13px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); opacity: 0; transform: translateY(20px) scale(0.95); transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 10px; backdrop-filter: blur(10px); }
         .toast.show { opacity: 1; transform: translateY(0) scale(1); }
@@ -102,7 +110,7 @@
             </div>
             <div>
                 <h2 class="text-2xl font-black text-slate-800 tracking-tight">Sisteme Giriş</h2>
-                <p class="text-xs font-bold text-slate-500 mt-1">Personel Yönetim Sistemi</p>
+                <p class="text-xs font-bold text-slate-500 mt-1">Personel Yönetim Sistemi (V6)</p>
             </div>
             
             <div class="text-left mt-2">
@@ -128,7 +136,8 @@
 
     <!-- ANA UYGULAMA İÇERİĞİ -->
     <div id="appContainer" style="display:none;" class="flex flex-col min-h-screen relative">
-        <!-- ÜST BAR (HEADER) -->
+        
+        <!-- ÜST BAR (HEADER) - En üstte yapışık (Sticky) -->
         <header id="main-header" class="glass-panel sticky top-0 z-[60] h-[76px] flex items-center shadow-lg border-b border-white/40 rounded-none w-full bg-white/70 backdrop-blur-xl">
             <div class="container mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center w-full gap-3 md:gap-0">
                 <div class="flex items-center gap-4">
@@ -151,7 +160,7 @@
             <!-- İSTATİSTİK KARTLARI -->
             <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-4"></div>
 
-            <!-- ARAMA VE FİLTRE PANELİ -->
+            <!-- ARAMA VE FİLTRE PANELİ (Dinamik Sticky) -->
             <div id="filter-panel" class="glass-panel p-3.5 rounded-2xl mb-4 sticky z-[50] shadow-lg border border-white/80 backdrop-blur-2xl bg-white/75 transition-all">
                 <div class="flex flex-col lg:flex-row gap-4 w-full">
                     <div class="relative w-full lg:w-2/5 group">
@@ -168,16 +177,18 @@
             </div>
 
             <!-- TABLO -->
-            <div class="glass-panel rounded-2xl shadow-lg border border-white/60 bg-white/50 overflow-hidden">
-                <div class="w-full relative overflow-x-auto custom-scrollbar">
-                    <table class="min-w-full leading-normal text-left relative border-collapse">
-                        <thead id="table-head" class="bg-slate-100/95 backdrop-blur-xl sticky z-[40] shadow-md">
-                            <tr class="text-slate-700 uppercase text-[10px] font-black tracking-wider border-b-2 border-slate-200">
-                                <th class="px-5 py-4 rounded-tl-xl"><i class="fas fa-user mr-1 text-slate-400"></i> Personel Kimliği</th>
-                                <th class="px-5 py-4"><i class="fas fa-building mr-1 text-slate-400"></i> Görev & Kurum</th>
-                                <th class="px-5 py-4"><i class="fas fa-map-marker-alt mr-1 text-slate-400"></i> İletişim & Adres</th>
-                                <th class="px-5 py-4"><i class="fas fa-ambulance mr-1 text-slate-400"></i> Acil Durum Kişisi</th>
-                                <th class="px-5 py-4 text-center rounded-tr-xl"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Durum / İzin</th>
+            <div class="glass-panel rounded-2xl shadow-lg border border-white/60 bg-white/50">
+                <div class="w-full relative">
+                    <!-- Tablo başlığının yapışması ve kaymaması için border-separate kullanıldı -->
+                    <table class="min-w-full leading-normal text-left relative border-separate border-spacing-0">
+                        <!-- JS ile top değeri dinamik olarak Filtre Çubuğunun altına tam oturacak şekilde hesaplanır -->
+                        <thead id="table-head" class="bg-slate-100/95 backdrop-blur-xl sticky z-[40] shadow-md transition-all">
+                            <tr class="text-slate-700 uppercase text-[10px] font-black tracking-wider">
+                                <th class="px-5 py-4 border-b-2 border-slate-200 rounded-tl-2xl"><i class="fas fa-user mr-1 text-slate-400"></i> Personel Kimliği</th>
+                                <th class="px-5 py-4 border-b-2 border-slate-200"><i class="fas fa-building mr-1 text-slate-400"></i> Görev & Kurum</th>
+                                <th class="px-5 py-4 border-b-2 border-slate-200"><i class="fas fa-map-marker-alt mr-1 text-slate-400"></i> İletişim & Adres</th>
+                                <th class="px-5 py-4 border-b-2 border-slate-200"><i class="fas fa-ambulance mr-1 text-slate-400"></i> Acil Durum Kişisi</th>
+                                <th class="px-5 py-4 text-center border-b-2 border-slate-200 rounded-tr-2xl"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Durum / İzin</th>
                             </tr>
                         </thead>
                         <tbody id="personnelTableBody" class="text-xs divide-y divide-slate-200/50 bg-white/50">
@@ -265,9 +276,9 @@
                         <button onclick="openZimmetForm()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm"><i class="fas fa-plus-circle"></i> Ekle</button>
                     </div>
                     <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm">
-                        <table class="min-w-full text-left">
-                            <thead class="bg-slate-50 text-slate-600 text-[11px] uppercase font-black sticky top-0 z-10 border-b border-slate-200">
-                                <tr><th class="p-4">Demirbaş Adı</th><th class="p-4">Seri No / Not</th><th class="p-4">Veriliş Tarihi</th><th class="p-4 text-center w-24">İşlem</th></tr>
+                        <table class="min-w-full text-left border-collapse">
+                            <thead class="bg-slate-50 text-slate-600 text-[11px] uppercase font-black sticky top-0 z-10 shadow-sm">
+                                <tr><th class="p-4 border-b-2 border-slate-200">Demirbaş Adı</th><th class="p-4 border-b-2 border-slate-200">Seri No / Not</th><th class="p-4 border-b-2 border-slate-200">Veriliş Tarihi</th><th class="p-4 text-center w-24 border-b-2 border-slate-200">İşlem</th></tr>
                             </thead>
                             <tbody id="zimmetTableBody" class="divide-y divide-slate-100"></tbody>
                         </table>
@@ -280,9 +291,9 @@
                         <button onclick="openIzinForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm"><i class="fas fa-calendar-plus"></i> İzin İşle</button>
                     </div>
                     <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm">
-                        <table class="min-w-full text-left">
-                            <thead class="bg-slate-50 text-slate-600 text-[11px] uppercase font-black sticky top-0 z-10 border-b border-slate-200">
-                                <tr><th class="p-4 w-36">İzin Türü</th><th class="p-4 w-32">Başlangıç</th><th class="p-4 w-32">Bitiş</th><th class="p-4">Açıklama</th><th class="p-4 text-center w-24">İşlem</th></tr>
+                        <table class="min-w-full text-left border-collapse">
+                            <thead class="bg-slate-50 text-slate-600 text-[11px] uppercase font-black sticky top-0 z-10 shadow-sm">
+                                <tr><th class="p-4 w-36 border-b-2 border-slate-200">İzin Türü</th><th class="p-4 w-32 border-b-2 border-slate-200">Başlangıç</th><th class="p-4 w-32 border-b-2 border-slate-200">Bitiş</th><th class="p-4 border-b-2 border-slate-200">Açıklama</th><th class="p-4 text-center w-24 border-b-2 border-slate-200">İşlem</th></tr>
                             </thead>
                             <tbody id="izinTableBody" class="divide-y divide-slate-100"></tbody>
                         </table>
@@ -472,7 +483,7 @@
         </div>
     </div>
 
-    <!-- SCRIPT (Sadece 1 Adet) -->
+    <!-- TEK VE ORİJİNAL SCRIPT BLOĞU -->
     <script>
         function showToast(msg, type = "success") {
             const container = document.getElementById("toast-container");
@@ -501,8 +512,12 @@
             if(header && filterPanel && tableHead) {
                 const headerRect = header.getBoundingClientRect();
                 const filterHeight = filterPanel.offsetHeight;
+                
+                // Filtre paneli header'ın bittiği yere yapışır
                 filterPanel.style.top = headerRect.height + 'px';
-                tableHead.style.top = (headerRect.height + filterHeight + 16) + 'px'; 
+                
+                // Tablo başlığı filtrenin bittiği yere yapışır (+16px margin-bottom)
+                tableHead.style.top = (headerRect.height + filterHeight + 16) + 'px';
             }
         }
         window.addEventListener('resize', adjustStickyElements);
@@ -593,13 +608,13 @@
             "Demirbaş Sahipleri": { bg: "bg-lime-50", text: "text-lime-700", border: "border-lime-100", icon: "fa-laptop" }
         };
 
+        // --- FIREBASE GİRİŞ İŞLEMLERİ ---
         function checkLogin() {
             const pass = document.getElementById('loginPass').value;
             if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
             
             showSpinner("Giriş Yapılıyor...");
             auth.signInWithEmailAndPassword("numarataj@sistem.com", pass)
-                .then((userCredential) => { })
                 .catch((error) => {
                     hideSpinner();
                     showToast("Hatalı şifre veya bağlantı hatası!", "error");
@@ -635,6 +650,8 @@
                 if(data && data.settings) {
                     let dbSettings = data.settings;
                     if (dbSettings.dropdowns) systemSettings.dropdowns = dbSettings.dropdowns;
+                    
+                    // Akıllı Birleştirme: Yeni kartları kaybetmeden eskileri koru
                     if (dbSettings.cards) {
                         systemSettings.cards = systemSettings.cards.map(defCard => {
                             let found = dbSettings.cards.find(c => c.id === defCard.id);
@@ -713,7 +730,12 @@
                 els.forEach(el => {
                     if (el) {
                         let html = el.id.startsWith("filter-") ? `<option value="">TÜMÜ (${systemSettings.dropdowns[key].label.toLocaleUpperCase('tr-TR')})</option>` : "";
-                        html += systemSettings.dropdowns[key].values.map(v => `<option value="${v}">${v.toLocaleUpperCase('tr-TR')}</option>`).join('');
+                        
+                        // "DURUM" BUG'I BURADA ÇÖZÜLDÜ: Value her zaman büyük harftir
+                        html += systemSettings.dropdowns[key].values.map(v => {
+                            let upperV = v.toLocaleUpperCase('tr-TR');
+                            return `<option value="${upperV}">${upperV}</option>`;
+                        }).join('');
                         el.innerHTML = html;
                     }
                 });
@@ -758,7 +780,7 @@
             tbody.innerHTML = "";
 
             if(data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500 font-bold bg-white/40 mt-4">Kayıtlı personel bulunmuyor. Yeni kayıt ekleyebilirsiniz.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500 font-bold bg-white/40 mt-4">Kayıtlı veya aranan kriterde personel bulunmuyor.</td></tr>`;
                 renderStatsCards();
                 setTimeout(adjustStickyElements, 50);
                 return;
@@ -932,7 +954,6 @@
             if(!p.zimmetler || p.zimmetler.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500 font-bold">Kayıtlı demirbaş bulunmuyor.</td></tr>'; return; }
             p.zimmetler.forEach(z => tb.innerHTML += `<tr class="border-b border-slate-200/60 hover:bg-slate-50 transition"><td class="p-4 font-bold text-slate-800 uppercase">${z.urun}</td><td class="p-4 text-slate-600 uppercase">${z.seri}</td><td class="p-4 text-slate-600 font-bold">${z.tarih}</td><td class="p-4 text-center"><button onclick="deleteZimmet(${z.id})" class="text-rose-500 hover:text-white bg-rose-50 border border-rose-200 hover:bg-rose-500 w-8 h-8 rounded-lg transition"><i class="fas fa-trash-alt"></i></button></td></tr>`);
         }
-        
         function saveZimmet() {
             const u = document.getElementById("z_urun").value.trim();
             const t = document.getElementById("z_tarih").value;
@@ -947,7 +968,6 @@
                 showToast("Demirbaş başarıyla eklendi.", "success");
             }
         }
-        
         function deleteZimmet(id) { 
             if(confirm("Silmek istediğinize emin misiniz?")) {
                 personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
@@ -966,7 +986,6 @@
             });
             applyFilters(); 
         }
-        
         function saveIzin() {
             const bas = document.getElementById("i_bas").value;
             const bit = document.getElementById("i_bit").value;
@@ -984,7 +1003,6 @@
                 showToast("İzin kaydı başarıyla eklendi.", "success");
             }
         }
-        
         function deleteIzin(id) { 
             if(confirm("İzni silmek istediğinize emin misiniz?")) {
                 personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
@@ -1208,7 +1226,14 @@
                 document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-indigo-600"></i> Personeli Düzenle';
                 
                 const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
-                fields.forEach(f => { if(document.getElementById("f_"+f)) document.getElementById("f_"+f).value = p[f] || ""; });
+                fields.forEach(f => { 
+                    let el = document.getElementById("f_"+f);
+                    if(el) {
+                        let val = p[f] || "";
+                        if(el.tagName === 'SELECT' && val) val = val.toLocaleUpperCase('tr-TR');
+                        el.value = val;
+                    }
+                });
                 openModal('personnelModal');
             }, 350); 
         }
@@ -1267,6 +1292,7 @@
                 }
             } 
         }
+
     </script>
 </body>
 </html>
