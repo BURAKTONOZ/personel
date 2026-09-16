@@ -73,6 +73,10 @@
         #spinner-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); z-index: 9999999; display: none; align-items: center; justify-content: center; flex-direction: column; color: white; }
         .loader { border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #6366f1; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Resim Büyütme İmleci */
+        .zoomable-img { cursor: zoom-in; transition: transform 0.2s; }
+        .zoomable-img:hover { transform: scale(1.05); }
     </style>
 </head>
 <body class="text-sm">
@@ -84,6 +88,11 @@
         <div class="font-black tracking-widest uppercase text-sm" id="spinnerText">Yükleniyor...</div>
     </div>
     <div id="toast-container"></div>
+
+    <!-- FOTOĞRAF BÜYÜTME (ZOOM) MODALI -->
+    <div id="photoZoomModal" class="fixed inset-0 z-[999999] hidden items-center justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-zoom-out" onclick="closePhotoModal()">
+        <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white/20">
+    </div>
 
     <!-- GİRİŞ EKRANI (LOGIN) -->
     <div id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md transition-all duration-500 px-4">
@@ -155,16 +164,18 @@
                 </div>
             </div>
 
-            <div class="glass-panel rounded-2xl shadow-lg border border-white/60 bg-white/50">
-                <div class="w-full relative">
+            <!-- TABLO KAPSAICISI (Köşelerin yuvarlak görünmesi için overflow-hidden eklendi) -->
+            <div class="glass-panel rounded-2xl shadow-lg border border-white/60 bg-white/50 overflow-hidden">
+                <div class="w-full relative overflow-x-auto custom-scrollbar">
                     <table class="min-w-full leading-normal text-left relative border-collapse">
+                        <!-- Başlığın ilk ve son hücrelerine de yuvarlaklık veriyoruz -->
                         <thead id="table-head" class="bg-slate-100/95 backdrop-blur-xl sticky z-30 shadow-md">
                             <tr class="text-slate-700 uppercase text-[10px] font-black tracking-wider border-b-2 border-slate-200">
-                                <th class="px-5 py-4"><i class="fas fa-user mr-1 text-slate-400"></i> Personel Kimliği</th>
+                                <th class="px-5 py-4 rounded-tl-xl"><i class="fas fa-user mr-1 text-slate-400"></i> Personel Kimliği</th>
                                 <th class="px-5 py-4"><i class="fas fa-building mr-1 text-slate-400"></i> Görev & Kurum</th>
                                 <th class="px-5 py-4"><i class="fas fa-map-marker-alt mr-1 text-slate-400"></i> İletişim & Adres</th>
                                 <th class="px-5 py-4"><i class="fas fa-ambulance mr-1 text-slate-400"></i> Acil Durum Kişisi</th>
-                                <th class="px-5 py-4 text-center"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Durum / İzin</th>
+                                <th class="px-5 py-4 text-center rounded-tr-xl"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Durum / İzin</th>
                             </tr>
                         </thead>
                         <tbody id="personnelTableBody" class="text-xs divide-y divide-slate-200/50 bg-white/50">
@@ -181,7 +192,8 @@
             <div class="glass-modal rounded-2xl w-full max-w-5xl flex flex-col h-[85vh] modal-content overflow-hidden">
                 <div class="bg-white/90 border-b border-slate-200 p-5 md:p-6 flex justify-between items-start shrink-0">
                     <div class="flex items-center gap-4 md:gap-5">
-                        <img id="pv_foto" src="" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border-2 border-slate-200 shadow-md bg-white">
+                        <!-- Fotoğrafa zoom özelliği eklendi -->
+                        <img id="pv_foto" src="" class="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border-2 border-slate-200 shadow-md bg-white zoomable-img" onclick="openPhotoModal()" title="Büyütmek için tıklayın">
                         <div>
                             <h2 id="pv_ad" class="text-xl md:text-2xl font-black tracking-tight text-slate-800 uppercase"></h2>
                             <div class="flex flex-wrap items-center gap-2 mt-1.5 md:mt-2">
@@ -198,14 +210,17 @@
                     </div>
                 </div>
 
+                <!-- ACİL DURUM SEKME BUTONU EKLENDİ -->
                 <div class="bg-slate-50/90 border-b border-slate-200 flex overflow-x-auto px-4 shrink-0">
                     <button onclick="switchTab('genel')" id="tabBtn_genel" class="profile-tab-btn py-4 px-4 md:px-5 font-bold text-[11px] md:text-xs border-b-[3px] text-indigo-600 border-indigo-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-id-card text-sm"></i> Genel</button>
                     <button onclick="switchTab('kurum')" id="tabBtn_kurum" class="profile-tab-btn py-4 px-4 md:px-5 font-bold text-[11px] md:text-xs border-b-[3px] text-slate-500 border-transparent hover:text-indigo-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-building text-sm"></i> Kurum</button>
+                    <button onclick="switchTab('acil')" id="tabBtn_acil" class="profile-tab-btn py-4 px-4 md:px-5 font-bold text-[11px] md:text-xs border-b-[3px] text-slate-500 border-transparent hover:text-indigo-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-ambulance text-sm"></i> Acil Durum</button>
                     <button onclick="switchTab('zimmet')" id="tabBtn_zimmet" class="profile-tab-btn py-4 px-4 md:px-5 font-bold text-[11px] md:text-xs border-b-[3px] text-slate-500 border-transparent hover:text-indigo-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-laptop text-sm"></i> Demirbaşlar</button>
                     <button onclick="switchTab('izin')" id="tabBtn_izin" class="profile-tab-btn py-4 px-4 md:px-5 font-bold text-[11px] md:text-xs border-b-[3px] text-slate-500 border-transparent hover:text-indigo-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-plane-departure text-sm"></i> İzinler</button>
                 </div>
 
                 <div class="flex-1 overflow-y-auto p-4 md:p-6 text-sm relative bg-white/70 custom-scrollbar">
+                    
                     <div id="tab_genel" class="tab-panel">
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
                             <div><p class="text-slate-400 text-[10px] md:text-xs font-bold uppercase mb-1">Doğum Tarihi / Yaş</p><p class="font-bold text-slate-800 text-[13px] md:text-sm flex items-center gap-2">🎂 <span id="pv_dogum"></span></p></div>
@@ -217,8 +232,12 @@
                             <div><p class="text-slate-400 text-[10px] md:text-xs font-bold uppercase mb-1">Kan Grubu</p><p class="font-black text-rose-600 text-[13px] md:text-sm bg-rose-50 px-2 py-1 rounded inline-flex border border-rose-100 uppercase">🩸 <span id="pv_kan"></span></p></div>
                             <div class="col-span-2"><p class="text-slate-400 text-[10px] md:text-xs font-bold uppercase mb-1">Adres</p><p class="font-bold text-slate-800 text-[13px] md:text-sm flex items-start gap-2 uppercase force-upper">📍 <span id="pv_adres"></span></p></div>
                         </div>
-                        <div class="bg-rose-50/70 border border-rose-200 p-5 md:p-6 rounded-2xl mt-5 md:mt-6 shadow-sm">
-                            <h4 class="text-rose-700 font-black text-sm mb-4 flex items-center gap-2"><i class="fas fa-ambulance"></i> Acil Durum Kişisi</h4>
+                    </div>
+
+                    <!-- YENİ ACİL DURUM SEKMESİ -->
+                    <div id="tab_acil" class="tab-panel hidden">
+                        <div class="bg-rose-50/70 border border-rose-200 p-5 md:p-6 rounded-2xl shadow-sm">
+                            <h4 class="text-rose-700 font-black text-sm mb-4 flex items-center gap-2"><i class="fas fa-ambulance"></i> Acil Durum Kişisi Bilgileri</h4>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
                                 <div class="bg-white p-4 rounded-xl border border-rose-100 shadow-sm"><p class="text-rose-400 text-[10px] md:text-xs font-bold uppercase mb-1">Ad Soyad</p><p class="font-bold text-rose-900 text-[13px] md:text-sm uppercase force-upper" id="pv_acilAd"></p></div>
                                 <div class="bg-white p-4 rounded-xl border border-rose-100 shadow-sm"><p class="text-rose-400 text-[10px] md:text-xs font-bold uppercase mb-1">Yakınlık</p><p class="font-bold text-rose-900 text-[13px] md:text-sm uppercase force-upper" id="pv_acilYakinlik"></p></div>
@@ -242,7 +261,6 @@
                     <div id="tab_zimmet" class="tab-panel hidden h-full flex-col">
                         <div class="flex justify-between items-center mb-4 shrink-0">
                             <h3 class="font-black text-slate-700 text-sm flex items-center gap-2"><i class="fas fa-boxes text-slate-400"></i> Personele Kayıtlı Demirbaşlar</h3>
-                            <!-- Form temizleme fonksiyonu çağrıldı -->
                             <button onclick="openZimmetForm()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm"><i class="fas fa-plus-circle"></i> Ekle</button>
                         </div>
                         <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm">
@@ -258,7 +276,6 @@
                     <div id="tab_izin" class="tab-panel hidden h-full flex-col">
                         <div class="flex justify-between items-center mb-4 shrink-0">
                             <h3 class="font-black text-slate-700 text-sm flex items-center gap-2"><i class="fas fa-plane text-slate-400"></i> İzin Geçmişi ve Kayıtları</h3>
-                            <!-- Form temizleme fonksiyonu çağrıldı -->
                             <button onclick="openIzinForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm"><i class="fas fa-calendar-plus"></i> İzin İşle</button>
                         </div>
                         <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm">
@@ -320,7 +337,7 @@
                             <div class="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
                                 <img id="previewFoto" src="https://via.placeholder.com/150" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-white">
                                 <div class="flex-1">
-                                    <label class="block font-bold text-slate-500 mb-0.5 text-[9px] uppercase tracking-wide">Vesikalık (Oto-Küçültme)</label>
+                                    <label class="block font-bold text-slate-500 mb-0.5 text-[9px] uppercase tracking-wide">Vesikalık</label>
                                     <input type="file" id="f_fotoFile" accept="image/*" onchange="handleFileUpload(event)" class="w-full text-[9px] file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:font-bold file:bg-indigo-100 file:text-indigo-700 cursor-pointer">
                                 </div>
                             </div>
@@ -361,9 +378,10 @@
                             
                             <div><label class="block font-bold text-slate-500 mb-0.5 text-[10px] uppercase">Fiili Görev</label><select id="f_gorev" class="w-full glass-input p-2 rounded-xl font-bold text-slate-800 text-xs force-upper"></select></div>
                             
+                            <!-- İşe Başlama - Durum Kontrolleri Buraya Bağlandı -->
                             <div class="grid grid-cols-2 gap-3">
-                                <div><label class="block font-bold text-slate-500 mb-0.5 text-[10px] uppercase">İşe Başlama</label><input type="date" id="f_gelisTarihi" class="w-full glass-input p-2 rounded-xl font-bold text-xs"></div>
-                                <div><label class="block font-bold text-rose-600 mb-0.5 text-[10px] uppercase">Ayrılış Tarihi</label><input type="date" id="f_ayrilisTarihi" onchange="checkAyrilisStatus()" class="w-full bg-rose-50 border border-rose-200 p-2 rounded-xl text-rose-800 font-bold text-xs outline-none focus:border-rose-400"></div>
+                                <div><label class="block font-bold text-slate-500 mb-0.5 text-[10px] uppercase">İşe Başlama</label><input type="date" id="f_gelisTarihi" onchange="checkDurumStatus()" class="w-full glass-input p-2 rounded-xl font-bold text-xs"></div>
+                                <div><label class="block font-bold text-rose-600 mb-0.5 text-[10px] uppercase">Ayrılış Tarihi</label><input type="date" id="f_ayrilisTarihi" onchange="checkDurumStatus()" class="w-full bg-rose-50 border border-rose-200 p-2 rounded-xl text-rose-800 font-bold text-xs outline-none focus:border-rose-400"></div>
                             </div>
                             
                             <div><label class="block font-bold text-slate-500 mb-0.5 text-[10px] uppercase">Çalışma Durumu</label><select id="f_durum" class="w-full bg-slate-100 border border-slate-300 p-2 rounded-xl font-black uppercase text-slate-800 text-xs outline-none focus:border-indigo-400 force-upper"></select></div>
@@ -405,7 +423,7 @@
                     <div class="bg-white/90 p-5 rounded-2xl border border-slate-200 shadow-sm">
                         <h4 class="font-black text-sm text-slate-800 mb-1 flex items-center gap-2 uppercase tracking-wide"><i class="fas fa-chart-pie text-blue-600 text-lg"></i> İstatistik Kartlarını Yönet</h4>
                         <p class="text-[11px] text-slate-500 mb-5 font-medium">Ana ekranda görünmesini istediğiniz kartları büyük düğmelerden açıp kapatabilirsiniz.</p>
-                        <div id="settings-cards-container" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+                        <div id="settings-cards-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
                     </div>
 
                     <div class="bg-white/90 p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -422,7 +440,7 @@
             </div>
         </div>
 
-        <!-- MİNİ FORMLAR (TEMİZLENEREK AÇILIR) -->
+        <!-- MİNİ FORMLAR -->
         <div id="addZimmetModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70]">
             <div class="glass-modal p-6 rounded-2xl w-80 shadow-2xl modal-content border border-slate-200">
                 <h3 class="font-black text-base mb-5 text-emerald-700 flex items-center gap-2 uppercase tracking-wider"><i class="fas fa-laptop"></i> Zimmet Ekle</h3>
@@ -453,7 +471,7 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> 
 
     <script>
         function showToast(msg, type = "success") {
@@ -484,6 +502,27 @@
             }
         }
         window.addEventListener('resize', adjustStickyElements);
+
+        // --- FOTOĞRAF BÜYÜTME (ZOOM) FONKSİYONLARI ---
+        function openPhotoModal() {
+            const src = document.getElementById("pv_foto").src;
+            if(!src || src.includes('placeholder')) return;
+            document.getElementById("fullSizePhoto").src = src;
+            const m = document.getElementById('photoZoomModal');
+            m.style.display = 'flex';
+            setTimeout(() => {
+                m.classList.remove('opacity-0');
+                document.getElementById('fullSizePhoto').classList.remove('scale-95');
+                document.getElementById('fullSizePhoto').classList.add('scale-100');
+            }, 10);
+        }
+        function closePhotoModal() {
+            const m = document.getElementById('photoZoomModal');
+            m.classList.add('opacity-0');
+            document.getElementById('fullSizePhoto').classList.remove('scale-100');
+            document.getElementById('fullSizePhoto').classList.add('scale-95');
+            setTimeout(() => { m.style.display = 'none'; }, 300);
+        }
 
         // --- FIREBASE BAĞLANTISI ---
         const firebaseConfig = {
@@ -517,6 +556,7 @@
                 acilYakinlik: { label: "Yakınlık", values: ["Eşi", "Babası", "Annesi", "Kardeşi", "Çocuğu", "Arkadaşı"] },
                 durum: { label: "Çalışma Durumu", values: ["Aktif", "Pasif"] }
             },
+            // YENİ İSTATİSTİK KARTLARI EKLENDİ
             cards: [
                 { id: "total", title: "Toplam Personel", type: "all", active: true },
                 { id: "active", title: "Aktif Çalışan", type: "durum", value: "Aktif", active: true },
@@ -525,6 +565,11 @@
                 { id: "isci", title: "İşçi Personel", type: "kadro", value: "İşçi", active: true },
                 { id: "muhendis", title: "Mühendisler", type: "gorev", value: "Harita Mühendisi", active: true },
                 { id: "kadin", title: "Kadın Personel", type: "cinsiyet", value: "Kadın", active: false },
+                { id: "erkek", title: "Erkek Personel", type: "cinsiyet", value: "Erkek", active: false },
+                { id: "sozlesmeli", title: "Sözleşmeli Personel", type: "kadro", value: "Sözleşmeli Memur", active: false },
+                { id: "sirket_elemani", title: "Şirket Personeli", type: "kadro", value: "Şirket Elemanı", active: false },
+                { id: "tekniker", title: "Teknikerler", type: "gorev", value: "Harita Teknikeri", active: false },
+                { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
                 { id: "izinli", title: "Şu An İzinde", type: "custom", func: "izinli", active: true }
             ]
         };
@@ -537,7 +582,13 @@
             "İşçi Personel": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100", icon: "fa-hard-hat" },
             "Mühendisler": { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100", icon: "fa-drafting-compass" },
             "Kadın Personel": { bg: "bg-pink-50", text: "text-pink-600", border: "border-pink-100", icon: "fa-female" },
-            "Şu An İzinde": { bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-100", icon: "fa-umbrella-beach" }
+            "Şu An İzinde": { bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-100", icon: "fa-umbrella-beach" },
+            // Yeni Renk ve İkonlar
+            "Erkek Personel": { bg: "bg-cyan-50", text: "text-cyan-700", border: "border-cyan-100", icon: "fa-male" },
+            "Sözleşmeli Personel": { bg: "bg-teal-50", text: "text-teal-700", border: "border-teal-100", icon: "fa-file-signature" },
+            "Şirket Personeli": { bg: "bg-gray-50", text: "text-gray-700", border: "border-gray-200", icon: "fa-id-badge" },
+            "Teknikerler": { bg: "bg-fuchsia-50", text: "text-fuchsia-700", border: "border-fuchsia-100", icon: "fa-tools" },
+            "Demirbaş Sahipleri": { bg: "bg-lime-50", text: "text-lime-700", border: "border-lime-100", icon: "fa-laptop" }
         };
 
         // --- FIREBASE GİRİŞ İŞLEMLERİ ---
@@ -547,9 +598,7 @@
             
             showSpinner("Giriş Yapılıyor...");
             auth.signInWithEmailAndPassword("numarataj@sistem.com", pass)
-                .then((userCredential) => {
-                    // onAuthStateChanged tetikleneceği için burada bir şey yapmıyoruz
-                })
+                .then((userCredential) => { })
                 .catch((error) => {
                     hideSpinner();
                     showToast("Hatalı şifre veya bağlantı hatası!", "error");
@@ -565,7 +614,6 @@
             }
         }
 
-        // Firebase Giriş Dinleyicisi
         auth.onAuthStateChanged((user) => {
             if (user) {
                 const loginScreen = document.getElementById('loginScreen');
@@ -578,7 +626,6 @@
             }
         });
 
-        // --- FIREBASE VERİ OKUMA VE YAZMA ---
         function fetchDataFromFirebase() {
             showSpinner("Veriler Yükleniyor...");
             db.ref('/').once('value').then((snapshot) => {
@@ -681,7 +728,11 @@
                             return SYSTEM_TODAY >= b && SYSTEM_TODAY <= bit;
                         });
                     }).length;
-                } else count = personnelData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
+                } else if (card.type === "custom" && card.func === "zimmetli") {
+                    count = personnelData.filter(p => (p.durum === "Aktif" || p.durum === "AKTİF") && p.zimmetler && p.zimmetler.length > 0).length;
+                } else {
+                    count = personnelData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
+                }
                 
                 const styling = statColorsAndIcons[card.title] || { bg: "bg-white", text: "text-slate-700", border: "border-slate-200", icon: "fa-info-circle" };
                 
@@ -849,22 +900,6 @@
                 aB.classList.remove('border-transparent', 'text-slate-500'); 
                 aB.classList.add('border-indigo-600', 'text-indigo-600'); 
             }
-        }
-
-        // --- FORM TEMİZLEYİCİLERİ ---
-        function openZimmetForm() {
-            document.getElementById('z_urun').value = '';
-            document.getElementById('z_seri').value = '';
-            document.getElementById('z_tarih').value = '';
-            openModal('addZimmetModal');
-        }
-
-        function openIzinForm() {
-            document.getElementById('i_tur').selectedIndex = 0;
-            document.getElementById('i_bas').value = '';
-            document.getElementById('i_bit').value = '';
-            document.getElementById('i_aciklama').value = '';
-            openModal('addIzinModal');
         }
 
         function renderZimmetTable() {
@@ -1103,12 +1138,22 @@
             reader.readAsDataURL(file);
         }
 
-        function checkAyrilisStatus() {
-            const dateVal = document.getElementById("f_ayrilisTarihi").value;
+        // --- AKTİF/PASİF DURUM OTOMATİK KONTROLÜ ---
+        function checkDurumStatus() {
+            const bas = document.getElementById("f_gelisTarihi").value;
+            const ayr = document.getElementById("f_ayrilisTarihi").value;
             const durumEl = document.getElementById("f_durum");
-            if(dateVal) {
+            
+            let targetStatus = "";
+            if(ayr) {
+                targetStatus = "PASİF";
+            } else if (bas) {
+                targetStatus = "AKTİF";
+            }
+
+            if(targetStatus) {
                 for(let i=0; i<durumEl.options.length; i++) {
-                    if(durumEl.options[i].value.toLowerCase() === "pasif" || durumEl.options[i].value.toLowerCase() === "pasİf" || durumEl.options[i].value.toLocaleUpperCase('tr-TR') === "PASİF") {
+                    if(durumEl.options[i].value.toLocaleUpperCase('tr-TR') === targetStatus) {
                         durumEl.selectedIndex = i;
                         break;
                     }
