@@ -33,7 +33,6 @@
         .glass-modal { background: rgba(248, 250, 252, 0.93); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.8); box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35); }
         .glass-input { background: rgba(255, 255, 255, 0.9); border: 1px solid #cbd5e1; color: #1e293b; transition: all 0.3s ease; }
         .glass-input:focus { background: #ffffff; border-color: #4f46e5; outline: none; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); }
-        
         .force-upper { text-transform: uppercase; }
 
         .modal-overlay { opacity: 0; visibility: hidden; transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(0px); }
@@ -44,6 +43,7 @@
         @keyframes fadeInCustom { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fadeIn { animation: fadeInCustom 0.3s ease-out forwards; }
 
+        /* Timeline (İzin Çizelgesi) */
         .tl-row-header { position: sticky; top: 0; z-index: 30; background: #f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .tl-name { position: sticky; left: 0; z-index: 20; min-width: 170px; max-width: 170px; padding: 0 10px; font-weight: 700; font-size: 11px; border-right: 2px solid #cbd5e1; background: #ffffff; display:flex; align-items:center; }
         .tl-name-header { z-index: 40 !important; background: #f1f5f9; }
@@ -90,12 +90,12 @@
     </div>
     <div id="toast-container"></div>
 
-    <!-- FOTOĞRAF BÜYÜTME (ZOOM) MODALI -->
-    <div id="photoZoomModal" class="fixed inset-0 z-[999999] hidden items-center justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-zoom-out" onclick="closePhotoModal()">
+    <!-- FOTOĞRAF BÜYÜTME (ZOOM) MODALI - Z-INDEX 100 -->
+    <div id="photoZoomModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-zoom-out" onclick="closePhotoModal()">
         <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-2xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white/20">
     </div>
 
-    <!-- GİRİŞ EKRANI (LOGIN) -->
+    <!-- GİRİŞ EKRANI (LOGIN) - Z-INDEX 100 -->
     <div id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/80 backdrop-blur-md transition-all duration-500 px-4">
         <div class="glass-modal p-8 rounded-3xl w-full max-w-md flex flex-col gap-6 text-center border border-white/20 shadow-2xl">
             <div class="w-20 h-20 bg-gradient-to-tr from-indigo-600 to-blue-500 rounded-full mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-indigo-500/30 mb-2">
@@ -129,7 +129,7 @@
 
     <!-- ANA UYGULAMA İÇERİĞİ -->
     <div id="appContainer" style="display:none;" class="flex flex-col min-h-screen relative">
-        <!-- ÜST BAR (HEADER) - En üstte yapışık (Sticky) -->
+        <!-- ÜST BAR (HEADER) - Z-INDEX 60 -->
         <header id="main-header" class="glass-panel sticky top-0 z-[60] h-[76px] flex items-center shadow-lg border-b border-white/40 rounded-none w-full bg-white/70 backdrop-blur-xl">
             <div class="container mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center w-full gap-3 md:gap-0">
                 <div class="flex items-center gap-4">
@@ -152,7 +152,7 @@
             <!-- İSTATİSTİK KARTLARI -->
             <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-4"></div>
 
-            <!-- ARAMA VE FİLTRE PANELİ (Dinamik Sticky) -->
+            <!-- ARAMA VE FİLTRE PANELİ - Z-INDEX 50 -->
             <div id="filter-panel" class="glass-panel p-3.5 rounded-2xl mb-4 sticky z-[50] shadow-lg border border-white/80 backdrop-blur-2xl bg-white/75 transition-all">
                 <div class="flex flex-col lg:flex-row gap-4 w-full">
                     <div class="relative w-full lg:w-2/5 group">
@@ -168,19 +168,18 @@
                 </div>
             </div>
 
-            <!-- TABLO -->
-            <div class="glass-panel rounded-2xl shadow-lg border border-white/60 bg-white/50">
+            <!-- TABLO BÖLÜMÜ (OVERFLOW KALDIRILDI) -->
+            <div class="glass-panel rounded-2xl shadow-lg border border-white/60 bg-white/50 pb-4">
                 <div class="w-full relative overflow-x-auto custom-scrollbar rounded-2xl">
-                    <!-- border-separate ve border-spacing-0 ile sticky thead katmanı kusursuz çalışır -->
                     <table class="min-w-full leading-normal text-left relative border-separate border-spacing-0">
-                        <!-- JS ile top değeri dinamik olarak Filtrenin bittiği yere kilitlenecek -->
+                        <!-- TABLO BAŞLIĞI - Z-INDEX 40 -->
                         <thead id="table-head" class="sticky z-[40] transition-all">
                             <tr class="shadow-sm">
-                                <th class="px-5 py-4 border-b-[3px] border-indigo-500 bg-slate-200/95 backdrop-blur-2xl text-slate-800 text-[11px] font-black uppercase tracking-widest"><i class="fas fa-id-card mr-1 text-indigo-600"></i> Personel Kimliği</th>
+                                <th class="px-5 py-4 border-b-[3px] border-indigo-500 bg-slate-200/95 backdrop-blur-2xl text-slate-800 text-[11px] font-black uppercase tracking-widest rounded-tl-xl"><i class="fas fa-id-card mr-1 text-indigo-600"></i> Personel Kimliği</th>
                                 <th class="px-5 py-4 border-b-[3px] border-indigo-500 bg-slate-200/95 backdrop-blur-2xl text-slate-800 text-[11px] font-black uppercase tracking-widest"><i class="fas fa-building mr-1 text-indigo-600"></i> Görev & Kurum</th>
                                 <th class="px-5 py-4 border-b-[3px] border-indigo-500 bg-slate-200/95 backdrop-blur-2xl text-slate-800 text-[11px] font-black uppercase tracking-widest"><i class="fas fa-map-marker-alt mr-1 text-indigo-600"></i> İletişim & Adres</th>
                                 <th class="px-5 py-4 border-b-[3px] border-indigo-500 bg-slate-200/95 backdrop-blur-2xl text-slate-800 text-[11px] font-black uppercase tracking-widest"><i class="fas fa-ambulance mr-1 text-indigo-600"></i> Acil Durum Kişisi</th>
-                                <th class="px-5 py-4 text-center border-b-[3px] border-indigo-500 bg-slate-200/95 backdrop-blur-2xl text-slate-800 text-[11px] font-black uppercase tracking-widest"><i class="fas fa-info-circle mr-1 text-indigo-600"></i> Durum / İzin</th>
+                                <th class="px-5 py-4 text-center border-b-[3px] border-indigo-500 bg-slate-200/95 backdrop-blur-2xl text-slate-800 text-[11px] font-black uppercase tracking-widest rounded-tr-xl"><i class="fas fa-info-circle mr-1 text-indigo-600"></i> Durum / İzin</th>
                             </tr>
                         </thead>
                         <tbody id="personnelTableBody" class="text-xs divide-y divide-slate-300/60 bg-white/40">
@@ -194,8 +193,8 @@
 
     <!-- SİSTEM MODALLARI -->
     
-    <!-- 1. PROFİL MODALI -->
-    <div id="profileModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
+    <!-- 1. PROFİL MODALI (Z-INDEX 70) -->
+    <div id="profileModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] px-4">
         <div class="glass-modal rounded-2xl w-full max-w-5xl flex flex-col h-[85vh] modal-content overflow-hidden">
             <div class="bg-white/90 border-b border-slate-200 p-5 md:p-6 flex justify-between items-start shrink-0">
                 <div class="flex items-center gap-4 md:gap-5">
@@ -225,7 +224,6 @@
             </div>
 
             <div class="flex-1 overflow-y-auto p-4 md:p-6 text-sm relative bg-white/70 custom-scrollbar">
-                
                 <div id="tab_genel" class="tab-panel">
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <div><p class="text-slate-400 text-[10px] md:text-xs font-bold uppercase mb-1">Doğum Tarihi / Yaş</p><p class="font-bold text-slate-800 text-[13px] md:text-sm flex items-center gap-2">🎂 <span id="pv_dogum"></span></p></div>
@@ -295,8 +293,8 @@
         </div>
     </div>
 
-    <!-- 2. İZİN ÇİZELGESİ MODALI -->
-    <div id="timelineModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] p-4">
+    <!-- 2. İZİN ÇİZELGESİ MODALI (Z-INDEX 70) -->
+    <div id="timelineModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] p-4">
         <div class="glass-modal rounded-3xl w-full h-full max-w-[98vw] flex flex-col modal-content overflow-hidden border border-slate-200">
             <div class="flex flex-col md:flex-row justify-between items-center p-5 bg-white/95 border-b border-slate-200 gap-4 shrink-0 shadow-sm">
                 <h3 class="text-xl font-black text-slate-800 flex items-center gap-2"><i class="fas fa-calendar-alt text-indigo-600"></i> İzin Çizelgesi</h3>
@@ -320,7 +318,7 @@
         </div>
     </div>
 
-    <!-- 3. PERSONEL FORMU MODALI -->
+    <!-- 3. PERSONEL FORMU MODALI (Z-INDEX 80) -->
     <div id="personnelModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
         <div class="glass-modal rounded-3xl shadow-2xl w-full max-w-[95vw] lg:max-w-[85vw] flex flex-col h-[85vh] modal-content border border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-200 p-4 md:p-5 bg-white/95 shrink-0 rounded-t-3xl shadow-sm">
@@ -341,7 +339,7 @@
                         <div class="flex items-center gap-3 bg-slate-50 p-2 rounded-xl border border-slate-200">
                             <img id="previewFoto" src="https://via.placeholder.com/150" class="w-12 h-12 rounded-lg object-cover border border-slate-300 bg-white">
                             <div class="flex-1">
-                                <label class="block font-bold text-slate-500 mb-0.5 text-[9px] uppercase tracking-wide">Vesikalık</label>
+                                <label class="block font-bold text-slate-500 mb-0.5 text-[9px] uppercase tracking-wide">Vesikalık (Oto-Küçültme)</label>
                                 <input type="file" id="f_fotoFile" accept="image/*" onchange="handleFileUpload(event)" class="w-full text-[9px] file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:font-bold file:bg-indigo-100 file:text-indigo-700 cursor-pointer">
                             </div>
                         </div>
@@ -414,7 +412,7 @@
         </div>
     </div>
 
-    <!-- 4. SİSTEM AYARLARI MODALI -->
+    <!-- 4. SİSTEM AYARLARI MODALI (Z-INDEX 80) -->
     <div id="settingsModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
         <div class="glass-modal rounded-3xl w-full max-w-[90vw] flex flex-col h-[85vh] modal-content border border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-200 p-6 bg-white/95 shrink-0 rounded-t-3xl shadow-sm">
@@ -443,8 +441,8 @@
         </div>
     </div>
 
-    <!-- MİNİ FORMLAR -->
-    <div id="addZimmetModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80]">
+    <!-- MİNİ FORMLAR (Z-INDEX 90) -->
+    <div id="addZimmetModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90]">
         <div class="glass-modal p-6 rounded-2xl w-80 shadow-2xl modal-content border border-slate-200">
             <h3 class="font-black text-base mb-5 text-emerald-700 flex items-center gap-2 uppercase tracking-wider"><i class="fas fa-laptop"></i> Zimmet Ekle</h3>
             <div><label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Demirbaş Adı *</label><input type="text" id="z_urun" placeholder="Örn: 3D Tarayıcı" class="w-full glass-input p-3 rounded-xl mb-4 text-sm font-bold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
@@ -457,7 +455,7 @@
         </div>
     </div>
     
-    <div id="addIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80]">
+    <div id="addIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90]">
         <div class="glass-modal p-6 rounded-2xl w-80 shadow-2xl modal-content border border-slate-200">
             <h3 class="font-black text-base mb-5 text-indigo-700 flex items-center gap-2 uppercase tracking-wider"><i class="fas fa-plane-departure"></i> İzin İşle</h3>
             <div><label class="block text-xs font-bold text-slate-500 mb-1 uppercase">İzin Türü *</label><select id="i_tur" class="w-full glass-input p-3 rounded-xl mb-4 text-sm font-black text-indigo-900 force-upper">
@@ -475,7 +473,7 @@
         </div>
     </div>
 
-    <!-- TEK VE ORİJİNAL SCRIPT BLOĞU -->
+    <!-- === TEK VE ORİJİNAL SCRIPT BLOĞU === -->
     <script>
         // --- TARİH ÇEVİRİCİ FONKSİYON ---
         function formatDateTR(dateString) {
@@ -487,6 +485,7 @@
             return dateString;
         }
 
+        // --- TOAST VE SPINNER ---
         function showToast(msg, type = "success") {
             const container = document.getElementById("toast-container");
             const toast = document.createElement("div");
@@ -506,6 +505,7 @@
         }
         function hideSpinner() { document.getElementById("spinner-overlay").style.display = "none"; }
 
+        // --- YAPIŞKAN TABLO BAŞLIĞI HESAPLAMA ---
         function adjustStickyElements() {
             const header = document.getElementById('main-header');
             const filterPanel = document.getElementById('filter-panel');
@@ -515,13 +515,17 @@
                 const headerRect = header.getBoundingClientRect();
                 const filterHeight = filterPanel.offsetHeight;
                 
+                // Filtre paneli header'ın bittiği yere yapışır
                 filterPanel.style.top = headerRect.height + 'px';
-                tableHead.style.top = (headerRect.height + filterHeight + 15) + 'px';
+                
+                // Tablo başlığı filtrenin bittiği yere yapışır (+16px margin-bottom)
+                tableHead.style.top = (headerRect.height + filterHeight + 16) + 'px';
             }
         }
         window.addEventListener('resize', adjustStickyElements);
         window.addEventListener('scroll', adjustStickyElements);
 
+        // --- FOTOĞRAF BÜYÜTME (ZOOM) FONKSİYONLARI ---
         function openPhotoModal() {
             const src = document.getElementById("pv_foto").src;
             if(!src || src.includes('placeholder')) return;
@@ -607,6 +611,7 @@
             "Demirbaş Sahipleri": { bg: "bg-lime-50", text: "text-lime-700", border: "border-lime-100", icon: "fa-laptop" }
         };
 
+        // --- FIREBASE GİRİŞ İŞLEMLERİ ---
         function checkLogin() {
             const pass = document.getElementById('loginPass').value;
             if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
@@ -638,12 +643,24 @@
             }
         });
 
+        // --- FİREBASE'DEN VERİ OKUMA (AKILLI PARSER İLE) ---
         function fetchDataFromFirebase() {
             showSpinner("Veriler Yükleniyor...");
             db.ref('/').once('value').then((snapshot) => {
                 const data = snapshot.val();
-                if(data && data.personnel) personnelData = data.personnel;
-                else personnelData = [];
+                
+                // FIREBASE DİZİ/OBJE PARSER'I
+                if(data && data.personnel) {
+                    let parsedData = Array.isArray(data.personnel) ? data.personnel : Object.values(data.personnel);
+                    personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
+                    
+                    personnelData.forEach(p => {
+                        if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
+                        if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
+                    });
+                } else {
+                    personnelData = [];
+                }
                 
                 if(data && data.settings) {
                     let dbSettings = data.settings;
@@ -664,6 +681,7 @@
             }).catch(e => {
                 hideSpinner();
                 showToast("Veriler çekilirken hata oluştu!", "error");
+                console.error(e);
             });
         }
 
@@ -946,26 +964,32 @@
             if(!p.zimmetler || p.zimmetler.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500 font-bold">Kayıtlı demirbaş bulunmuyor.</td></tr>'; return; }
             p.zimmetler.forEach(z => tb.innerHTML += `<tr class="border-b border-slate-200/60 hover:bg-slate-50 transition"><td class="p-4 font-bold text-slate-800 uppercase">${z.urun}</td><td class="p-4 text-slate-600 uppercase">${z.seri}</td><td class="p-4 text-slate-600 font-bold">${formatDateTR(z.tarih)}</td><td class="p-4 text-center"><button onclick="deleteZimmet(${z.id})" class="text-rose-500 hover:text-white bg-rose-50 border border-rose-200 hover:bg-rose-500 w-8 h-8 rounded-lg transition"><i class="fas fa-trash-alt"></i></button></td></tr>`);
         }
+        
         function saveZimmet() {
-            const u = document.getElementById("z_urun").value.trim();
-            const t = document.getElementById("z_tarih").value;
-            if(!u || !t) { showToast("Demirbaş adı ve tarihi zorunludur!", "error"); return; }
+            try {
+                const u = document.getElementById("z_urun").value.trim();
+                const t = document.getElementById("z_tarih").value;
+                if(!u || !t) { showToast("Demirbaş adı ve tarihi zorunludur!", "error"); return; }
 
-            const p = personnelData.find(x => x.id === selectedUserId);
-            p.zimmetler = p.zimmetler || []; 
-            p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
-            
-            if(saveToDatabase()) {
-                renderZimmetTable(); applyFilters(); closeModal('addZimmetModal');
-                showToast("Demirbaş başarıyla eklendi.", "success");
-            }
+                const p = personnelData.find(x => x.id === selectedUserId);
+                p.zimmetler = p.zimmetler || []; 
+                p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
+                
+                if(saveToDatabase()) {
+                    renderZimmetTable(); applyFilters(); closeModal('addZimmetModal');
+                    showToast("Demirbaş başarıyla eklendi.", "success");
+                }
+            } catch (error) { showToast("Demirbaş eklenirken hata oluştu.", "error"); }
         }
+        
         function deleteZimmet(id) { 
-            if(confirm("Silmek istediğinize emin misiniz?")) {
-                personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
-                saveToDatabase(); renderZimmetTable(); applyFilters(); 
-                showToast("Demirbaş silindi.", "success");
-            }
+            try {
+                if(confirm("Silmek istediğinize emin misiniz?")) {
+                    personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
+                    saveToDatabase(); renderZimmetTable(); applyFilters(); 
+                    showToast("Demirbaş silindi.", "success");
+                }
+            } catch (error) { showToast("Demirbaş silinirken hata oluştu.", "error"); }
         }
 
         function renderIzinTable() {
@@ -978,30 +1002,36 @@
             });
             applyFilters(); 
         }
+        
         function saveIzin() {
-            const bas = document.getElementById("i_bas").value;
-            const bit = document.getElementById("i_bit").value;
-            const acik = document.getElementById("i_aciklama").value.trim();
-            if(!bas || !bit || !acik) { showToast("Tarihler ve açıklama zorunludur!", "error"); return; }
-            if(new Date(bas) > new Date(bit)) { showToast("Bitiş tarihi başlangıçtan küçük olamaz!", "error"); return; }
+            try {
+                const bas = document.getElementById("i_bas").value;
+                const bit = document.getElementById("i_bit").value;
+                const acik = document.getElementById("i_aciklama").value.trim();
+                if(!bas || !bit || !acik) { showToast("Tarihler ve açıklama zorunludur!", "error"); return; }
+                if(new Date(bas) > new Date(bit)) { showToast("Bitiş tarihi başlangıçtan küçük olamaz!", "error"); return; }
 
-            const p = personnelData.find(x => x.id === selectedUserId);
-            p.izinler = p.izinler || []; 
-            p.izinler.push({ id: Date.now(), tur: document.getElementById("i_tur").value, baslangic: bas, bitis: bit, aciklama: acik });
-            
-            if(saveToDatabase()) {
-                renderIzinTable(); applyFilters(); closeModal('addIzinModal'); 
-                if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
-                showToast("İzin kaydı başarıyla eklendi.", "success");
-            }
+                const p = personnelData.find(x => x.id === selectedUserId);
+                p.izinler = p.izinler || []; 
+                p.izinler.push({ id: Date.now(), tur: document.getElementById("i_tur").value, baslangic: bas, bitis: bit, aciklama: acik });
+                
+                if(saveToDatabase()) {
+                    renderIzinTable(); applyFilters(); closeModal('addIzinModal'); 
+                    if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
+                    showToast("İzin kaydı başarıyla eklendi.", "success");
+                }
+            } catch (error) { showToast("İzin eklenirken hata oluştu.", "error"); }
         }
+        
         function deleteIzin(id) { 
-            if(confirm("İzni silmek istediğinize emin misiniz?")) {
-                personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
-                saveToDatabase(); renderIzinTable(); applyFilters(); 
-                if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
-                showToast("İzin silindi.", "success");
-            }
+            try {
+                if(confirm("İzni silmek istediğinize emin misiniz?")) {
+                    personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
+                    saveToDatabase(); renderIzinTable(); applyFilters(); 
+                    if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
+                    showToast("İzin silindi.", "success");
+                }
+            } catch (error) { showToast("İzin silinirken hata oluştu.", "error"); }
         }
 
         function changeMonth(dir) {
@@ -1232,46 +1262,50 @@
         }
         
         function savePersonnel() {
-            const tc = document.getElementById("f_tcNo").value.trim();
-            const ad = document.getElementById("f_adSoyad").value.trim();
-            if(!tc || tc.length !== 11 || isNaN(tc)) { showToast("Lütfen 11 haneli sayısal bir TC Kimlik No girin.", "error"); return; }
-            if(!ad) { showToast("Ad Soyad alanı zorunludur.", "error"); return; }
+            try {
+                const tc = document.getElementById("f_tcNo").value.trim();
+                const ad = document.getElementById("f_adSoyad").value.trim();
+                if(!tc || tc.length !== 11 || isNaN(tc)) { showToast("Lütfen 11 haneli sayısal bir TC Kimlik No girin.", "error"); return; }
+                if(!ad) { showToast("Ad Soyad alanı zorunludur.", "error"); return; }
 
-            const idVal = document.getElementById("formId").value;
-            const exists = personnelData.find(p => p.tcNo === tc && p.id != idVal);
-            if(exists) { showToast("Bu TC Kimlik numarasıyla zaten bir kayıt mevcut!", "error"); return; }
+                const idVal = document.getElementById("formId").value;
+                const exists = personnelData.find(p => p.tcNo === tc && p.id != idVal);
+                if(exists) { showToast("Bu TC Kimlik numarasıyla zaten bir kayıt mevcut!", "error"); return; }
 
-            const durumVal = document.getElementById("f_durum").value;
-            const ayrilisVal = document.getElementById("f_ayrilisTarihi").value;
-            
-            if((durumVal === "Pasif" || durumVal === "PASİF") && !ayrilisVal) {
-                showToast("Durumu 'Pasif' olan personel için 'Ayrılış Tarihi' girmek zorunludur!", "error");
-                document.getElementById("f_ayrilisTarihi").focus();
-                return;
-            }
-
-            const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "https://via.placeholder.com/150" };
-            const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
-            
-            fields.forEach(f => { 
-                let rawVal = document.getElementById("f_"+f).value;
-                if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "tcNo"].includes(f)) {
-                    pData[f] = rawVal; 
-                } else {
-                    pData[f] = rawVal ? rawVal.toLocaleUpperCase('tr-TR') : "";
+                const durumVal = document.getElementById("f_durum").value;
+                const ayrilisVal = document.getElementById("f_ayrilisTarihi").value;
+                
+                if((durumVal === "Pasif" || durumVal === "PASİF") && !ayrilisVal) {
+                    showToast("Durumu 'Pasif' olan personel için 'Ayrılış Tarihi' girmek zorunludur!", "error");
+                    document.getElementById("f_ayrilisTarihi").focus();
+                    return;
                 }
-            });
 
-            if(idVal) {
-                const old = personnelData.find(x=>x.id === pData.id);
-                pData.izinler = old.izinler; pData.zimmetler = old.zimmetler;
-                if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl;
-                personnelData[personnelData.findIndex(x=>x.id===pData.id)] = pData;
-            } else { personnelData.unshift(pData); }
-            
-            if(saveToDatabase()) {
-                applyFilters(); closeModal('personnelModal');
-                showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
+                const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "https://via.placeholder.com/150" };
+                const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
+                
+                fields.forEach(f => { 
+                    let rawVal = document.getElementById("f_"+f).value;
+                    if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "tcNo"].includes(f)) {
+                        pData[f] = rawVal; 
+                    } else {
+                        pData[f] = rawVal ? rawVal.toLocaleUpperCase('tr-TR') : "";
+                    }
+                });
+
+                if(idVal) {
+                    const old = personnelData.find(x=>x.id === pData.id);
+                    pData.izinler = old.izinler; pData.zimmetler = old.zimmetler;
+                    if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl;
+                    personnelData[personnelData.findIndex(x=>x.id===pData.id)] = pData;
+                } else { personnelData.unshift(pData); }
+                
+                if(saveToDatabase()) {
+                    applyFilters(); closeModal('personnelModal');
+                    showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
+                }
+            } catch (error) {
+                showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error");
             }
         }
 
