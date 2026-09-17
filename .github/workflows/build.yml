@@ -18,6 +18,11 @@ jobs:
     - name: Kodu İndir
       uses: actions/checkout@v4
 
+    - name: Python Kurulumu (Derleme Hatası İçin)
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
     - name: Node.js Kurulumu
       uses: actions/setup-node@v4
       with:
