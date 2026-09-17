@@ -1,0 +1,31 @@
+{
+  "name": "numarataj-personel",
+  "version": "1.0.0",
+  "description": "Numarataj Personel Yönetim Sistemi",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.tonoz.numarataj",
+    "productName": "Numarataj Personel",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "icon.ico"
+    },
+    "portable": {
+      "artifactName": "NumaratajPersonel.exe"
+    }
+  }
+}
