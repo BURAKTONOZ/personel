@@ -21,8 +21,7 @@
       "output": "dist"
     },
     "win": {
-      "target": "portable",
-      "icon": "icon.ico"
+      "target": "portable"
     },
     "portable": {
       "artifactName": "NumaratajPersonel.exe"
