@@ -24,7 +24,7 @@ function createWindow() {
   win.maximize(); // Tam ekran açılır
   win.show();
   win.setMenuBarVisibility(false); // Üstteki rahatsız edici Dosya, Düzenle menüsünü gizler
-  win.loadFile('index.html');
+  win.loadFile('desktop.html');
 }
 
 function initDB() {
