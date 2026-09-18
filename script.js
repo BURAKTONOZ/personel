@@ -38,7 +38,6 @@ window.addEventListener('scroll', adjustStickyElements);
 
 function openPhotoModal() {
     const src = document.getElementById("pv_foto").src;
-    // Eğer resim bir silüet ise büyütmeye gerek yok
     if(!src || src.includes('placeholder') || src.includes('data:image/svg')) return;
     document.getElementById("fullSizePhoto").src = src;
     const m = document.getElementById('photoZoomModal');
@@ -67,17 +66,14 @@ let selectedUserId = null;
 let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
 
-// Kadın ve Erkek için özel internetsiz (SVG) silüetler
 const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
 
-// Resim yoksa uygun silüeti getiren fonksiyon
 function getAvatarUrl(foto, cinsiyet) {
     if(foto && foto.trim() !== "" && !foto.includes("via.placeholder.com")) return foto;
     return (cinsiyet && cinsiyet.toUpperCase() === 'KADIN') ? avatarFemale : avatarMale;
 }
 
-// Formdaki cinsiyet değiştikçe silüeti anında değiştiren fonksiyon
 window.updateFormSilhouette = function() {
     if(!uploadedBase64Foto) {
         const currentSrc = document.getElementById("previewFoto").src;
@@ -88,7 +84,6 @@ window.updateFormSilhouette = function() {
     }
 }
 
-// EKSİK KALAN YAŞ HESAPLAMA (Geri Eklendi)
 function getAge(dateString) {
     if(!dateString) return '-';
     let birthDate = new Date(dateString);
@@ -150,9 +145,7 @@ function exportToExcel() {
         showToast("Dışa aktarılacak personel kaydı bulunamadı!", "error");
         return;
     }
-    
     showSpinner("Excel Dosyası Hazırlanıyor...");
-    
     setTimeout(() => {
         const exportData = currentFilteredData.map(p => ({
             "TC Kimlik No": p.tcNo || "",
@@ -184,7 +177,6 @@ function exportToExcel() {
             const worksheet = XLSX.utils.json_to_sheet(exportData);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Personel_Listesi");
-            
             XLSX.writeFile(workbook, "Personel_Raporu.xlsx");
             hideSpinner();
             showToast("Excel dosyası başarıyla indirildi.", "success");
@@ -204,12 +196,8 @@ async function backupDatabase() {
     showSpinner("Veritabanı Yedekleniyor...");
     const result = await window.api.backupDatabase();
     hideSpinner();
-    
-    if(result.success) {
-        showToast("Veritabanı yedeği başarıyla alındı.", "success");
-    } else if(result.message !== "İşlem iptal edildi.") {
-        showToast("Yedekleme hatası: " + result.message, "error");
-    }
+    if(result.success) { showToast("Veritabanı yedeği başarıyla alındı.", "success"); } 
+    else if(result.message !== "İşlem iptal edildi.") { showToast("Yedekleme hatası: " + result.message, "error"); }
 }
 
 // UYGULAMA MANTIĞI
@@ -218,13 +206,11 @@ function checkLogin() {
     if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
     
     showSpinner("Sistem Kontrol Ediliyor...");
-    
     setTimeout(async () => {
         if(pass === "123456") {
             if (typeof window.api !== 'undefined') {
                 const dbCheck = await window.api.checkDatabase();
                 hideSpinner();
-                
                 if (dbCheck.requirePath) {
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('dbPathModal').style.display = 'flex';
@@ -232,7 +218,6 @@ function checkLogin() {
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('appContainer').style.display = 'flex';
                     if (window.api) window.api.maximizeWindow(); 
-                    
                     fetchDataFromLocalDB();
                     startPolling();
                 }
@@ -270,7 +255,6 @@ async function saveNewDbPath() {
         document.getElementById('dbPathModal').style.display = 'none';
         document.getElementById('appContainer').style.display = 'flex';
         if (window.api) window.api.maximizeWindow();
-        
         showToast("Veritabanı yolu kaydedildi.", "success");
         fetchDataFromLocalDB();
         startPolling();
@@ -287,7 +271,6 @@ function changeDbPathFromSettings() {
 
 function startPolling() {
     if (typeof window.api === 'undefined') return;
-    
     setInterval(async () => {
         const status = await window.api.getDbStatus();
         const led = document.getElementById('led-indicator');
@@ -296,7 +279,6 @@ function startPolling() {
         if (status.connected) {
             led.className = 'led green';
             statusText.innerText = 'Bağlı';
-            
             const pathDisplay = document.getElementById('settingsDbPath');
             if (pathDisplay) pathDisplay.innerText = status.path;
 
@@ -322,6 +304,7 @@ function startPolling() {
     }, 5000);
 }
 
+// Çıkış (LogOut) Fonksiyonu: HTML'deki Buton Silinmiş Olsa da Teknik Güvenlik İçin Kodda Durabilir
 function logOut() {
     if(confirm("Sistemden çıkış yapmak istediğinize emin misiniz?")) {
         showSpinner("Çıkış Yapılıyor...");
@@ -331,18 +314,15 @@ function logOut() {
 
 function fetchDataFromLocalDB() {
     showSpinner("Veriler Yükleniyor...");
-    
     if(typeof window.api === 'undefined') {
         hideSpinner();
         initSystem();
         return;
     }
-
     window.api.getData().then((data) => {
         if(data && data.personnel) {
             let parsedData = Array.isArray(data.personnel) ? data.personnel : Object.values(data.personnel);
             personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
-            
             personnelData.forEach(p => {
                 if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
                 if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
@@ -352,7 +332,6 @@ function fetchDataFromLocalDB() {
         if(data && data.settings) {
             let dbSettings = data.settings;
             if (dbSettings.dropdowns) systemSettings.dropdowns = dbSettings.dropdowns;
-            
             if (dbSettings.cards) {
                 systemSettings.cards = systemSettings.cards.map(defCard => {
                     let found = dbSettings.cards.find(c => c.id === defCard.id);
@@ -361,7 +340,6 @@ function fetchDataFromLocalDB() {
                 });
             }
         }
-        
         hideSpinner();
         initSystem();
         showToast("Sisteme başarıyla giriş yapıldı.", "success");
@@ -374,18 +352,14 @@ function fetchDataFromLocalDB() {
 
 function saveToDatabase() { 
     if(typeof window.api !== 'undefined') {
-        window.api.savePersonnel(personnelData).catch(e => {
-            showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error");
-        });
+        window.api.savePersonnel(personnelData).catch(e => { showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error"); });
     }
     return true; 
 }
 
 function saveSettingsToDatabase() { 
     if(typeof window.api !== 'undefined') {
-        window.api.saveSettings(systemSettings).catch(e => {
-            showToast("Ayarlar kaydedilemedi.", "error");
-        });
+        window.api.saveSettings(systemSettings).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
     }
 }
 
@@ -430,7 +404,6 @@ function populateSelectOptions() {
 function renderStatsCards() {
     const container = document.getElementById("stats-container");
     container.innerHTML = "";
-
     systemSettings.cards.filter(c => c.active).forEach(card => {
         let count = 0;
         if (card.type === "all") count = currentFilteredData.length; 
@@ -490,19 +463,13 @@ function renderTable(data) {
         }
         
         let zimmetCount = p.zimmetler ? p.zimmetler.length : 0;
-        
-        let tarihBilgisi = isAktif 
-            ? `🗓️ Başlama: <span class="font-semibold text-slate-600">${formatDateTR(p.gelisTarihi) || '-'}</span>`
-            : `🚪 Ayrılış: <span class="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">${formatDateTR(p.ayrilisTarihi) || 'Belirtilmedi'}</span>`;
+        let tarihBilgisi = isAktif ? `🗓️ Başlama: <span class="font-semibold text-slate-600">${formatDateTR(p.gelisTarihi) || '-'}</span>` : `🚪 Ayrılış: <span class="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">${formatDateTR(p.ayrilisTarihi) || 'Belirtilmedi'}</span>`;
 
         tbody.innerHTML += `
             <tr onclick="openProfileModal(${p.id})" class="row-hover cursor-pointer group ${!isAktif ? 'opacity-70 bg-slate-50 grayscale-[20%]' : ''}">
                 <td class="px-5 py-3 border-b border-slate-100">
                     <div class="flex items-center gap-4">
-                        <div class="relative">
-                            <!-- TABLODA SİLÜET FONKSİYONU KULLANILDI -->
-                            <img src="${getAvatarUrl(p.fotoUrl, p.cinsiyet)}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-sm bg-slate-100 p-0.5">
-                        </div>
+                        <div class="relative"><img src="${getAvatarUrl(p.fotoUrl, p.cinsiyet)}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-sm bg-slate-100 p-0.5"></div>
                         <div>
                             <div class="font-bold text-slate-800 text-[13px] group-hover:text-blue-600 transition-colors uppercase force-upper">${p.adSoyad}</div>
                             <div class="text-[11px] text-slate-500 font-mono mt-0.5 font-medium">🆔 ${p.tcNo} <span class="mx-1 text-slate-300">•</span> ${p.cinsiyet === 'Erkek' || p.cinsiyet === 'ERKEK'?'Erkek':'Kadın'} <span class="mx-1 text-slate-300">•</span> ${getAge(p.dogumTarihi)} Yaş</div>
@@ -540,7 +507,6 @@ function applyFilters() {
     currentFilteredData = personnelData.filter(p => {
         let pAd = p.adSoyad ? p.adSoyad.toLocaleUpperCase('tr-TR') : "";
         let pSicil = p.sicil ? p.sicil.toLocaleUpperCase('tr-TR') : "";
-        
         let matchSearch = pAd.includes(search) || p.tcNo.includes(search) || pSicil.includes(search) || (p.tel||"").includes(search);
         let mDurum = !document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value.toLocaleUpperCase('tr-TR');
         let mSirket = !document.getElementById("filter-sirket").value || p.sirket === document.getElementById("filter-sirket").value || p.sirket === document.getElementById("filter-sirket").value.toLocaleUpperCase('tr-TR');
@@ -562,7 +528,6 @@ function openProfileModal(id) {
 
     const setVal = (eId, val) => { const el = document.getElementById(eId); if(el) el.innerHTML = val; };
 
-    // PROFİL EKRANINDA SİLÜET FONKSİYONU KULLANILDI
     document.getElementById("pv_foto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
     setVal("pv_ad", (p.adSoyad || "").toLocaleUpperCase('tr-TR'));
     setVal("pv_gorev", `${p.sirket || ""} / ${p.gorev || ""}`.toLocaleUpperCase('tr-TR'));
@@ -573,7 +538,6 @@ function openProfileModal(id) {
         durumEl.className = `px-2 py-0.5 text-[10px] font-bold rounded uppercase border ${p.durum === 'Aktif' || p.durum === 'AKTİF' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`;
     }
     setVal("pv_tcHeader", p.tcNo);
-
     setVal("pv_dogum", `${formatDateTR(p.dogumTarihi) || '-'} <span class="text-slate-400">(${getAge(p.dogumTarihi)} Yaş)</span>`); 
     setVal("pv_medeni", `${(p.medeniHal||"-").toLocaleUpperCase('tr-TR')} (${p.cocukSayisi || 0} Çocuk)`);
     setVal("pv_cinsiyet", (p.cinsiyet||"-").toLocaleUpperCase('tr-TR'));
@@ -636,6 +600,15 @@ function openIzinForm() {
     openModal('addIzinModal');
 }
 
+// YENİ: TOPLU İZİN FORMU AÇILIŞI
+function openBulkIzinForm() {
+    document.getElementById('bi_tur').selectedIndex = 0;
+    document.getElementById('bi_bas').value = '';
+    document.getElementById('bi_bit').value = '';
+    document.getElementById('bi_aciklama').value = '';
+    openModal('addBulkIzinModal');
+}
+
 function renderZimmetTable() {
     const tb = document.getElementById("zimmetTableBody"); if(!tb) return; tb.innerHTML = "";
     const p = personnelData.find(x => x.id === selectedUserId);
@@ -648,7 +621,6 @@ function saveZimmet() {
         const u = document.getElementById("z_urun").value.trim();
         const t = document.getElementById("z_tarih").value;
         if(!u || !t) { showToast("Demirbaş adı ve tarihi zorunludur!", "error"); return; }
-
         const p = personnelData.find(x => x.id === selectedUserId);
         p.zimmetler = p.zimmetler || []; 
         p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
@@ -673,6 +645,44 @@ function deleteZimmet(id) {
 function renderIzinTable() {
     const tb = document.getElementById("izinTableBody"); if(!tb) return; tb.innerHTML = "";
     const p = personnelData.find(x => x.id === selectedUserId);
+    
+    // YENİ: YILLIK İZİN HESAPLAMA (ÖZET KUTULARI İÇİN)
+    let yillik = 0, rapor = 0, idari = 0, saatlik = 0;
+    const currentYear = SYSTEM_TODAY.getFullYear();
+
+    if(p && p.izinler) {
+        p.izinler.forEach(iz => {
+            let dBas = new Date(iz.baslangic); dBas.setHours(0,0,0,0);
+            let dBit = new Date(iz.bitis); dBit.setHours(23,59,59,999);
+            
+            // İzin aralığındaki her bir günü kontrol edip, sadece BU YILA ait olanları sayar
+            let tempDate = new Date(dBas);
+            let gunSayisi = 0;
+            while(tempDate <= dBit) {
+                if(tempDate.getFullYear() === currentYear) gunSayisi++;
+                tempDate.setDate(tempDate.getDate() + 1);
+            }
+
+            if(gunSayisi > 0) {
+                if(iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK')) yillik += gunSayisi;
+                else if(iz.tur.includes('Rapor') || iz.tur.includes('RAPOR')) rapor += gunSayisi;
+                else if(iz.tur.includes('İdari') || iz.tur.includes('İDARİ')) idari += gunSayisi;
+                else if(iz.tur.includes('Saatlik') || iz.tur.includes('SAATLİK')) saatlik += gunSayisi; 
+            }
+        });
+    }
+
+    // ÖZET KUTULARINI HTML'E YAZDIRMA
+    const summaryContainer = document.getElementById("izinSummaryContainer");
+    if(summaryContainer) {
+        summaryContainer.innerHTML = `
+            <div class="bg-rose-50 border border-rose-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">${currentYear} YILLIK</div><div class="text-2xl font-black text-rose-700 leading-none">${yillik} <span class="text-[10px] font-semibold text-rose-500">GÜN</span></div></div>
+            <div class="bg-emerald-50 border border-emerald-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">${currentYear} RAPOR</div><div class="text-2xl font-black text-emerald-800 leading-none">${rapor} <span class="text-[10px] font-semibold text-emerald-600">GÜN</span></div></div>
+            <div class="bg-amber-50 border border-amber-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">${currentYear} İDARİ</div><div class="text-2xl font-black text-amber-800 leading-none">${idari} <span class="text-[10px] font-semibold text-amber-600">GÜN</span></div></div>
+            <div class="bg-sky-50 border border-sky-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-sky-600 uppercase tracking-widest mb-1">${currentYear} SAATLİK</div><div class="text-2xl font-black text-sky-800 leading-none">${saatlik} <span class="text-[10px] font-semibold text-sky-600">KEZ</span></div></div>
+        `;
+    }
+
     if(!p.izinler || p.izinler.length === 0) { tb.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-500 font-semibold">Kayıtlı izin bulunmuyor.</td></tr>'; return; }
     p.izinler.sort((a,b)=>new Date(b.baslangic)-new Date(a.baslangic)).forEach(iz => {
         let cl = iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK') ? 'izin-y' : (iz.tur.includes('Rapor') || iz.tur.includes('RAPOR') ? 'izin-r' : (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 'izin-s'));
@@ -712,6 +722,52 @@ function deleteIzin(id) {
     } catch (error) { showToast("İzin silinirken hata oluştu.", "error"); }
 }
 
+// YENİ: TOPLU İZİN KAYDETME FONKSİYONU
+function saveBulkIzin() {
+    const tur = document.getElementById("bi_tur").value;
+    const bas = document.getElementById("bi_bas").value;
+    const bit = document.getElementById("bi_bit").value;
+    const acik = document.getElementById("bi_aciklama").value.trim();
+
+    if(!bas || !bit || !acik) { showToast("Tarihler ve açıklama zorunludur!", "error"); return; }
+    if(new Date(bas) > new Date(bit)) { showToast("Bitiş tarihi başlangıçtan küçük olamaz!", "error"); return; }
+
+    const formatBas = formatDateTR(bas);
+    const formatBit = formatDateTR(bit);
+
+    if(!confirm(`DİKKAT: Sistemdeki tüm "Aktif" personellere ${formatBas} - ${formatBit} tarihleri arasında "${tur}" işlenecektir. Onaylıyor musunuz?`)) return;
+
+    showSpinner("Toplu İzinler İşleniyor...");
+    
+    setTimeout(() => {
+        let islenenPersonelSayisi = 0;
+        
+        personnelData.forEach(p => {
+            if(p.durum === "Aktif" || p.durum === "AKTİF") {
+                p.izinler = p.izinler || [];
+                p.izinler.push({ 
+                    id: Date.now() + Math.floor(Math.random()*10000), 
+                    tur: tur, 
+                    baslangic: bas, 
+                    bitis: bit, 
+                    aciklama: acik 
+                });
+                islenenPersonelSayisi++;
+            }
+        });
+
+        if(saveToDatabase()) {
+            applyFilters();
+            closeModal('addBulkIzinModal');
+            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
+            hideSpinner();
+            showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
+        } else {
+            hideSpinner();
+        }
+    }, 500); // 500ms işlem efekti vererek donmayı önler
+}
+
 function changeMonth(dir) {
     tlCurrentDate.setMonth(tlCurrentDate.getMonth() + dir);
     document.getElementById("timelineMonth").value = `${tlCurrentDate.getFullYear()}-${String(tlCurrentDate.getMonth()+1).padStart(2,'0')}`;
@@ -721,23 +777,17 @@ function changeMonth(dir) {
 window.showTooltip = function(e, el) {
     const tt = document.getElementById('global-tooltip');
     if(!tt) return;
-    
     const tur = el.getAttribute('data-tur');
     const tarih = el.getAttribute('data-tarih');
     const desc = el.getAttribute('data-desc');
     const colorClass = el.getAttribute('data-color');
-    
     let colorHex = "#fff";
     if(colorClass === "rose") colorHex = "#fb7185";
     if(colorClass === "emerald") colorHex = "#34d399";
     if(colorClass === "amber") colorHex = "#fbbf24";
     if(colorClass === "sky") colorHex = "#38bdf8";
 
-    tt.innerHTML = `
-        <div class='font-bold text-[12px] mb-1.5 flex items-center gap-1.5 uppercase' style='color:${colorHex}'><i class="fas fa-info-circle"></i> ${tur}</div>
-        <div class='text-slate-300 font-semibold mb-1.5 border-b border-slate-600 pb-2 text-[10px] uppercase tracking-wide'>Tarih: ${tarih}</div>
-        <div class='text-white mt-1 uppercase text-[11px] font-medium'>${desc}</div>
-    `;
+    tt.innerHTML = `<div class='font-bold text-[12px] mb-1.5 flex items-center gap-1.5 uppercase' style='color:${colorHex}'><i class="fas fa-info-circle"></i> ${tur}</div><div class='text-slate-300 font-semibold mb-1.5 border-b border-slate-600 pb-2 text-[10px] uppercase tracking-wide'>Tarih: ${tarih}</div><div class='text-white mt-1 uppercase text-[11px] font-medium'>${desc}</div>`;
     tt.style.display = 'block';
     setTimeout(() => { tt.style.opacity = '1'; }, 10);
     window.updateTooltip(e);
@@ -746,21 +796,16 @@ window.showTooltip = function(e, el) {
 window.updateTooltip = function(e) {
     const tt = document.getElementById('global-tooltip');
     if(tt && tt.style.display === 'block') {
-        let left = e.clientX + 20;
-        let top = e.clientY + 20;
+        let left = e.clientX + 20; let top = e.clientY + 20;
         if (left + 240 > window.innerWidth) left = e.clientX - 260;
         if (top + 90 > window.innerHeight) top = e.clientY - 100;
-        tt.style.left = left + 'px';
-        tt.style.top = top + 'px';
+        tt.style.left = left + 'px'; tt.style.top = top + 'px';
     }
 }
 
 window.hideTooltip = function() { 
     const tt = document.getElementById('global-tooltip');
-    if(tt) {
-        tt.style.opacity = '0';
-        setTimeout(() => { tt.style.display = 'none'; }, 200);
-    }
+    if(tt) { tt.style.opacity = '0'; setTimeout(() => { tt.style.display = 'none'; }, 200); }
 }
 
 function generateTimeline() {
@@ -776,33 +821,23 @@ function generateTimeline() {
     
     document.getElementById("timelineCurrentLabel").innerText = `${monthNames[m]} ${y}`.toLocaleUpperCase('tr-TR');
 
-    let html = '<div class="inline-block min-w-full">';
-    
-    html += '<div class="tl-row tl-row-header">';
-    html += '<div class="tl-name tl-name-header text-center justify-center text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200"><i class="fas fa-users mr-1.5"></i> PERSONEL</div>';
+    let html = '<div class="inline-block min-w-full"><div class="tl-row tl-row-header"><div class="tl-name tl-name-header text-center justify-center text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200"><i class="fas fa-users mr-1.5"></i> PERSONEL</div>';
     
     for(let d=1; d<=daysInMonth; d++) {
         let currDate = new Date(y, m, d);
         let isWeek = (currDate.getDay() === 0 || currDate.getDay() === 6);
         let gunAdi = gunIsimleri[currDate.getDay()];
-        html += `
-            <div class="tl-cell flex flex-col items-center justify-center py-1.5 ${isWeek?'text-rose-600 bg-rose-50':'text-slate-600 bg-white'} border-b border-slate-200">
-                <span class="text-[9px] font-semibold tracking-wide">${gunAdi}</span>
-                <span class="text-xs font-bold leading-tight">${d}</span>
-            </div>`;
+        html += `<div class="tl-cell flex flex-col items-center justify-center py-1.5 ${isWeek?'text-rose-600 bg-rose-50':'text-slate-600 bg-white'} border-b border-slate-200"><span class="text-[9px] font-semibold tracking-wide">${gunAdi}</span><span class="text-xs font-bold leading-tight">${d}</span></div>`;
     }
     html += '</div>';
 
     personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white">`;
-        html += `<div class="tl-name truncate text-slate-700 font-semibold force-upper border-b border-slate-100" title="${p.adSoyad}">${p.adSoyad}</div>`;
-        
+        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-slate-700 font-semibold force-upper border-b border-slate-100" title="${p.adSoyad}">${p.adSoyad}</div>`;
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
             let cellClass = isWeek ? 'weekend border-b border-slate-100' : 'border-b border-slate-100';
-            let content = '';
-            let tooltipEvents = '';
+            let content = ''; let tooltipEvents = '';
 
             if(p.izinler) {
                 for(let iz of p.izinler) {
@@ -814,10 +849,8 @@ function generateTimeline() {
                         else if(iz.tur.includes("Rapor") || iz.tur.includes('RAPOR')) { cellClass = "izin-r"; content = "R"; clColor="emerald"; }
                         else if(iz.tur.includes("İdari") || iz.tur.includes('İDARİ')) { cellClass = "izin-i"; content = "İ"; clColor="amber"; }
                         else if(iz.tur.includes("Saatlik") || iz.tur.includes('SAATLİK')) { cellClass = "izin-s"; content = "S"; clColor="sky"; }
-                        
                         let safeDesc = (iz.aciklama || 'Açıklama belirtilmemiş').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
                         let toolTipDate = String(d).padStart(2,'0') + "." + String(m+1).padStart(2,'0') + "." + y;
-                        
                         tooltipEvents = `data-tur="${iz.tur}" data-tarih="${toolTipDate}" data-desc="${safeDesc}" data-color="${clColor}" onmouseover="showTooltip(event, this)" onmousemove="updateTooltip(event)" onmouseout="hideTooltip()"`;
                         break;
                     }
@@ -870,7 +903,6 @@ function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     if (!file.type.match('image.*')) { showToast("Sadece resim dosyası yükleyebilirsiniz.", "error"); return; }
-    
     showSpinner("Fotoğraf İşleniyor...");
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -879,10 +911,8 @@ function handleFileUpload(event) {
             const canvas = document.createElement('canvas');
             const MAX_WIDTH = 400; const MAX_HEIGHT = 400;
             let width = img.width; let height = img.height;
-
             if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
             else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-            
             canvas.width = width; canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
@@ -900,20 +930,11 @@ function checkDurumStatus() {
     const bas = document.getElementById("f_gelisTarihi").value;
     const ayr = document.getElementById("f_ayrilisTarihi").value;
     const durumEl = document.getElementById("f_durum");
-    
     let targetStatus = "";
-    if(ayr) {
-        targetStatus = "PASİF";
-    } else if (bas) {
-        targetStatus = "AKTİF";
-    }
-
+    if(ayr) { targetStatus = "PASİF"; } else if (bas) { targetStatus = "AKTİF"; }
     if(targetStatus) {
         for(let i=0; i<durumEl.options.length; i++) {
-            if(durumEl.options[i].value.toLocaleUpperCase('tr-TR') === targetStatus) {
-                durumEl.selectedIndex = i;
-                break;
-            }
+            if(durumEl.options[i].value.toLocaleUpperCase('tr-TR') === targetStatus) { durumEl.selectedIndex = i; break; }
         }
     }
 }
@@ -924,7 +945,7 @@ function openPersonnelForm() {
     uploadedBase64Foto = "";
     document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-plus text-blue-600"></i> Yeni Personel Kaydı';
     openModal('personnelModal'); 
-    updateFormSilhouette(); // Açılışta silüeti cinsiyet kutusuna göre ayarlar
+    updateFormSilhouette(); 
 }
 
 function editPersonnelFromProfile() { 
@@ -933,25 +954,17 @@ function editPersonnelFromProfile() {
         const p = personnelData.find(x => x.id === selectedUserId);
         document.getElementById("formId").value = p.id;
         uploadedBase64Foto = ""; 
-        
-        // Forma kişinin fotoğrafı (veya silüeti) yüklenir
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
-        
         const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
-        
         fields.forEach(f => { 
             let el = document.getElementById("f_"+f);
             if(el) {
                 let val = p[f] || "";
                 if(el.tagName === 'SELECT' && val) {
                     let option = Array.from(el.options).find(o => o.value.toLocaleUpperCase('tr-TR') === val.toLocaleUpperCase('tr-TR'));
-                    if (option) {
-                        el.value = option.value;
-                    }
-                } else {
-                    el.value = val;
-                }
+                    if (option) el.value = option.value;
+                } else { el.value = val; }
             }
         });
         openModal('personnelModal');
@@ -964,38 +977,25 @@ function savePersonnel() {
         const ad = document.getElementById("f_adSoyad").value.trim();
         if(!tc || tc.length !== 11 || isNaN(tc)) { showToast("Lütfen 11 haneli sayısal bir TC Kimlik No girin.", "error"); return; }
         if(!ad) { showToast("Ad Soyad alanı zorunludur.", "error"); return; }
-
         const idVal = document.getElementById("formId").value;
         const exists = personnelData.find(p => p.tcNo === tc && p.id != idVal);
         if(exists) { showToast("Bu TC Kimlik numarasıyla zaten bir kayıt mevcut!", "error"); return; }
-
         const durumVal = document.getElementById("f_durum").value;
         const ayrilisVal = document.getElementById("f_ayrilisTarihi").value;
-        
         if((durumVal === "Pasif" || durumVal === "PASİF") && !ayrilisVal) {
             showToast("Durumu 'Pasif' olan personel için 'Ayrılış Tarihi' girmek zorunludur!", "error");
-            document.getElementById("f_ayrilisTarihi").focus();
-            return;
+            document.getElementById("f_ayrilisTarihi").focus(); return;
         }
-
-        // FOTOĞRAF MANTIĞI: Eski placeholder silindi, ya base64 atılır ya da boş "" bırakılır (silüet için)
         const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "" };
         const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
-        
         fields.forEach(f => { 
             let rawVal = document.getElementById("f_"+f).value;
-            if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "tcNo"].includes(f)) {
-                pData[f] = rawVal; 
-            } else {
-                pData[f] = rawVal ? rawVal.toLocaleUpperCase('tr-TR') : "";
-            }
+            if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "tcNo"].includes(f)) { pData[f] = rawVal; } 
+            else { pData[f] = rawVal ? rawVal.toLocaleUpperCase('tr-TR') : ""; }
         });
-
         if(idVal) {
             const old = personnelData.find(x=>x.id === pData.id);
-            pData.izinler = old.izinler || []; 
-            pData.zimmetler = old.zimmetler || [];
-            // Eğer yeni fotoğraf yüklenmediyse eski fotoğrafı koru (eski foto silüet ise yine boş kalsın)
+            pData.izinler = old.izinler || []; pData.zimmetler = old.zimmetler || [];
             if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl || ""; 
             personnelData[personnelData.findIndex(x=>x.id===pData.id)] = pData;
         } else { personnelData.unshift(pData); }
@@ -1004,17 +1004,14 @@ function savePersonnel() {
             applyFilters(); closeModal('personnelModal');
             showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
         }
-    } catch (error) {
-        showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error");
-    }
+    } catch (error) { showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error"); }
 }
 
 function deletePersonnelFromProfile() { 
     if(confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?")) { 
         personnelData = personnelData.filter(x=>x.id!==selectedUserId); 
         if(saveToDatabase()) {
-            closeModal('profileModal'); 
-            setTimeout(applyFilters, 350); 
+            closeModal('profileModal'); setTimeout(applyFilters, 350); 
             showToast("Personel kaydı silindi.", "success");
         }
     } 
