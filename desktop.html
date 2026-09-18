@@ -9,14 +9,11 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- Excel Çıktısı İçin JS Kütüphanesi -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="text-sm">
 
-    <!-- SPINNER & TOAST -->
     <div id="spinner-overlay">
         <div class="loader"></div>
         <div class="font-bold tracking-widest uppercase text-sm text-slate-700" id="spinnerText">İşleniyor...</div>
@@ -47,12 +44,10 @@
     <div id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center transition-all duration-500 bg-transparent">
         <div class="glass-modal p-8 rounded-3xl w-full max-w-sm flex flex-col gap-5 text-center shadow-2xl bg-white/95 backdrop-blur-md relative border border-slate-200" style="-webkit-app-region: drag;">
             
-            <!-- Şık Kapatma Butonu -->
             <button onclick="if(window.api) window.api.windowClose()" class="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-100 hover:bg-rose-500 hover:text-white text-slate-500 flex items-center justify-center transition-all shadow-sm cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;">
                 <i class="fas fa-times text-xs"></i>
             </button>
 
-            <!-- İçerik -->
             <div class="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/30 mt-2">
                 <i class="fas fa-fingerprint"></i>
             </div>
@@ -85,7 +80,6 @@
     <!-- ANA UYGULAMA ÇERÇEVESİ -->
     <div id="appContainer" style="display:none;" class="flex flex-col relative">
         <header id="main-header" class="bg-white/95 backdrop-blur-sm sticky top-0 z-[60] h-[76px] flex items-center shadow-sm border-b border-slate-200 w-full px-5" style="-webkit-app-region: drag;">
-            <!-- Sol: Logo ve Başlık -->
             <div class="flex items-center gap-4 flex-1">
                 <div class="bg-blue-600 w-11 h-11 rounded-xl text-white shadow-sm flex items-center justify-center"><i class="fas fa-users-cog text-xl"></i></div>
                 <div>
@@ -94,14 +88,12 @@
                 </div>
             </div>
 
-            <!-- Orta: LED Durumu -->
             <div class="hidden md:flex items-center justify-center gap-2 bg-slate-50 px-4 py-2 rounded-full border border-slate-200 shadow-inner">
                 <span id="led-indicator" class="led orange"></span>
                 <span id="db-status-text" class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Bağlantı Bekleniyor...</span>
                 <span id="db-last-update" class="text-[10px] font-semibold text-slate-400 ml-2"></span>
             </div>
 
-            <!-- Sağ: Butonlar ve Yeni Pencere Kontrolleri -->
             <div class="flex items-center justify-end flex-1 gap-4" style="-webkit-app-region: no-drag;">
                 <div class="flex items-center gap-2">
                     <button onclick="exportToExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-emerald-200 shadow-sm"><i class="fas fa-file-excel text-emerald-600"></i> Excel Çıktısı</button>
@@ -159,6 +151,8 @@
         </main>
     </div>
 
+    <div id="global-tooltip"></div>
+    
     <!-- 1. PROFİL MODALI -->
     <div id="profileModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] px-4">
         <div class="glass-modal rounded-xl w-full max-w-5xl flex flex-col h-[80vh] modal-content overflow-hidden border-0 shadow-2xl">
@@ -203,6 +197,7 @@
                     </div>
                 </div>
 
+                <!-- KAYMA DÜZELTİLDİ: mt-auto kaldırıldı ve mt-2 yapıldı -->
                 <div id="tab_acil" class="tab-panel hidden">
                     <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm">
                         <h4 class="text-slate-800 font-bold text-sm mb-4 flex items-center gap-2"><i class="fas fa-ambulance text-rose-500"></i> Acil Durum Kişisi Bilgileri</h4>
@@ -364,7 +359,8 @@
                         
                         <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Adres</label><textarea id="f_adres" rows="3" class="w-full glass-input p-2.5 rounded-lg text-xs font-semibold resize-none force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></textarea></div>
                         
-                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-auto space-y-3">
+                        <!-- KAYMA DÜZELTİLDİ: mt-auto kaldırıldı ve mt-2 yapıldı -->
+                        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-2 space-y-3">
                             <h5 class="font-bold text-slate-700 flex items-center gap-1.5 text-[10px] uppercase tracking-wide"><i class="fas fa-ambulance text-rose-500"></i> Acil Durum Kişisi</h5>
                             <div><label class="block font-semibold text-slate-500 mb-1 text-[9px] uppercase">Ad Soyad</label><input type="text" id="f_acilKisi" class="w-full bg-white border border-slate-300 p-2 rounded-lg font-semibold text-slate-800 text-xs outline-none focus:border-blue-500 force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
                             <div class="grid grid-cols-2 gap-3">
@@ -378,7 +374,7 @@
         </div>
     </div>
 
-    <!-- 4. SİSTEM AYARLARI MODALI (Veritabanı Yedekleme Eklendi) -->
+    <!-- 4. SİSTEM AYARLARI MODALI -->
     <div id="settingsModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
         <div class="glass-modal rounded-xl w-full max-w-[90vw] flex flex-col h-[80vh] modal-content border-0 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-200 p-6 bg-white shrink-0">
