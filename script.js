@@ -57,9 +57,22 @@ function closePhotoModal() {
     setTimeout(() => { m.style.display = 'none'; }, 300);
 }
 
-// DEĞİŞKENLER
+// DEĞİŞKENLER VE HESAPLAMALAR
 let personnelData = [];
-let currentFilteredData = []; // Excel çıktısı için o an ekranda görünen listeyi hafızada tutar
+let currentFilteredData = [];
+const SYSTEM_TODAY = new Date();
+SYSTEM_TODAY.setHours(0,0,0,0);
+
+// EKSİK OLAN FONKSİYON EKLENDİ
+function getAge(dateString) {
+    if(!dateString) return '-';
+    let birthDate = new Date(dateString);
+    let age = SYSTEM_TODAY.getFullYear() - birthDate.getFullYear();
+    let m = SYSTEM_TODAY.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && SYSTEM_TODAY.getDate() < birthDate.getDate())) age--;
+    return age;
+}
+
 let systemSettings = {
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
@@ -109,8 +122,6 @@ const statColorsAndIcons = {
 let selectedUserId = null;
 let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
-const SYSTEM_TODAY = new Date();
-SYSTEM_TODAY.setHours(0,0,0,0);
 
 // EXCEL ÇIKTISI ALMA FONKSİYONU
 function exportToExcel() {
@@ -122,7 +133,6 @@ function exportToExcel() {
     showSpinner("Excel Dosyası Hazırlanıyor...");
     
     setTimeout(() => {
-        // Excel için temizlenmiş veri tablosu oluşturuluyor
         const exportData = currentFilteredData.map(p => ({
             "TC Kimlik No": p.tcNo || "",
             "Ad Soyad": p.adSoyad || "",
@@ -154,7 +164,6 @@ function exportToExcel() {
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Personel_Listesi");
             
-            // Dosyayı İndir
             XLSX.writeFile(workbook, "Personel_Raporu.xlsx");
             hideSpinner();
             showToast("Excel dosyası başarıyla indirildi.", "success");
@@ -403,7 +412,7 @@ function renderStatsCards() {
 
     systemSettings.cards.filter(c => c.active).forEach(card => {
         let count = 0;
-        if (card.type === "all") count = currentFilteredData.length; // Kartları sadece filtredeki sayılara göre de ayarlayabilirsin ama genel toplamlar global alınır:
+        if (card.type === "all") count = currentFilteredData.length; 
         else if (card.type === "custom" && card.func === "izinli") {
             count = personnelData.filter(p => {
                 if (p.durum !== "Aktif" && p.durum !== "AKTİF") return false;
