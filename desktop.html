@@ -531,6 +531,120 @@
 
     <!-- === YENİLENEN SİSTEM MANTIĞI === -->
     <script>
+        // YARDIMCI ARAÇLAR (Alet Çantası)
+        function showSpinner(text="İşleniyor...") { 
+            document.getElementById("spinnerText").innerText = text;
+            document.getElementById("spinner-overlay").style.display = "flex"; 
+        }
+        
+        function hideSpinner() { 
+            document.getElementById("spinner-overlay").style.display = "none"; 
+        }
+        
+        function showToast(msg, type = "success") {
+            const container = document.getElementById("toast-container");
+            const toast = document.createElement("div");
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<i class="fas ${type==='success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} text-lg"></i> ${msg}`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add("show"), 10);
+            setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 400); }, 3000);
+        }
+
+        function formatDateTR(dateString) {
+            if (!dateString) return '';
+            const parts = dateString.split('-');
+            if (parts.length === 3) return `${parts[2]}.${parts[1]}.${parts[0]}`;
+            return dateString;
+        }
+
+        function adjustStickyElements() {
+            const header = document.getElementById('main-header');
+            const filterPanel = document.getElementById('filter-panel');
+            if(header && filterPanel) {
+                const headerRect = header.getBoundingClientRect();
+                filterPanel.style.top = headerRect.height + 'px';
+            }
+        }
+        window.addEventListener('resize', adjustStickyElements);
+        window.addEventListener('scroll', adjustStickyElements);
+
+        function openPhotoModal() {
+            const src = document.getElementById("pv_foto").src;
+            if(!src || src.includes('placeholder')) return;
+            document.getElementById("fullSizePhoto").src = src;
+            const m = document.getElementById('photoZoomModal');
+            m.style.display = 'flex';
+            setTimeout(() => {
+                m.classList.remove('opacity-0');
+                document.getElementById('fullSizePhoto').classList.remove('scale-95');
+                document.getElementById('fullSizePhoto').classList.add('scale-100');
+            }, 10);
+        }
+        
+        function closePhotoModal() {
+            const m = document.getElementById('photoZoomModal');
+            m.classList.add('opacity-0');
+            document.getElementById('fullSizePhoto').classList.remove('scale-100');
+            document.getElementById('fullSizePhoto').classList.add('scale-95');
+            setTimeout(() => { m.style.display = 'none'; }, 300);
+        }
+
+        // DEĞİŞKENLER
+        let personnelData = [];
+        let systemSettings = {
+            dropdowns: {
+                cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
+                medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli", "Boşanmış"] },
+                tahsil: { label: "Tahsil", values: ["İlköğretim", "Lise", "Önlisans", "Lisans", "Yüksek Lisans"] },
+                sirket: { label: "Şirket / Kurum", values: ["ABB Kadrolu", "PORTAŞ", "BUGSAŞ", "ANFA", "BELKA"] },
+                bina: { label: "Bina / Birim", values: ["ABB Ana Bina", "101 Harita Şefliği", "Arazi Ekibi", "Arşiv"] },
+                kadro: { label: "Kadro Türü", values: ["Memur", "Sözleşmeli Memur", "İşçi", "Şirket Elemanı"] },
+                gorev: { label: "Fiili Görev", values: ["Harita Mühendisi", "Harita Teknikeri", "Veri Giriş Personeli", "Topoğraf", "Şef"] },
+                kanGrubu: { label: "Kan Grubu", values: ["Belirtilmemiş", "A Rh+", "A Rh-", "B Rh+", "B Rh-", "AB Rh+", "AB Rh-", "0 Rh+", "0 Rh-"] },
+                acilYakinlik: { label: "Yakınlık", values: ["Eşi", "Babası", "Annesi", "Kardeşi", "Çocuğu", "Arkadaşı"] },
+                durum: { label: "Çalışma Durumu", values: ["Aktif", "Pasif"] }
+            },
+            cards: [
+                { id: "total", title: "Toplam Personel", type: "all", active: true },
+                { id: "active", title: "Aktif Çalışan", type: "durum", value: "Aktif", active: true },
+                { id: "passive", title: "Pasif Personel", type: "durum", value: "Pasif", active: false },
+                { id: "memur", title: "Kadrolu Memur", type: "kadro", value: "Memur", active: true },
+                { id: "isci", title: "İşçi Personel", type: "kadro", value: "İşçi", active: true },
+                { id: "muhendis", title: "Mühendisler", type: "gorev", value: "Harita Mühendisi", active: true },
+                { id: "kadin", title: "Kadın Personel", type: "cinsiyet", value: "Kadın", active: false },
+                { id: "erkek", title: "Erkek Personel", type: "cinsiyet", value: "Erkek", active: false },
+                { id: "sozlesmeli", title: "Sözleşmeli Personel", type: "kadro", value: "Sözleşmeli Memur", active: false },
+                { id: "sirket_elemani", title: "Şirket Personeli", type: "kadro", value: "Şirket Elemanı", active: false },
+                { id: "tekniker", title: "Teknikerler", type: "gorev", value: "Harita Teknikeri", active: false },
+                { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
+                { id: "izinli", title: "Şu An İzinde", type: "custom", func: "izinli", active: true }
+            ]
+        };
+
+        const statColorsAndIcons = {
+            "Toplam Personel": { bg: "bg-white", text: "text-blue-600", border: "border-slate-200", icon: "fa-users" },
+            "Aktif Çalışan": { bg: "bg-white", text: "text-emerald-600", border: "border-slate-200", icon: "fa-user-check" },
+            "Pasif Personel": { bg: "bg-white", text: "text-rose-600", border: "border-slate-200", icon: "fa-user-times" },
+            "Kadrolu Memur": { bg: "bg-white", text: "text-blue-600", border: "border-slate-200", icon: "fa-user-tie" },
+            "İşçi Personel": { bg: "bg-white", text: "text-amber-600", border: "border-slate-200", icon: "fa-hard-hat" },
+            "Mühendisler": { bg: "bg-white", text: "text-indigo-600", border: "border-slate-200", icon: "fa-drafting-compass" },
+            "Kadın Personel": { bg: "bg-white", text: "text-pink-600", border: "border-slate-200", icon: "fa-female" },
+            "Şu An İzinde": { bg: "bg-white", text: "text-orange-500", border: "border-slate-200", icon: "fa-umbrella-beach" },
+            "Erkek Personel": { bg: "bg-white", text: "text-cyan-600", border: "border-slate-200", icon: "fa-male" },
+            "Sözleşmeli Personel": { bg: "bg-white", text: "text-teal-600", border: "border-slate-200", icon: "fa-file-signature" },
+            "Şirket Personeli": { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-id-badge" },
+            "Teknikerler": { bg: "bg-white", text: "text-fuchsia-600", border: "border-slate-200", icon: "fa-tools" },
+            "Demirbaş Sahipleri": { bg: "bg-white", text: "text-lime-600", border: "border-slate-200", icon: "fa-laptop" }
+        };
+
+        let selectedUserId = null;
+        let tlCurrentDate = new Date();
+        let uploadedBase64Foto = "";
+        const SYSTEM_TODAY = new Date();
+        SYSTEM_TODAY.setHours(0,0,0,0);
+
+        // UYGULAMA MANTIĞI
         function checkLogin() {
             const pass = document.getElementById('loginPass').value;
             if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
@@ -540,27 +654,23 @@
             setTimeout(async () => {
                 if(pass === "123456") {
                     if (typeof window.api !== 'undefined') {
-                        // Giriş başarılı, şimdi ağı ara (Donmaz)
                         const dbCheck = await window.api.checkDatabase();
                         hideSpinner();
                         
                         if (dbCheck.requirePath) {
-                            // Ağı bulamadıysa yolu sor
                             document.getElementById('loginScreen').style.display = 'none';
                             document.getElementById('dbPathModal').style.display = 'flex';
                         } else {
-                            // Ağı bulduysa doğrudan başlat
                             document.getElementById('loginScreen').style.display = 'none';
                             document.getElementById('custom-titlebar').style.display = 'flex';
                             document.getElementById('appContainer').style.display = 'flex';
-                            document.body.style.backgroundColor = '#f8fafc'; // Arka planı doldur
-                            if (window.api) window.api.maximizeWindow(); // Tam ekrana geç
+                            document.body.style.backgroundColor = '#f8fafc'; 
+                            if (window.api) window.api.maximizeWindow(); 
                             
                             fetchDataFromLocalDB();
                             startPolling();
                         }
                     } else {
-                        // Tarayıcı Test Modu
                         hideSpinner();
                         document.getElementById('loginScreen').style.display = 'none';
                         document.getElementById('custom-titlebar').style.display = 'flex';
@@ -720,13 +830,6 @@
                 });
             }
         }
-
-        let selectedUserId = null;
-        let tlCurrentDate = new Date();
-        let uploadedBase64Foto = "";
-        
-        const SYSTEM_TODAY = new Date();
-        SYSTEM_TODAY.setHours(0,0,0,0);
 
         function getAge(dateString) {
             if(!dateString) return '-';
