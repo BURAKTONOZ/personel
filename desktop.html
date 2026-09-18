@@ -22,7 +22,7 @@
 
         /* Ana Uygulama Barı (İlk başta gizli) */
         #custom-titlebar { 
-            display: none; /* Giriş yapmadan önce gizli */
+            display: none; 
             position: fixed; top: 0; left: 0; right: 0; z-index: 99999999;
             height: 40px; background: rgba(30, 30, 30, 0.95); 
             color: white; user-select: none;
@@ -88,7 +88,7 @@
         .toggle-checkbox:checked + .toggle-label { background-color: #2563eb; }
 
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 999999; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); opacity: 0; transform: translateY(20px) scale(0.95); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: 600; font-size: 13px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); opacity: 0; transform: translateY(20px) scale(0.95); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; align-items: center; gap: 10px; pointer-events: auto; }
         .toast.show { opacity: 1; transform: translateY(0) scale(1); }
         .toast-success { background: #10b981; border: 1px solid #059669; }
         .toast-error { background: #ef4444; border: 1px solid #b91c1c; }
@@ -120,7 +120,7 @@
     <!-- SPINNER & TOAST -->
     <div id="spinner-overlay">
         <div class="loader"></div>
-        <div class="font-bold tracking-widest uppercase text-sm text-slate-700" id="spinnerText">Ağ Aranıyor...</div>
+        <div class="font-bold tracking-widest uppercase text-sm text-slate-700" id="spinnerText">İşleniyor...</div>
     </div>
     <div id="toast-container"></div>
 
@@ -129,11 +129,11 @@
     </div>
 
     <!-- Veritabanı Yolu İsteme Modalı -->
-    <div id="dbPathModal" class="fixed inset-0 flex-col items-center justify-center z-[105] p-4 bg-slate-100 rounded-xl border border-slate-300 shadow-2xl" style="display:none; -webkit-app-region: drag;">
+    <div id="dbPathModal" class="fixed inset-0 flex-col items-center justify-center z-[105] p-4 bg-slate-100 rounded-xl border border-slate-300 shadow-2xl" style="display:none;">
         <div class="w-full flex justify-end mb-2" style="-webkit-app-region: drag;">
             <button onclick="if(window.api) window.api.windowClose()" class="text-slate-400 hover:text-red-500 transition-colors p-2 cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;"><i class="fas fa-times text-xl"></i></button>
         </div>
-        <div class="glass-modal p-7 rounded-xl w-full max-w-md bg-white pointer-events-auto shadow-sm" style="-webkit-app-region: no-drag;">
+        <div class="glass-modal p-7 rounded-xl w-full max-w-md bg-white shadow-sm">
             <h2 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle text-rose-500"></i> Veritabanı Bulunamadı</h2>
             <p class="text-xs text-slate-600 mb-6 font-medium leading-relaxed">Bağlanmaya çalıştığınız ağ adresinde personel veritabanı bulunamadı. Lütfen <strong class="text-slate-800">PersonelDB.sqlite</strong> dosyasının oluşturulacağı yeni bir klasör yolu seçin.</p>
             <div class="flex gap-2 mb-6 flex-col">
@@ -146,14 +146,14 @@
 
     <!-- GİRİŞ EKRANI (Şeffaf Küçük Pencere) -->
     <div id="loginScreen" class="fixed inset-0 z-[100] flex flex-col bg-slate-100 rounded-xl border border-slate-300 shadow-2xl transition-all duration-500">
-        <!-- Pencereyi taşımak ve kapatmak için özel üst bar (Giriş ekranına özel) -->
-        <div class="h-10 w-full flex justify-end items-center px-2" style="-webkit-app-region: drag;">
+        <!-- SADECE BU BAR SÜRÜKLENEBİLİR - BUTONLARIN ÇALIŞMASI İÇİN ALT KISIM SERBEST BIRAKILDI -->
+        <div class="h-10 w-full flex justify-end items-center px-2 bg-slate-200/50 rounded-t-xl" style="-webkit-app-region: drag;">
             <button onclick="if(window.api) window.api.windowClose()" class="text-slate-400 hover:text-red-500 transition-colors p-2 cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;"><i class="fas fa-times text-xl"></i></button>
         </div>
         
-        <!-- Form Alanı -->
-        <div class="flex-1 flex items-center justify-center px-4 pb-10" style="-webkit-app-region: drag;">
-            <div class="glass-modal p-8 rounded-2xl w-full max-w-sm flex flex-col gap-6 text-center shadow-md bg-white pointer-events-auto" style="-webkit-app-region: no-drag;">
+        <!-- Form Alanı (Sürüklenemez, Tıklanabilir) -->
+        <div class="flex-1 flex items-center justify-center px-4 pb-10">
+            <div class="glass-modal p-8 rounded-2xl w-full max-w-sm flex flex-col gap-6 text-center shadow-md bg-white">
                 <div class="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/30 mb-2">
                     <i class="fas fa-fingerprint"></i>
                 </div>
@@ -535,7 +535,7 @@
             const pass = document.getElementById('loginPass').value;
             if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
             
-            showSpinner("Ağ Aranıyor...");
+            showSpinner("Sistem Kontrol Ediliyor...");
             
             setTimeout(async () => {
                 if(pass === "123456") {
@@ -559,6 +559,15 @@
                             fetchDataFromLocalDB();
                             startPolling();
                         }
+                    } else {
+                        // Tarayıcı Test Modu
+                        hideSpinner();
+                        document.getElementById('loginScreen').style.display = 'none';
+                        document.getElementById('custom-titlebar').style.display = 'flex';
+                        document.getElementById('appContainer').style.display = 'flex';
+                        document.body.style.backgroundColor = '#f8fafc';
+                        showToast("Tarayıcı modundasınız, veritabanına bağlanılamaz. Sadece tasarım test edilebilir.", "error");
+                        initSystem();
                     }
                 } else {
                     hideSpinner();
@@ -604,7 +613,6 @@
             document.getElementById('custom-titlebar').style.display = 'none';
             document.body.style.backgroundColor = 'transparent';
             
-            // Pencereyi küçültmek istersen buradan da komut gönderilebilir ama şimdilik ortada gösterecek
             document.getElementById('dbPathModal').style.display = 'flex';
         }
 
