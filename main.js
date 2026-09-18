@@ -5,8 +5,8 @@ const fsPromises = require('fs').promises;
 const sqlite3 = require('sqlite3').verbose();
 
 const configPath = path.join(app.getPath('userData'), 'dbconfig.json');
+// YENİ VARSAYILAN ADRES EKLENDİ
 const defaultNetworkDir = '\\\\192.168.101.194\\Numarataj_tarama\\NUMARATAJ PROGRAMLAR\\PERSONEL YÖNETİM SİSTEMİ';
-
 let dbPath = '';
 let db = null;
 let isDbConnected = false;
@@ -23,7 +23,6 @@ function saveCustomPath(newPath) {
   fs.writeFileSync(configPath, JSON.stringify({ customPath: newPath }));
 }
 
-// Asenkron ağ kontrolü (Donmayı engeller)
 async function connectToDB(targetDir) {
   try {
     await fsPromises.access(targetDir); 
@@ -50,7 +49,7 @@ async function connectToDB(targetDir) {
 
 function createWindow() {
   win = new BrowserWindow({
-    width: 450,       // İlk açılışta küçük pencere
+    width: 450,       
     height: 600,
     frame: false,
     transparent: true,
@@ -60,15 +59,24 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false
     },
-    resizable: false // Giriş ekranında yeniden boyutlandırmayı kapat
+    resizable: false 
   });
 
   win.loadFile('desktop.html');
 
+  // Pencere Kontrolleri
   ipcMain.on('window-minimize', () => win.minimize());
   ipcMain.on('window-close', () => app.quit());
   
-  // Giriş başarılı olunca tam ekrana geçiren komut
+  // YENİ: Tam Ekran / Daraltma Geçişi
+  ipcMain.on('window-maximize-toggle', () => {
+    if(win.isMaximized()) {
+        win.unmaximize();
+    } else {
+        win.maximize();
+    }
+  });
+
   ipcMain.on('maximize-window', () => {
     win.resizable = true;
     win.maximize();
@@ -93,6 +101,26 @@ ipcMain.handle('check-db-connection', async () => {
 ipcMain.handle('select-folder', async () => {
   const result = await dialog.showOpenDialog(win, { properties: ['openDirectory'] });
   return result.canceled ? null : result.filePaths[0];
+});
+
+// YENİ: Veritabanını Seçilen Klasöre Yedekleme İşlemi
+ipcMain.handle('backup-database', async () => {
+    if(!dbPath || !fs.existsSync(dbPath)) return {success: false, message: "Aktif veritabanı bulunamadı!"};
+    
+    const result = await dialog.showSaveDialog(win, {
+        title: 'Veritabanını Yedekle',
+        defaultPath: 'PersonelDB_Yedek.sqlite',
+        filters: [{ name: 'SQLite Database', extensions: ['sqlite'] }]
+    });
+
+    if(result.canceled || !result.filePath) return {success: false, message: "İşlem iptal edildi."};
+
+    try {
+        fs.copyFileSync(dbPath, result.filePath);
+        return {success: true, path: result.filePath};
+    } catch(e) {
+        return {success: false, message: e.message};
+    }
 });
 
 ipcMain.handle('set-custom-db-path', async (event, newDir) => {
