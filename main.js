@@ -5,7 +5,6 @@ const fsPromises = require('fs').promises;
 const sqlite3 = require('sqlite3').verbose();
 
 const configPath = path.join(app.getPath('userData'), 'dbconfig.json');
-// YENİ VARSAYILAN ADRES EKLENDİ
 const defaultNetworkDir = '\\\\192.168.101.194\\Numarataj_tarama\\NUMARATAJ PROGRAMLAR\\PERSONEL YÖNETİM SİSTEMİ';
 let dbPath = '';
 let db = null;
@@ -54,6 +53,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     backgroundColor: '#00000000', 
+    icon: path.join(__dirname, 'icon.png'), // <--- UYGULAMA İKONU BURAYA EKLENDİ
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -64,11 +64,9 @@ function createWindow() {
 
   win.loadFile('desktop.html');
 
-  // Pencere Kontrolleri
   ipcMain.on('window-minimize', () => win.minimize());
   ipcMain.on('window-close', () => app.quit());
   
-  // YENİ: Tam Ekran / Daraltma Geçişi
   ipcMain.on('window-maximize-toggle', () => {
     if(win.isMaximized()) {
         win.unmaximize();
@@ -103,7 +101,6 @@ ipcMain.handle('select-folder', async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
-// YENİ: Veritabanını Seçilen Klasöre Yedekleme İşlemi
 ipcMain.handle('backup-database', async () => {
     if(!dbPath || !fs.existsSync(dbPath)) return {success: false, message: "Aktif veritabanı bulunamadı!"};
     
