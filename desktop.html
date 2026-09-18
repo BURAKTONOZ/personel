@@ -9,7 +9,46 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; overflow-y: auto; overflow-x: hidden; color: #1e293b; background-color: #f8fafc; }
+        /* Çerçevesiz Şeffaf Pencere Ayarları */
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; padding: 0; padding-top: 40px; 
+            background-color: #f8fafc; /* Şeffaflık aktifken formun düzgün görünmesi için zemin rengi */
+            border: 1px solid #475569; 
+            border-radius: 10px; 
+            height: 100vh; 
+            box-sizing: border-box; 
+            overflow: hidden; 
+            color: #1e293b;
+        }
+
+        /* Özel Sürüklenebilir Başlık ve Durum Çubuğu */
+        #custom-titlebar { 
+            position: fixed; top: 0; left: 0; right: 0; z-index: 99999999;
+            display: flex; height: 40px; background: rgba(30, 30, 30, 0.95); 
+            color: white; user-select: none;
+            border-top-left-radius: 9px; border-top-right-radius: 9px;
+            border-bottom: 1px solid #1e293b;
+        }
+        .drag-region { 
+            flex: 1; -webkit-app-region: drag; /* Pencereyi buradan tutarak sürükleyebilirsin */
+            display: flex; align-items: center; padding-left: 15px;
+        }
+        .window-controls { -webkit-app-region: no-drag; display: flex; }
+        .window-controls button { 
+            background: transparent; border: none; color: white; width: 45px; 
+            cursor: pointer; font-size: 16px; outline: none;
+        }
+        .window-controls .close-btn:hover { background: #e81123; border-top-right-radius: 9px; }
+        .window-controls button:hover { background: rgba(255,255,255,0.1); }
+
+        /* LED Stilleri */
+        .db-status-container { display: flex; align-items: center; gap: 10px; font-size: 12px; font-family: monospace; font-weight: 600; letter-spacing: 0.5px; }
+        .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
+        .led.orange { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+        .led.red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+        .led.green { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        #db-last-update { color: #94a3b8; margin-left: 15px; }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
@@ -57,7 +96,7 @@
         .toast-success { background: #10b981; border: 1px solid #059669; }
         .toast-error { background: #ef4444; border: 1px solid #b91c1c; }
         
-        #spinner-overlay { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(4px); z-index: 9999999; display: none; align-items: center; justify-content: center; flex-direction: column; color: #1e293b; }
+        #spinner-overlay { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(4px); z-index: 9999999; display: none; align-items: center; justify-content: center; flex-direction: column; color: #1e293b; border-radius: 10px; }
         .loader { border: 4px solid #e2e8f0; border-top: 4px solid #2563eb; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
@@ -65,7 +104,22 @@
         .zoomable-img:hover { transform: scale(1.05); }
     </style>
 </head>
-<body class="text-sm bg-slate-50">
+<body class="text-sm">
+
+    <!-- Özel Sürüklenebilir Başlık ve Durum Çubuğu -->
+    <div id="custom-titlebar">
+        <div class="drag-region">
+            <div class="db-status-container">
+                <span id="led-indicator" class="led orange"></span>
+                <span id="db-status-text">Bağlantı Bekleniyor...</span>
+                <span id="db-last-update"></span>
+            </div>
+        </div>
+        <div class="window-controls">
+            <button onclick="if(window.api) window.api.windowMinimize()">—</button>
+            <button class="close-btn" onclick="if(window.api) window.api.windowClose()">✕</button>
+        </div>
+    </div>
 
     <!-- SPINNER & TOAST -->
     <div id="spinner-overlay">
@@ -75,12 +129,25 @@
     <div id="toast-container"></div>
 
     <!-- FOTOĞRAF BÜYÜTME (ZOOM) MODALI - Z-INDEX 110 -->
-    <div id="photoZoomModal" class="fixed inset-0 z-[110] hidden items-center justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-zoom-out" onclick="closePhotoModal()">
+    <div id="photoZoomModal" class="fixed inset-0 z-[110] hidden items-center justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-zoom-out rounded-xl" onclick="closePhotoModal()">
         <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white">
     </div>
 
+    <!-- Veritabanı Yolu İsteme Modalı -->
+    <div id="dbPathModal" class="fixed inset-0 modal-overlay justify-center items-center z-[105] px-4 rounded-xl" style="display:none; background: rgba(15, 23, 42, 0.95);">
+        <div class="glass-modal p-7 rounded-xl w-full max-w-lg modal-content border border-slate-200 opacity-100 transform scale-100 shadow-2xl">
+            <h2 class="text-xl font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle text-rose-500"></i> Veritabanı Bulunamadı</h2>
+            <p class="text-sm text-slate-600 mb-6 font-medium leading-relaxed">Bağlanmaya çalıştığınız ağ adresinde personel veritabanı bulunamadı. Lütfen <strong class="text-slate-800">PersonelDB.sqlite</strong> dosyasının oluşturulacağı veya bulunduğu yeni bir klasör yolu seçin.</p>
+            <div class="flex gap-2 mb-6">
+                <input type="text" id="selectedDbPath" readonly placeholder="Klasör seçilmedi..." class="flex-1 glass-input p-3 rounded-lg text-xs font-mono bg-slate-50 border border-slate-300 text-slate-700 outline-none">
+                <button onclick="browseFolder()" class="bg-white hover:bg-slate-100 text-slate-700 px-5 py-2.5 rounded-lg text-xs font-bold transition-all border border-slate-300 shadow-sm"><i class="fas fa-folder-open mr-1"></i> Gözat</button>
+            </div>
+            <button onclick="saveNewDbPath()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-lg text-sm font-bold shadow-sm transition-all flex justify-center items-center gap-2">Kaydet ve Devam Et <i class="fas fa-arrow-right"></i></button>
+        </div>
+    </div>
+
     <!-- GİRİŞ EKRANI (LOGIN) - Z-INDEX 100 -->
-    <div id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-100 transition-all duration-500 px-4">
+    <div id="loginScreen" class="fixed inset-0 mt-[40px] z-[100] flex items-center justify-center bg-slate-100 transition-all duration-500 px-4 rounded-b-xl">
         <div class="glass-modal p-8 rounded-2xl w-full max-w-md flex flex-col gap-6 text-center shadow-xl">
             <div class="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/30 mb-2">
                 <i class="fas fa-fingerprint"></i>
@@ -112,7 +179,7 @@
     <div id="global-tooltip"></div>
 
     <!-- ANA UYGULAMA İÇERİĞİ -->
-    <div id="appContainer" style="display:none;" class="flex flex-col min-h-screen relative">
+    <div id="appContainer" style="display:none;" class="flex flex-col h-[calc(100vh-40px)] relative overflow-y-auto custom-scrollbar rounded-b-xl">
         <header id="main-header" class="bg-white sticky top-0 z-[60] h-[76px] flex items-center shadow-sm border-b border-slate-200 w-full">
             <div class="container mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center w-full gap-3 md:gap-0">
                 <div class="flex items-center gap-4">
@@ -150,7 +217,7 @@
             </div>
 
             <div class="glass-panel rounded-xl overflow-hidden pb-0">
-                <div class="w-full relative overflow-auto max-h-[60vh] custom-scrollbar">
+                <div class="w-full relative overflow-auto max-h-[55vh] custom-scrollbar">
                     <table class="min-w-full leading-normal text-left relative border-collapse">
                         <thead id="table-head" class="sticky top-0 z-[40]">
                             <tr>
@@ -170,8 +237,8 @@
     </div>
 
     <!-- 1. PROFİL MODALI -->
-    <div id="profileModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] px-4">
-        <div class="glass-modal rounded-xl w-full max-w-5xl flex flex-col h-[85vh] modal-content overflow-hidden">
+    <div id="profileModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] px-4 rounded-xl">
+        <div class="glass-modal rounded-xl w-full max-w-5xl flex flex-col h-[80vh] modal-content overflow-hidden">
             <div class="bg-white border-b border-slate-200 p-5 flex justify-between items-start shrink-0">
                 <div class="flex items-center gap-4">
                     <img id="pv_foto" src="" class="w-16 h-16 rounded-lg object-cover border border-slate-200 shadow-sm bg-white zoomable-img" onclick="openPhotoModal()" title="Büyütmek için tıklayın">
@@ -241,7 +308,7 @@
                         <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-boxes text-slate-400"></i> Personele Kayıtlı Demirbaşlar</h3>
                         <button onclick="openZimmetForm()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-1.5 shadow-sm text-xs"><i class="fas fa-plus text-blue-600"></i> Ekle</button>
                     </div>
-                    <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm">
+                    <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm custom-scrollbar">
                         <table class="min-w-full text-left border-collapse">
                             <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold sticky top-0 z-10 border-b border-slate-200">
                                 <tr><th class="p-4">Demirbaş Adı</th><th class="p-4">Seri No / Not</th><th class="p-4">Veriliş Tarihi</th><th class="p-4 text-center w-24">İşlem</th></tr>
@@ -256,7 +323,7 @@
                         <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-plane text-slate-400"></i> İzin Geçmişi ve Kayıtları</h3>
                         <button onclick="openIzinForm()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-1.5 shadow-sm text-xs"><i class="fas fa-calendar-plus text-blue-600"></i> İzin İşle</button>
                     </div>
-                    <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm">
+                    <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm custom-scrollbar">
                         <table class="min-w-full text-left border-collapse">
                             <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold sticky top-0 z-10 border-b border-slate-200">
                                 <tr><th class="p-4 w-36">İzin Türü</th><th class="p-4 w-32">Başlangıç</th><th class="p-4 w-32">Bitiş</th><th class="p-4">Açıklama</th><th class="p-4 text-center w-24">İşlem</th></tr>
@@ -270,7 +337,7 @@
     </div>
 
     <!-- 2. İZİN ÇİZELGESİ MODALI -->
-    <div id="timelineModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] p-4">
+    <div id="timelineModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] p-4 rounded-xl">
         <div class="glass-modal rounded-xl w-full h-full max-w-[98vw] flex flex-col modal-content overflow-hidden border border-slate-200">
             <div class="flex flex-col md:flex-row justify-between items-center p-5 bg-white border-b border-slate-200 gap-4 shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-calendar-alt text-blue-600"></i> İzin Çizelgesi</h3>
@@ -295,8 +362,8 @@
     </div>
 
     <!-- 3. PERSONEL FORMU MODALI -->
-    <div id="personnelModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
-        <div class="glass-modal rounded-xl shadow-2xl w-full max-w-[95vw] lg:max-w-[85vw] flex flex-col h-[85vh] modal-content border border-slate-200">
+    <div id="personnelModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4 rounded-xl">
+        <div class="glass-modal rounded-xl shadow-2xl w-full max-w-[95vw] lg:max-w-[85vw] flex flex-col h-[80vh] modal-content border border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-200 p-4 md:p-5 bg-white shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="formTitle"><i class="fas fa-user-edit text-blue-600"></i> Yeni Personel Kaydı</h3>
                 <div class="flex items-center gap-3">
@@ -389,14 +456,23 @@
     </div>
 
     <!-- 4. SİSTEM AYARLARI MODALI -->
-    <div id="settingsModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
-        <div class="glass-modal rounded-xl w-full max-w-[90vw] flex flex-col h-[85vh] modal-content border border-slate-200">
+    <div id="settingsModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4 rounded-xl">
+        <div class="glass-modal rounded-xl w-full max-w-[90vw] flex flex-col h-[80vh] modal-content border border-slate-200">
             <div class="flex justify-between items-center border-b border-slate-200 p-6 bg-white shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-sliders-h text-blue-600"></i> Sistem Ayarları</h3>
                 <button onclick="closeModal('settingsModal')" class="text-slate-400 hover:text-slate-800 text-lg w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 flex items-center justify-center transition-all"><i class="fas fa-times"></i></button>
             </div>
             
             <div class="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar bg-slate-50">
+                
+                <div class="bg-white p-5 rounded-xl border border-slate-200 mb-2 flex items-center justify-between shadow-sm">
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-800 uppercase flex items-center gap-2"><i class="fas fa-database text-blue-500"></i> Aktif Veritabanı Yolu</h4>
+                        <p id="settingsDbPath" class="text-xs text-slate-500 font-mono mt-1">Yükleniyor...</p>
+                    </div>
+                    <button onclick="changeDbPathFromSettings()" class="bg-white border border-slate-300 px-4 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 shadow-sm"><i class="fas fa-folder-open mr-1"></i> Yolu Değiştir</button>
+                </div>
+
                 <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
                     <h4 class="font-bold text-sm text-slate-800 mb-1 flex items-center gap-2 uppercase tracking-wide"><i class="fas fa-chart-pie text-blue-500 text-lg"></i> İstatistik Kartlarını Yönet</h4>
                     <p class="text-xs text-slate-500 mb-5 font-medium">Ana ekranda görünmesini istediğiniz kartları butonlardan açıp kapatabilirsiniz.</p>
@@ -418,7 +494,7 @@
     </div>
 
     <!-- MİNİ FORMLAR -->
-    <div id="addZimmetModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90]">
+    <div id="addZimmetModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90] rounded-xl">
         <div class="glass-modal p-6 rounded-xl w-80 shadow-2xl modal-content border border-slate-200">
             <h3 class="font-bold text-base mb-5 text-slate-800 flex items-center gap-2"><i class="fas fa-laptop text-blue-500"></i> Zimmet Ekle</h3>
             <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Demirbaş Adı *</label><input type="text" id="z_urun" placeholder="Örn: 3D Tarayıcı" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-semibold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
@@ -431,7 +507,7 @@
         </div>
     </div>
     
-    <div id="addIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90]">
+    <div id="addIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90] rounded-xl">
         <div class="glass-modal p-6 rounded-xl w-80 shadow-2xl modal-content border border-slate-200">
             <h3 class="font-bold text-base mb-5 text-slate-800 flex items-center gap-2"><i class="fas fa-plane-departure text-blue-500"></i> İzin İşle</h3>
             <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">İzin Türü *</label><select id="i_tur" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-bold text-slate-700 force-upper">
@@ -451,6 +527,88 @@
 
     <!-- === GÜNCELLENMİŞ OFFLINE JAVASCRIPT BLOĞU === -->
     <script>
+        // SİSTEM BAŞLANGICINDA VERİTABANI BAĞLANTISINI KONTROL ET
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (typeof window.api !== 'undefined') {
+                const dbCheck = await window.api.checkDatabase();
+                if (dbCheck.requirePath) {
+                    // Yol bulunamazsa Login ekranını gizle, Yol Seçme ekranını aç
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('dbPathModal').style.display = 'flex';
+                }
+            }
+        });
+
+        // KULLANICIDAN YENİ YOL İSTEME FONKSİYONLARI
+        async function browseFolder() {
+            if (typeof window.api === 'undefined') return;
+            const folderPath = await window.api.selectFolder();
+            if (folderPath) {
+                document.getElementById('selectedDbPath').value = folderPath;
+            }
+        }
+
+        async function saveNewDbPath() {
+            const path = document.getElementById('selectedDbPath').value;
+            if (!path) return showToast("Lütfen gözat butonuna basarak bir klasör seçin!", "error");
+            
+            showSpinner("Veritabanı Oluşturuluyor / Bağlanıyor...");
+            const result = await window.api.setCustomDbPath(path);
+            hideSpinner();
+            
+            if (result.success) {
+                document.getElementById('dbPathModal').style.display = 'none';
+                document.getElementById('loginScreen').style.display = 'flex'; // Login'e geri dön
+                showToast("Veritabanı yolu kaydedildi.", "success");
+            } else {
+                showToast("Bu klasöre bağlanılamadı, yazma yetkiniz olmayabilir.", "error");
+            }
+        }
+
+        function changeDbPathFromSettings() {
+            closeModal('settingsModal');
+            document.getElementById('dbPathModal').style.display = 'flex';
+        }
+
+        // 5 SANİYEDE BİR SESSİZ GÜNCELLEME (POLLING) SİSTEMİ
+        function startPolling() {
+            if (typeof window.api === 'undefined') return;
+            
+            setInterval(async () => {
+                const status = await window.api.getDbStatus();
+                const led = document.getElementById('led-indicator');
+                const statusText = document.getElementById('db-status-text');
+                
+                if (status.connected) {
+                    led.className = 'led green';
+                    statusText.innerText = 'Bağlı';
+                    
+                    const pathDisplay = document.getElementById('settingsDbPath');
+                    if (pathDisplay) pathDisplay.innerText = status.path;
+
+                    const newData = await window.api.getData();
+                    if (newData && newData.personnel) {
+                        let parsedData = Array.isArray(newData.personnel) ? newData.personnel : Object.values(newData.personnel);
+                        personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
+                        
+                        personnelData.forEach(p => {
+                            if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
+                            if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
+                        });
+                        
+                        applyFilters(); // Arayüzü arka planda tazele
+                        
+                        const now = new Date();
+                        document.getElementById('db-last-update').innerText = `Son Yenileme: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                    }
+                } else {
+                    led.className = 'led red';
+                    statusText.innerText = 'Bağlantı Koptu!';
+                }
+            }, 5000);
+        }
+
+        // --- DİĞER STANDART YARDIMCI FONKSİYONLAR ---
         function formatDateTR(dateString) {
             if (!dateString) return '';
             const parts = dateString.split('-');
@@ -552,15 +710,12 @@
             "Demirbaş Sahipleri": { bg: "bg-white", text: "text-lime-600", border: "border-slate-200", icon: "fa-laptop" }
         };
 
-        // --- GİRİŞ İŞLEMLERİ (AĞ/LOKAL SİSTEM) ---
         function checkLogin() {
             const pass = document.getElementById('loginPass').value;
             if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
             
             showSpinner("Giriş Yapılıyor...");
             
-            // Firebase olmadığı için şifreyi burada kontrol ediyoruz. 
-            // Şifre: 123456
             setTimeout(() => {
                 if(pass === "123456") {
                     const loginScreen = document.getElementById('loginScreen');
@@ -569,6 +724,7 @@
                         loginScreen.style.display = 'none';
                         document.getElementById('appContainer').style.display = 'flex';
                         fetchDataFromLocalDB();
+                        startPolling(); // GİRİŞ BAŞARILI OLUNCA POLLING BAŞLASIN
                     }, 400);
                 } else {
                     hideSpinner();
@@ -584,11 +740,9 @@
             }
         }
 
-        // --- AĞDAKİ SQLITE VERİTABANINDAN OKUMA ---
         function fetchDataFromLocalDB() {
             showSpinner("Veriler Ağdan Yükleniyor...");
             
-            // Eğer window.api yoksa (yani Chrome'dan açılmışsa) hata vermesini engelle
             if(typeof window.api === 'undefined') {
                 hideSpinner();
                 showToast("Sistem masaüstü uygulaması olarak çalıştırılmalıdır!", "error");
@@ -630,7 +784,6 @@
             });
         }
 
-        // --- AĞDAKİ SQLITE VERİTABANINA YAZMA ---
         function saveToDatabase() { 
             if(typeof window.api !== 'undefined') {
                 window.api.savePersonnel(personnelData).catch(e => {
