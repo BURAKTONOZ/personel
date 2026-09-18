@@ -21,7 +21,7 @@
     <div id="toast-container"></div>
 
     <div id="photoZoomModal" class="fixed inset-0 z-[110] hidden items-center justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-zoom-out" onclick="closePhotoModal()">
-        <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white">
+        <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white bg-slate-100">
     </div>
 
     <!-- Veritabanı Yolu İsteme Modalı -->
@@ -158,7 +158,7 @@
         <div class="glass-modal rounded-xl w-full max-w-5xl flex flex-col h-[80vh] modal-content overflow-hidden border-0 shadow-2xl">
             <div class="bg-white border-b border-slate-200 p-5 flex justify-between items-start shrink-0">
                 <div class="flex items-center gap-4">
-                    <img id="pv_foto" src="" class="w-16 h-16 rounded-lg object-cover border border-slate-200 shadow-sm bg-white zoomable-img" onclick="openPhotoModal()" title="Büyütmek için tıklayın">
+                    <img id="pv_foto" src="" class="w-16 h-16 rounded-lg object-cover border border-slate-200 shadow-sm bg-slate-100 p-0.5 zoomable-img" onclick="openPhotoModal()" title="Büyütmek için tıklayın">
                     <div>
                         <h2 id="pv_ad" class="text-xl font-bold tracking-tight text-slate-800 uppercase"></h2>
                         <div class="flex flex-wrap items-center gap-2 mt-1.5">
@@ -197,7 +197,6 @@
                     </div>
                 </div>
 
-                <!-- KAYMA DÜZELTİLDİ: mt-auto kaldırıldı ve mt-2 yapıldı -->
                 <div id="tab_acil" class="tab-panel hidden">
                     <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm">
                         <h4 class="text-slate-800 font-bold text-sm mb-4 flex items-center gap-2"><i class="fas fa-ambulance text-rose-500"></i> Acil Durum Kişisi Bilgileri</h4>
@@ -298,7 +297,8 @@
                         <h4 class="font-bold text-slate-700 border-b border-slate-100 pb-2 text-xs uppercase tracking-wide flex items-center gap-2"><i class="fas fa-id-badge text-blue-500"></i> Kişisel Bilgiler</h4>
                         
                         <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
-                            <img id="previewFoto" src="https://via.placeholder.com/150" class="w-12 h-12 rounded-md object-cover border border-slate-300 bg-white">
+                            <!-- FOTOĞRAF KUTUSU -->
+                            <img id="previewFoto" src="" class="w-12 h-12 rounded-md object-cover border border-slate-300 bg-slate-100 p-0.5">
                             <div class="flex-1">
                                 <label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase tracking-wide">Vesikalık Yükle</label>
                                 <input type="file" id="f_fotoFile" accept="image/*" onchange="handleFileUpload(event)" class="w-full text-[10px] file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:font-semibold file:bg-blue-50 file:text-blue-600 cursor-pointer text-slate-500">
@@ -313,7 +313,8 @@
                         <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Ad Soyad *</label><input type="text" id="f_adSoyad" class="w-full glass-input p-2.5 rounded-lg font-bold text-slate-800 text-sm force-upper" placeholder="Zorunlu" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')" required></div>
                         
                         <div class="grid grid-cols-2 gap-3">
-                            <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Cinsiyet</label><select id="f_cinsiyet" class="w-full glass-input p-2.5 rounded-lg text-xs font-semibold force-upper"></select></div>
+                            <!-- CİNSİYET SEÇİMİNDE CANLI SİLÜET DEĞİŞTİRME TETİKLEYİCİSİ -->
+                            <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Cinsiyet</label><select id="f_cinsiyet" onchange="updateFormSilhouette()" class="w-full glass-input p-2.5 rounded-lg text-xs font-semibold force-upper"></select></div>
                             <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Tahsil</label><select id="f_tahsil" class="w-full glass-input p-2.5 rounded-lg text-xs font-semibold force-upper"></select></div>
                         </div>
 
@@ -359,7 +360,6 @@
                         
                         <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Adres</label><textarea id="f_adres" rows="3" class="w-full glass-input p-2.5 rounded-lg text-xs font-semibold resize-none force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></textarea></div>
                         
-                        <!-- KAYMA DÜZELTİLDİ: mt-auto kaldırıldı ve mt-2 yapıldı -->
                         <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 mt-2 space-y-3">
                             <h5 class="font-bold text-slate-700 flex items-center gap-1.5 text-[10px] uppercase tracking-wide"><i class="fas fa-ambulance text-rose-500"></i> Acil Durum Kişisi</h5>
                             <div><label class="block font-semibold text-slate-500 mb-1 text-[9px] uppercase">Ad Soyad</label><input type="text" id="f_acilKisi" class="w-full bg-white border border-slate-300 p-2 rounded-lg font-semibold text-slate-800 text-xs outline-none focus:border-blue-500 force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
