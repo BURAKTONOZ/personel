@@ -59,6 +59,7 @@ function closePhotoModal() {
 
 // DEĞİŞKENLER
 let personnelData = [];
+let currentFilteredData = []; // Excel çıktısı için o an ekranda görünen listeyi hafızada tutar
 let systemSettings = {
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
@@ -110,6 +111,76 @@ let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
 const SYSTEM_TODAY = new Date();
 SYSTEM_TODAY.setHours(0,0,0,0);
+
+// EXCEL ÇIKTISI ALMA FONKSİYONU
+function exportToExcel() {
+    if(currentFilteredData.length === 0) {
+        showToast("Dışa aktarılacak personel kaydı bulunamadı!", "error");
+        return;
+    }
+    
+    showSpinner("Excel Dosyası Hazırlanıyor...");
+    
+    setTimeout(() => {
+        // Excel için temizlenmiş veri tablosu oluşturuluyor
+        const exportData = currentFilteredData.map(p => ({
+            "TC Kimlik No": p.tcNo || "",
+            "Ad Soyad": p.adSoyad || "",
+            "Doğum Tarihi": p.dogumTarihi ? formatDateTR(p.dogumTarihi) : "",
+            "Cinsiyet": p.cinsiyet || "",
+            "Medeni Hal": p.medeniHal || "",
+            "Çocuk Sayısı": p.cocukSayisi || "0",
+            "Tahsil Durumu": p.tahsil || "",
+            "Telefon Numarası": p.tel || "",
+            "Kan Grubu": p.kanGrubu || "",
+            "Ev Adresi": p.adres || "",
+            "Şirket / Kurum": p.sirket || "",
+            "Çalıştığı Bina": p.bina || "",
+            "Kadro Türü": p.kadro || "",
+            "Sicil Numarası": p.sicil || "",
+            "Fiili Görev": p.gorev || "",
+            "İşe Başlama Tarihi": p.gelisTarihi ? formatDateTR(p.gelisTarihi) : "",
+            "İşten Ayrılış Tarihi": p.ayrilisTarihi ? formatDateTR(p.ayrilisTarihi) : "",
+            "Çalışma Durumu": p.durum || "",
+            "Acil Durum Kişisi": p.acilKisi || "",
+            "Acil Kişi Yakınlık": p.acilYakinlik || "",
+            "Acil Kişi Telefonu": p.acilTel || "",
+            "Kayıtlı Demirbaş Sayısı": p.zimmetler ? p.zimmetler.length : 0,
+            "Kullanılan İzin Sayısı": p.izinler ? p.izinler.length : 0
+        }));
+
+        try {
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Personel_Listesi");
+            
+            // Dosyayı İndir
+            XLSX.writeFile(workbook, "Personel_Raporu.xlsx");
+            hideSpinner();
+            showToast("Excel dosyası başarıyla indirildi.", "success");
+        } catch (error) {
+            hideSpinner();
+            showToast("Excel oluşturulurken bir hata meydana geldi.", "error");
+        }
+    }, 800);
+}
+
+// VERİTABANI YEDEKLEME FONKSİYONU
+async function backupDatabase() {
+    if(typeof window.api === 'undefined') {
+        showToast("Tarayıcı modunda yedekleme yapılamaz.", "error");
+        return;
+    }
+    showSpinner("Veritabanı Yedekleniyor...");
+    const result = await window.api.backupDatabase();
+    hideSpinner();
+    
+    if(result.success) {
+        showToast("Veritabanı yedeği başarıyla alındı.", "success");
+    } else if(result.message !== "İşlem iptal edildi.") {
+        showToast("Yedekleme hatası: " + result.message, "error");
+    }
+}
 
 // UYGULAMA MANTIĞI
 function checkLogin() {
@@ -288,15 +359,6 @@ function saveSettingsToDatabase() {
     }
 }
 
-function getAge(dateString) {
-    if(!dateString) return '-';
-    let birthDate = new Date(dateString);
-    let age = SYSTEM_TODAY.getFullYear() - birthDate.getFullYear();
-    let m = SYSTEM_TODAY.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && SYSTEM_TODAY.getDate() < birthDate.getDate())) age--;
-    return age;
-}
-
 function openModal(id) {
     const m = document.getElementById(id);
     m.style.display = "flex";
@@ -341,7 +403,7 @@ function renderStatsCards() {
 
     systemSettings.cards.filter(c => c.active).forEach(card => {
         let count = 0;
-        if (card.type === "all") count = personnelData.length;
+        if (card.type === "all") count = currentFilteredData.length; // Kartları sadece filtredeki sayılara göre de ayarlayabilirsin ama genel toplamlar global alınır:
         else if (card.type === "custom" && card.func === "izinli") {
             count = personnelData.filter(p => {
                 if (p.durum !== "Aktif" && p.durum !== "AKTİF") return false;
@@ -444,7 +506,7 @@ function renderTable(data) {
 
 function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
-    let filtered = personnelData.filter(p => {
+    currentFilteredData = personnelData.filter(p => {
         let pAd = p.adSoyad ? p.adSoyad.toLocaleUpperCase('tr-TR') : "";
         let pSicil = p.sicil ? p.sicil.toLocaleUpperCase('tr-TR') : "";
         
@@ -455,8 +517,9 @@ function applyFilters() {
         let mKadro = !document.getElementById("filter-kadro").value || p.kadro === document.getElementById("filter-kadro").value || p.kadro === document.getElementById("filter-kadro").value.toLocaleUpperCase('tr-TR');
         return matchSearch && mDurum && mSirket && mBina && mKadro;
     });
-    renderTable(filtered);
+    renderTable(currentFilteredData);
 }
+
 ["filter-search", "filter-durum", "filter-sirket", "filter-bina", "filter-kadro"].forEach(id => {
     document.getElementById(id).addEventListener(id === "filter-search" ? "input" : "change", applyFilters);
 });
@@ -623,7 +686,6 @@ function changeMonth(dir) {
     generateTimeline();
 }
 
-// Tooltip (Bilgi Ekranı) tetikleyicileri düzeltildi
 window.showTooltip = function(e, el) {
     const tt = document.getElementById('global-tooltip');
     if(!tt) return;
@@ -724,7 +786,6 @@ function generateTimeline() {
                         let safeDesc = (iz.aciklama || 'Açıklama belirtilmemiş').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
                         let toolTipDate = String(d).padStart(2,'0') + "." + String(m+1).padStart(2,'0') + "." + y;
                         
-                        // Olay dinleyicileri (Event Listeners) düzeltildi
                         tooltipEvents = `data-tur="${iz.tur}" data-tarih="${toolTipDate}" data-desc="${safeDesc}" data-color="${clColor}" onmouseover="showTooltip(event, this)" onmousemove="updateTooltip(event)" onmouseout="hideTooltip()"`;
                         break;
                     }
