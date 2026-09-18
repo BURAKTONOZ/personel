@@ -9,8 +9,10 @@ contextBridge.exposeInMainWorld('api', {
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   setCustomDbPath: (path) => ipcRenderer.invoke('set-custom-db-path', path),
   getDbStatus: () => ipcRenderer.invoke('get-db-status'),
+  backupDatabase: () => ipcRenderer.invoke('backup-database'),
   
   windowMinimize: () => ipcRenderer.send('window-minimize'),
+  windowMaximizeToggle: () => ipcRenderer.send('window-maximize-toggle'),
   windowClose: () => ipcRenderer.send('window-close'),
-  maximizeWindow: () => ipcRenderer.send('maximize-window') // YENİ EKLENDİ
+  maximizeWindow: () => ipcRenderer.send('maximize-window')
 });
