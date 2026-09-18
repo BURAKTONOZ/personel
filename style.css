@@ -1,4 +1,4 @@
-/* Çerçevesiz, Yumuşak Köşeli Ana Ekran */
+/* Tam şeffaf ana gövde - Pencere yuvarlatmaları appContainer'a verilecek */
 body { 
     font-family: 'Inter', sans-serif; 
     margin: 0; padding: 0; 
@@ -7,40 +7,23 @@ body {
     box-sizing: border-box; 
     overflow: hidden; 
     color: #1e293b;
-    border-radius: 12px; /* Yumuşak köşeler */
-    border: 1px solid rgba(0,0,0,0.1); /* Çok zarif, ince bir sınır */
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3); /* Pürüzsüz dış gölge */
 }
 
-/* Ana Uygulama Barı (Sleek Dark Design) */
-#custom-titlebar { 
-    display: none; 
-    position: fixed; top: 0; left: 0; right: 0; z-index: 99999999;
-    height: 42px; background: #0f172a; /* Şık koyu lacivert/siyah */
-    color: white; user-select: none;
-    border-top-left-radius: 11px; border-top-right-radius: 11px;
+/* ANA UYGULAMA ÇERÇEVESİ (Premium Görünüm) */
+#appContainer {
+    background-color: #f8fafc;
+    height: 100vh;
+    border-radius: 14px; /* Şık yuvarlak köşeler */
+    border: 1px solid rgba(0,0,0,0.15); /* Pürüzsüz çok ince bir sınır */
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    overflow: hidden;
 }
 
-.drag-region { 
-    flex: 1; -webkit-app-region: drag; 
-    display: flex; align-items: center; padding-left: 15px;
-}
-
-.window-controls { -webkit-app-region: no-drag; display: flex; }
-.window-controls button { 
-    background: transparent; border: none; color: #cbd5e1; width: 45px; 
-    cursor: pointer; font-size: 14px; outline: none; transition: all 0.2s;
-}
-.window-controls .close-btn:hover { background: #e81123; color: white; border-top-right-radius: 11px;}
-.window-controls button:hover:not(.close-btn) { background: rgba(255,255,255,0.1); color: white;}
-
-/* LED Stilleri */
-.db-status-container { display: flex; align-items: center; gap: 10px; font-size: 12px; font-family: monospace; font-weight: 600; letter-spacing: 0.5px; color: #e2e8f0; }
+/* LED Stilleri (Ana Başlığa Taşındı) */
 .led { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .led.orange { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
 .led.red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
 .led.green { background: #10b981; box-shadow: 0 0 8px #10b981; }
-#db-last-update { color: #64748b; margin-left: 15px; }
 
 /* Scrollbar (Kaydırma Çubuğu) */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -78,7 +61,7 @@ body {
 .izin-s { background-color: #e0f2fe; color: #0369a1; border: 1px solid #7dd3fc; }
 
 /* Tooltip & Switch & Toast & Spinner */
-#global-tooltip { position: fixed; display: none; z-index: 99999; pointer-events: none; background: #1e293b; color: white; padding: 10px 14px; border-radius: 8px; font-size: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4); line-height: 1.4; max-width: 250px; border: 1px solid #334155; }
+#global-tooltip { position: fixed; display: none; z-index: 999999; pointer-events: none; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(4px); color: white; padding: 12px 16px; border-radius: 10px; font-size: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); line-height: 1.4; max-width: 250px; border: 1px solid #334155; transition: opacity 0.2s ease; opacity: 0; }
 .row-hover { transition: all 0.2s ease; }
 .row-hover:hover { background-color: #f8fafc; box-shadow: inset 4px 0 0 0 #2563eb; }
 
