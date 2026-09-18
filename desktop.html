@@ -5,30 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Personel Yönetim Sistemi</title>
     
-    <!-- Dış Bağlantılar -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Ayırdığımız CSS Dosyamız -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="text-sm">
-
-    <!-- ÜST BAR (SÜRÜKLENEBİLİR) -->
-    <div id="custom-titlebar">
-        <div class="drag-region">
-            <div class="db-status-container">
-                <span id="led-indicator" class="led orange"></span>
-                <span id="db-status-text">Sistem Başlatılıyor...</span>
-                <span id="db-last-update"></span>
-            </div>
-        </div>
-        <div class="window-controls">
-            <button onclick="if(window.api) window.api.windowMinimize()">—</button>
-            <button class="close-btn" onclick="if(window.api) window.api.windowClose()">✕</button>
-        </div>
-    </div>
 
     <!-- SPINNER & TOAST -->
     <div id="spinner-overlay">
@@ -42,11 +24,11 @@
     </div>
 
     <!-- Veritabanı Yolu İsteme Modalı -->
-    <div id="dbPathModal" class="fixed inset-0 flex-col items-center justify-center z-[105] p-4 bg-slate-100 rounded-xl" style="display:none;">
+    <div id="dbPathModal" class="fixed inset-0 flex-col items-center justify-center z-[105] p-4 bg-slate-100 rounded-2xl shadow-2xl border border-slate-300" style="display:none; -webkit-app-region: drag;">
         <div class="w-full flex justify-end mb-2" style="-webkit-app-region: drag;">
             <button onclick="if(window.api) window.api.windowClose()" class="text-slate-400 hover:text-red-500 transition-colors p-2 cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;"><i class="fas fa-times text-xl"></i></button>
         </div>
-        <div class="glass-modal p-7 rounded-xl w-full max-w-md bg-white shadow-lg border-0">
+        <div class="glass-modal p-7 rounded-2xl w-full max-w-md bg-white shadow-sm pointer-events-auto border-0" style="-webkit-app-region: no-drag;">
             <h2 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle text-rose-500"></i> Veritabanı Bulunamadı</h2>
             <p class="text-xs text-slate-600 mb-6 font-medium leading-relaxed">Bağlanmaya çalıştığınız ağ adresinde personel veritabanı bulunamadı. Lütfen <strong class="text-slate-800">PersonelDB.sqlite</strong> dosyasının oluşturulacağı yeni bir klasör yolu seçin.</p>
             <div class="flex gap-2 mb-6 flex-col">
@@ -57,57 +39,81 @@
         </div>
     </div>
 
-    <!-- GİRİŞ EKRANI -->
-    <div id="loginScreen" class="fixed inset-0 z-[100] flex flex-col bg-slate-100 rounded-xl transition-all duration-500">
-        <div class="h-10 w-full flex justify-end items-center px-2 bg-slate-200/50 rounded-t-xl" style="-webkit-app-region: drag;">
-            <button onclick="if(window.api) window.api.windowClose()" class="text-slate-400 hover:text-red-500 transition-colors p-2 cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;"><i class="fas fa-times text-xl"></i></button>
-        </div>
-        <div class="flex-1 flex items-center justify-center px-4 pb-10">
-            <div class="glass-modal p-8 rounded-2xl w-full max-w-sm flex flex-col gap-6 text-center shadow-md bg-white border-0">
-                <div class="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/30 mb-2">
-                    <i class="fas fa-fingerprint"></i>
-                </div>
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Sisteme Giriş</h2>
-                    <p class="text-xs font-semibold text-slate-500 mt-1">Numarataj Şube Müdürlüğü</p>
-                </div>
-                
+    <!-- GİRİŞ EKRANI (Arkası tamamen şeffaf, havada süzülen widget) -->
+    <div id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center transition-all duration-500 bg-transparent">
+        <div class="glass-modal p-8 rounded-3xl w-full max-w-sm flex flex-col gap-5 text-center shadow-2xl bg-white/95 backdrop-blur-md relative border border-slate-200" style="-webkit-app-region: drag;">
+            
+            <!-- Şık Kapatma Butonu (Tasarımın Üzerinde) -->
+            <button onclick="if(window.api) window.api.windowClose()" class="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-100 hover:bg-rose-500 hover:text-white text-slate-500 flex items-center justify-center transition-all shadow-sm cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;">
+                <i class="fas fa-times text-xs"></i>
+            </button>
+
+            <!-- İçerik -->
+            <div class="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/30 mt-2">
+                <i class="fas fa-fingerprint"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">Personel Yönetim Sistemi</h2>
+                <p class="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">Numarataj Şube Müdürlüğü</p>
+            </div>
+            
+            <!-- İnputlar (Sürükleme dışı alan) -->
+            <div style="-webkit-app-region: no-drag;" class="w-full">
                 <div class="text-left mt-2">
-                    <label class="block text-xs font-bold text-slate-600 mb-2"><i class="fas fa-building mr-1"></i> Yetkili Birim</label>
-                    <div class="w-full bg-slate-50 border border-slate-200 p-3 rounded-lg font-semibold text-sm text-slate-700 flex items-center justify-between">
-                        <span>Numarataj Şube Müdürlüğü</span>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-building mr-1 text-slate-400"></i> Yetkili Birim</label>
+                    <div class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-semibold text-xs text-slate-700 flex items-center justify-between">
+                        <span>Numarataj Şube Md.</span>
                         <i class="fas fa-check-circle text-emerald-500"></i>
                     </div>
                 </div>
                 
-                <div class="text-left">
-                    <label class="block text-xs font-bold text-slate-600 mb-2"><i class="fas fa-lock mr-1"></i> Sistem Şifresi</label>
-                    <input type="password" id="loginPass" class="w-full glass-input p-3 rounded-lg font-bold text-lg tracking-widest focus:border-blue-500" placeholder="••••••" onkeypress="if(event.key === 'Enter') checkLogin()">
+                <div class="text-left mt-4">
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-lock mr-1 text-slate-400"></i> Sistem Şifresi</label>
+                    <input type="password" id="loginPass" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-center tracking-[0.5em] focus:border-blue-500 focus:bg-white transition-all outline-none" placeholder="••••••" onkeypress="if(event.key === 'Enter') checkLogin()">
                 </div>
                 
-                <button onclick="checkLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-lg font-bold transition-all shadow-md text-sm mt-2 flex items-center justify-center gap-2">
+                <button onclick="checkLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-xl font-bold transition-all shadow-md shadow-blue-500/20 text-sm mt-5 flex items-center justify-center gap-2">
                     GİRİŞ YAP <i class="fas fa-arrow-right"></i>
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- ANA UYGULAMA İÇERİĞİ -->
-    <div id="appContainer" style="display:none;" class="flex flex-col h-screen pt-[40px] relative overflow-y-auto custom-scrollbar rounded-b-xl bg-slate-50">
-        <header id="main-header" class="bg-white sticky top-0 z-[60] h-[76px] flex items-center shadow-sm border-b border-slate-200 w-full">
-            <div class="container mx-auto px-4 md:px-6 flex flex-col md:flex-row justify-between items-center w-full gap-3 md:gap-0">
-                <div class="flex items-center gap-4">
-                    <div class="bg-blue-600 p-2.5 rounded-lg text-white shadow-sm"><i class="fas fa-users-cog text-xl"></i></div>
-                    <div>
-                        <h1 class="text-base md:text-lg font-bold text-slate-800 leading-none tracking-tight">Numarataj Şube Müdürlüğü</h1>
-                        <p class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider mt-1">Personel Yönetim Sistemi</p>
-                    </div>
+    <!-- ANA UYGULAMA ÇERÇEVESİ (Premium) -->
+    <div id="appContainer" style="display:none;" class="flex flex-col relative">
+        
+        <!-- YENİ BİRLEŞİK HEADER VE PENCERE KONTROLLERİ -->
+        <header id="main-header" class="bg-white/95 backdrop-blur-sm sticky top-0 z-[60] h-[76px] flex items-center shadow-sm border-b border-slate-200 w-full px-5" style="-webkit-app-region: drag;">
+            <!-- Sol: Logo ve Başlık -->
+            <div class="flex items-center gap-4 flex-1">
+                <div class="bg-blue-600 w-11 h-11 rounded-xl text-white shadow-sm flex items-center justify-center"><i class="fas fa-users-cog text-xl"></i></div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-none tracking-tight">Numarataj Şube Müdürlüğü</h1>
+                    <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest mt-1.5">Personel Yönetim Sistemi</p>
                 </div>
-                <div class="flex items-center gap-2 hidden sm:flex">
-                    <button onclick="openModal('timelineModal')" class="bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5 border border-slate-200"><i class="fas fa-calendar-alt text-blue-600"></i> İzin Çizelgesi</button>
-                    <button onclick="openPersonnelForm()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-1.5"><i class="fas fa-user-plus"></i> Yeni Kayıt</button>
-                    <button onclick="openModal('settingsModal')" class="bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm ml-2 border-l border-slate-200 border border-slate-200"><i class="fas fa-sliders-h text-slate-500"></i> Ayarlar</button>
-                    <button onclick="logOut()" class="bg-white hover:bg-rose-50 text-rose-600 text-xs font-semibold px-4 py-2.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm ml-1 border border-slate-200"><i class="fas fa-sign-out-alt"></i> Çıkış</button>
+            </div>
+
+            <!-- Orta: LED Durumu -->
+            <div class="hidden md:flex items-center justify-center gap-2 bg-slate-50 px-4 py-2 rounded-full border border-slate-200 shadow-inner">
+                <span id="led-indicator" class="led orange"></span>
+                <span id="db-status-text" class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Bağlantı Bekleniyor...</span>
+                <span id="db-last-update" class="text-[10px] font-semibold text-slate-400 ml-2"></span>
+            </div>
+
+            <!-- Sağ: Butonlar ve Pencere Kontrolleri -->
+            <div class="flex items-center justify-end flex-1 gap-4" style="-webkit-app-region: no-drag;">
+                <div class="flex items-center gap-2">
+                    <button onclick="openModal('timelineModal')" class="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-200 shadow-sm"><i class="fas fa-calendar-alt text-blue-600"></i> İzin</button>
+                    <button onclick="openPersonnelForm()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-sm shadow-blue-500/20"><i class="fas fa-user-plus"></i> Yeni Kayıt</button>
+                    <button onclick="openModal('settingsModal')" class="bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-blue-600 text-sm w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 transition-all shadow-sm"><i class="fas fa-cog"></i></button>
+                </div>
+                
+                <div class="w-px h-8 bg-slate-200 mx-1"></div> <!-- Dikey Ayırıcı -->
+                
+                <div class="flex items-center gap-1.5">
+                    <button onclick="logOut()" title="Oturumu Kapat" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-rose-50 border border-slate-200 flex items-center justify-center text-slate-500 hover:text-rose-600 transition-all"><i class="fas fa-sign-out-alt text-xs"></i></button>
+                    <button onclick="if(window.api) window.api.windowMinimize()" title="Küçült" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-500 transition-all"><i class="fas fa-minus text-xs"></i></button>
+                    <button onclick="if(window.api) window.api.windowClose()" title="Kapat" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-rose-500 border border-slate-200 hover:border-rose-500 flex items-center justify-center text-slate-500 hover:text-white transition-all"><i class="fas fa-times text-xs"></i></button>
                 </div>
             </div>
         </header>
@@ -150,7 +156,9 @@
         </main>
     </div>
 
-    <!-- 1. PROFİL MODALI -->
+    <!-- Diğer Tüm Modallar (Aynı Kalıyor) -->
+    <div id="global-tooltip"></div>
+    
     <div id="profileModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] px-4">
         <div class="glass-modal rounded-xl w-full max-w-5xl flex flex-col h-[80vh] modal-content overflow-hidden border-0 shadow-2xl">
             <div class="bg-white border-b border-slate-200 p-5 flex justify-between items-start shrink-0">
@@ -172,7 +180,6 @@
                 </div>
             </div>
 
-            <!-- Profil Sekmeleri ve İçerik Kısmı Aynı Kaldı -->
             <div class="bg-slate-50 border-b border-slate-200 flex overflow-x-auto px-4 shrink-0">
                 <button onclick="switchTab('genel')" id="tabBtn_genel" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-blue-600 border-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-id-card text-sm"></i> Genel</button>
                 <button onclick="switchTab('kurum')" id="tabBtn_kurum" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-building text-sm"></i> Kurum</button>
@@ -251,9 +258,9 @@
         </div>
     </div>
 
-    <!-- 2. İZİN ÇİZELGESİ MODALI (Küçültüldü) -->
+    <!-- 2. İZİN ÇİZELGESİ MODALI (Yatayda Genişletildi w-[96vw]) -->
     <div id="timelineModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] p-4">
-        <div class="glass-modal rounded-xl w-full max-w-6xl h-[85vh] flex flex-col modal-content overflow-hidden border-0 shadow-2xl">
+        <div class="glass-modal rounded-2xl w-[96vw] max-w-[1600px] h-[85vh] flex flex-col modal-content overflow-hidden border-0 shadow-2xl">
             <div class="flex flex-col md:flex-row justify-between items-center p-5 bg-white border-b border-slate-200 gap-4 shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-calendar-alt text-blue-600"></i> İzin Çizelgesi</h3>
                 <div class="flex flex-wrap justify-center gap-5 text-xs font-semibold uppercase bg-slate-50 p-2.5 rounded-lg border border-slate-200">
@@ -278,7 +285,7 @@
 
     <!-- 3. PERSONEL FORMU MODALI -->
     <div id="personnelModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
-        <div class="glass-modal rounded-xl shadow-2xl w-full max-w-[90vw] lg:max-w-6xl flex flex-col h-[85vh] modal-content border-0">
+        <div class="glass-modal rounded-xl shadow-2xl w-[90vw] max-w-6xl flex flex-col h-[85vh] modal-content border-0">
             <div class="flex justify-between items-center border-b border-slate-200 p-4 md:p-5 bg-white shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="formTitle"><i class="fas fa-user-edit text-blue-600"></i> Yeni Personel Kaydı</h3>
                 <div class="flex items-center gap-3">
@@ -372,14 +379,13 @@
 
     <!-- 4. SİSTEM AYARLARI MODALI -->
     <div id="settingsModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
-        <div class="glass-modal rounded-xl w-full max-w-5xl flex flex-col h-[80vh] modal-content border-0 shadow-2xl">
+        <div class="glass-modal rounded-xl w-full max-w-[90vw] flex flex-col h-[80vh] modal-content border-0 shadow-2xl">
             <div class="flex justify-between items-center border-b border-slate-200 p-6 bg-white shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-sliders-h text-blue-600"></i> Sistem Ayarları</h3>
                 <button onclick="closeModal('settingsModal')" class="text-slate-400 hover:text-slate-800 text-lg w-10 h-10 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 flex items-center justify-center transition-all"><i class="fas fa-times"></i></button>
             </div>
             
             <div class="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar bg-slate-50">
-                
                 <div class="bg-white p-5 rounded-xl border border-slate-200 mb-2 flex items-center justify-between shadow-sm">
                     <div>
                         <h4 class="font-bold text-sm text-slate-800 uppercase flex items-center gap-2"><i class="fas fa-database text-blue-500"></i> Aktif Veritabanı Yolu</h4>
@@ -440,7 +446,7 @@
         </div>
     </div>
 
-    <!-- Ayırdığımız JS Dosyamız -->
+    <!-- SİSTEM BEYNİ -->
     <script src="script.js"></script>
 </body>
 </html>
