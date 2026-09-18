@@ -38,7 +38,8 @@ window.addEventListener('scroll', adjustStickyElements);
 
 function openPhotoModal() {
     const src = document.getElementById("pv_foto").src;
-    if(!src || src.includes('placeholder')) return;
+    // Eğer resim bir silüet ise büyütmeye gerek yok
+    if(!src || src.includes('placeholder') || src.includes('data:image/svg')) return;
     document.getElementById("fullSizePhoto").src = src;
     const m = document.getElementById('photoZoomModal');
     m.style.display = 'flex';
@@ -57,13 +58,37 @@ function closePhotoModal() {
     setTimeout(() => { m.style.display = 'none'; }, 300);
 }
 
-// DEĞİŞKENLER VE HESAPLAMALAR
+// DEĞİŞKENLER VE SİLÜETLER
 let personnelData = [];
 let currentFilteredData = [];
 const SYSTEM_TODAY = new Date();
 SYSTEM_TODAY.setHours(0,0,0,0);
+let selectedUserId = null;
+let tlCurrentDate = new Date();
+let uploadedBase64Foto = "";
 
-// EKSİK OLAN FONKSİYON EKLENDİ
+// Kadın ve Erkek için özel internetsiz (SVG) silüetler
+const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
+const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
+
+// Resim yoksa uygun silüeti getiren fonksiyon
+function getAvatarUrl(foto, cinsiyet) {
+    if(foto && foto.trim() !== "" && !foto.includes("via.placeholder.com")) return foto;
+    return (cinsiyet && cinsiyet.toUpperCase() === 'KADIN') ? avatarFemale : avatarMale;
+}
+
+// Formdaki cinsiyet değiştikçe silüeti anında değiştiren fonksiyon
+window.updateFormSilhouette = function() {
+    if(!uploadedBase64Foto) {
+        const currentSrc = document.getElementById("previewFoto").src;
+        if(currentSrc.includes("data:image/svg") || currentSrc.includes("placeholder") || currentSrc.trim() === "") {
+            const cin = document.getElementById("f_cinsiyet").value;
+            document.getElementById("previewFoto").src = getAvatarUrl("", cin);
+        }
+    }
+}
+
+// EKSİK KALAN YAŞ HESAPLAMA (Geri Eklendi)
 function getAge(dateString) {
     if(!dateString) return '-';
     let birthDate = new Date(dateString);
@@ -118,10 +143,6 @@ const statColorsAndIcons = {
     "Teknikerler": { bg: "bg-white", text: "text-fuchsia-600", border: "border-slate-200", icon: "fa-tools" },
     "Demirbaş Sahipleri": { bg: "bg-white", text: "text-lime-600", border: "border-slate-200", icon: "fa-laptop" }
 };
-
-let selectedUserId = null;
-let tlCurrentDate = new Date();
-let uploadedBase64Foto = "";
 
 // EXCEL ÇIKTISI ALMA FONKSİYONU
 function exportToExcel() {
@@ -479,7 +500,8 @@ function renderTable(data) {
                 <td class="px-5 py-3 border-b border-slate-100">
                     <div class="flex items-center gap-4">
                         <div class="relative">
-                            <img src="${p.fotoUrl || 'https://via.placeholder.com/150'}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-sm bg-white">
+                            <!-- TABLODA SİLÜET FONKSİYONU KULLANILDI -->
+                            <img src="${getAvatarUrl(p.fotoUrl, p.cinsiyet)}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-sm bg-slate-100 p-0.5">
                         </div>
                         <div>
                             <div class="font-bold text-slate-800 text-[13px] group-hover:text-blue-600 transition-colors uppercase force-upper">${p.adSoyad}</div>
@@ -540,7 +562,8 @@ function openProfileModal(id) {
 
     const setVal = (eId, val) => { const el = document.getElementById(eId); if(el) el.innerHTML = val; };
 
-    document.getElementById("pv_foto").src = p.fotoUrl || 'https://via.placeholder.com/150';
+    // PROFİL EKRANINDA SİLÜET FONKSİYONU KULLANILDI
+    document.getElementById("pv_foto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
     setVal("pv_ad", (p.adSoyad || "").toLocaleUpperCase('tr-TR'));
     setVal("pv_gorev", `${p.sirket || ""} / ${p.gorev || ""}`.toLocaleUpperCase('tr-TR'));
     
@@ -899,9 +922,9 @@ function openPersonnelForm() {
     document.getElementById("personnelForm").reset(); 
     document.getElementById("formId").value = ""; 
     uploadedBase64Foto = "";
-    document.getElementById("previewFoto").src = "https://via.placeholder.com/150";
     document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-plus text-blue-600"></i> Yeni Personel Kaydı';
     openModal('personnelModal'); 
+    updateFormSilhouette(); // Açılışta silüeti cinsiyet kutusuna göre ayarlar
 }
 
 function editPersonnelFromProfile() { 
@@ -909,8 +932,10 @@ function editPersonnelFromProfile() {
     setTimeout(() => {
         const p = personnelData.find(x => x.id === selectedUserId);
         document.getElementById("formId").value = p.id;
-        uploadedBase64Foto = p.fotoUrl || "";
-        document.getElementById("previewFoto").src = uploadedBase64Foto || "https://via.placeholder.com/150";
+        uploadedBase64Foto = ""; 
+        
+        // Forma kişinin fotoğrafı (veya silüeti) yüklenir
+        document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
         
         const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
@@ -953,7 +978,8 @@ function savePersonnel() {
             return;
         }
 
-        const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "https://via.placeholder.com/150" };
+        // FOTOĞRAF MANTIĞI: Eski placeholder silindi, ya base64 atılır ya da boş "" bırakılır (silüet için)
+        const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "" };
         const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
         
         fields.forEach(f => { 
@@ -969,7 +995,8 @@ function savePersonnel() {
             const old = personnelData.find(x=>x.id === pData.id);
             pData.izinler = old.izinler || []; 
             pData.zimmetler = old.zimmetler || [];
-            if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl;
+            // Eğer yeni fotoğraf yüklenmediyse eski fotoğrafı koru (eski foto silüet ise yine boş kalsın)
+            if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl || ""; 
             personnelData[personnelData.findIndex(x=>x.id===pData.id)] = pData;
         } else { personnelData.unshift(pData); }
         
