@@ -5,7 +5,8 @@ const fsPromises = require('fs').promises;
 const sqlite3 = require('sqlite3').verbose();
 
 const configPath = path.join(app.getPath('userData'), 'dbconfig.json');
-const defaultNetworkDir = '\\\\192.168.101.55\\Fen_Isleri_Dairesi_Bsk\\BURAK TONOZ';
+const defaultNetworkDir = '\\\\192.168.101.194\\Numarataj_tarama\\NUMARATAJ PROGRAMLAR\\PERSONEL YÖNETİM SİSTEMİ';
+
 let dbPath = '';
 let db = null;
 let isDbConnected = false;
