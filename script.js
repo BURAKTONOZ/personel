@@ -1,4 +1,4 @@
-// YARDIMCI ARAÇLAR (Alet Çantası)
+// YARDIMCI ARAÇLAR
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
     document.getElementById("spinner-overlay").style.display = "flex"; 
@@ -129,7 +129,6 @@ function checkLogin() {
                     document.getElementById('dbPathModal').style.display = 'flex';
                 } else {
                     document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('custom-titlebar').style.display = 'flex';
                     document.getElementById('appContainer').style.display = 'flex';
                     if (window.api) window.api.maximizeWindow(); 
                     
@@ -139,7 +138,6 @@ function checkLogin() {
             } else {
                 hideSpinner();
                 document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('custom-titlebar').style.display = 'flex';
                 document.getElementById('appContainer').style.display = 'flex';
                 showToast("Tarayıcı modundasınız, veritabanına bağlanılamaz.", "error");
                 initSystem();
@@ -169,7 +167,6 @@ async function saveNewDbPath() {
     
     if (result.success) {
         document.getElementById('dbPathModal').style.display = 'none';
-        document.getElementById('custom-titlebar').style.display = 'flex';
         document.getElementById('appContainer').style.display = 'flex';
         if (window.api) window.api.maximizeWindow();
         
@@ -184,7 +181,6 @@ async function saveNewDbPath() {
 function changeDbPathFromSettings() {
     closeModal('settingsModal');
     document.getElementById('appContainer').style.display = 'none';
-    document.getElementById('custom-titlebar').style.display = 'none';
     document.getElementById('dbPathModal').style.display = 'flex';
 }
 
@@ -627,8 +623,11 @@ function changeMonth(dir) {
     generateTimeline();
 }
 
+// Tooltip (Bilgi Ekranı) tetikleyicileri düzeltildi
 window.showTooltip = function(e, el) {
     const tt = document.getElementById('global-tooltip');
+    if(!tt) return;
+    
     const tur = el.getAttribute('data-tur');
     const tarih = el.getAttribute('data-tarih');
     const desc = el.getAttribute('data-desc');
@@ -643,15 +642,16 @@ window.showTooltip = function(e, el) {
     tt.innerHTML = `
         <div class='font-bold text-[12px] mb-1.5 flex items-center gap-1.5 uppercase' style='color:${colorHex}'><i class="fas fa-info-circle"></i> ${tur}</div>
         <div class='text-slate-300 font-semibold mb-1.5 border-b border-slate-600 pb-2 text-[10px] uppercase tracking-wide'>Tarih: ${tarih}</div>
-        <div class='text-white mt-1 uppercase'>${desc}</div>
+        <div class='text-white mt-1 uppercase text-[11px] font-medium'>${desc}</div>
     `;
     tt.style.display = 'block';
-    updateTooltip(e);
+    setTimeout(() => { tt.style.opacity = '1'; }, 10);
+    window.updateTooltip(e);
 }
 
 window.updateTooltip = function(e) {
     const tt = document.getElementById('global-tooltip');
-    if(tt.style.display === 'block') {
+    if(tt && tt.style.display === 'block') {
         let left = e.clientX + 20;
         let top = e.clientY + 20;
         if (left + 240 > window.innerWidth) left = e.clientX - 260;
@@ -661,7 +661,13 @@ window.updateTooltip = function(e) {
     }
 }
 
-window.hideTooltip = function() { document.getElementById('global-tooltip').style.display = 'none'; }
+window.hideTooltip = function() { 
+    const tt = document.getElementById('global-tooltip');
+    if(tt) {
+        tt.style.opacity = '0';
+        setTimeout(() => { tt.style.display = 'none'; }, 200);
+    }
+}
 
 function generateTimeline() {
     const inputVal = document.getElementById("timelineMonth").value;
@@ -717,7 +723,9 @@ function generateTimeline() {
                         
                         let safeDesc = (iz.aciklama || 'Açıklama belirtilmemiş').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
                         let toolTipDate = String(d).padStart(2,'0') + "." + String(m+1).padStart(2,'0') + "." + y;
-                        tooltipEvents = `data-tur="${iz.tur}" data-tarih="${toolTipDate}" data-desc="${safeDesc}" data-color="${clColor}" onmouseenter="showTooltip(event, this)" onmousemove="updateTooltip(event)" onmouseleave="hideTooltip()"`;
+                        
+                        // Olay dinleyicileri (Event Listeners) düzeltildi
+                        tooltipEvents = `data-tur="${iz.tur}" data-tarih="${toolTipDate}" data-desc="${safeDesc}" data-color="${clColor}" onmouseover="showTooltip(event, this)" onmousemove="updateTooltip(event)" onmouseout="hideTooltip()"`;
                         break;
                     }
                 }
