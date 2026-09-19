@@ -65,7 +65,7 @@ SYSTEM_TODAY.setHours(0,0,0,0);
 let selectedUserId = null;
 let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
-window.tooltipTimeout = null; // YENİ: Titreme sorununu çözecek hafıza mekanizması
+window.tooltipTimeout = null; 
 
 const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
@@ -77,11 +77,8 @@ function getAvatarUrl(foto, cinsiyet) {
 
 window.updateFormSilhouette = function() {
     if(!uploadedBase64Foto) {
-        const currentSrc = document.getElementById("previewFoto").src;
-        if(currentSrc.includes("data:image/svg") || currentSrc.includes("placeholder") || currentSrc.trim() === "") {
-            const cin = document.getElementById("f_cinsiyet").value;
-            document.getElementById("previewFoto").src = getAvatarUrl("", cin);
-        }
+        const cin = document.getElementById("f_cinsiyet").value || "ERKEK";
+        document.getElementById("previewFoto").src = getAvatarUrl("", cin);
     }
 }
 
@@ -94,11 +91,11 @@ function getAge(dateString) {
     return age;
 }
 
-// YENİ: NUMARATAJ ŞUBE MÜDÜRLÜĞÜ SABİT AYARLARI
+// SABİT AYARLAR (BOŞANMIŞ KALDIRILDI)
 let systemSettings = {
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
-        medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli", "Boşanmış"] },
+        medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli"] },
         tahsil: { label: "Tahsil", values: ["İlköğretim", "Lise", "Önlisans", "Lisans", "Yüksek Lisans"] },
         kadroSirket: { label: "Kadro / Şirket", values: ["MEMUR", "ŞİRKET (BELTAŞ)", "ŞİRKET (BELKA)"] },
         unvan: { label: "Ünvanı", values: ["GIDA MÜHENDİSİ", "TEKNİKER", "TEKNİSYEN", "BİLGİSAYAR İŞLETMENİ", "BEKÇİ", "MUTEMET", "VERİ HAZIRLAMA", "HARİTA MÜHENDİSİ", "HARİTA TEKNİKERİ", "VASIFSIZ ELEMAN", "OFİS TEKNİKERİ", "ENGELLİ İŞÇİ", "ŞANTİYE TEKNİKERİ", "ŞANTİYE SÜRVEYANI", "ÇAĞRI MERKEZİ OPERATÖRÜ", "MAKAM PERSONELİ", "BÜRO PERSONELİ", "YARDIMCI PERSONEL", "HALKLA İLİŞKİLER", "OPERATÖR", "USTA", "AĞIR VASITA ŞOFÖRÜ", "KISIM ŞEFİ", "KANTAR İŞÇİSİ", "BİYOLOG"] },
@@ -508,15 +505,17 @@ function applyFilters() {
         
         let mDurum = !document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value.toLocaleUpperCase('tr-TR');
         let mKadroSirket = !document.getElementById("filter-kadroSirket").value || p.kadroSirket === document.getElementById("filter-kadroSirket").value || p.kadroSirket === document.getElementById("filter-kadroSirket").value.toLocaleUpperCase('tr-TR');
-        let mUnvan = !document.getElementById("filter-unvan").value || p.unvan === document.getElementById("filter-unvan").value || p.unvan === document.getElementById("filter-unvan").value.toLocaleUpperCase('tr-TR');
+        // YENİ: BİNA FİLTRESİ (UNVAN YERİNE)
+        let mBina = !document.getElementById("filter-bina").value || p.bina === document.getElementById("filter-bina").value || p.bina === document.getElementById("filter-bina").value.toLocaleUpperCase('tr-TR');
         let mSeflik = !document.getElementById("filter-seflik").value || p.seflik === document.getElementById("filter-seflik").value || p.seflik === document.getElementById("filter-seflik").value.toLocaleUpperCase('tr-TR');
         
-        return matchSearch && mDurum && mKadroSirket && mUnvan && mSeflik;
+        return matchSearch && mDurum && mKadroSirket && mBina && mSeflik;
     });
     renderTable(currentFilteredData);
 }
 
-["filter-search", "filter-durum", "filter-kadroSirket", "filter-unvan", "filter-seflik"].forEach(id => {
+// FİLTRE DİNLEYİCİLERİ GÜNCELLENDİ
+["filter-search", "filter-durum", "filter-kadroSirket", "filter-bina", "filter-seflik"].forEach(id => {
     document.getElementById(id).addEventListener(id === "filter-search" ? "input" : "change", applyFilters);
 });
 
@@ -549,7 +548,6 @@ function openProfileModal(id) {
     setVal("pv_acilYakinlik", (p.acilYakinlik||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_acilTel", p.acilTel || '-'); 
     
-    // YENİ ALANLAR PROFİL EKRANINA EŞLENDİ
     setVal("pv_kadroSirket", (p.kadroSirket||"-").toLocaleUpperCase('tr-TR'));
     setVal("pv_unvan", (p.unvan||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_seflik", (p.seflik||"-").toLocaleUpperCase('tr-TR')); 
@@ -566,24 +564,48 @@ function openProfileModal(id) {
 }
 
 function switchTab(t) {
-    document.querySelectorAll('.tab-panel').forEach(el => {
-        el.classList.add('hidden');
-        el.classList.remove('animate-fadeIn');
-    });
+    document.querySelectorAll('.tab-panel').forEach(el => { el.classList.add('hidden'); el.classList.remove('animate-fadeIn'); });
     const aT = document.getElementById('tab_' + t); 
-    if(aT) {
-        aT.classList.remove('hidden');
-        aT.classList.add('animate-fadeIn');
-    }
+    if(aT) { aT.classList.remove('hidden'); aT.classList.add('animate-fadeIn'); }
     
-    document.querySelectorAll('.profile-tab-btn').forEach(b => { 
+    document.querySelectorAll('.profile-tab-btn').forEach(b => { b.classList.remove('border-blue-600', 'text-blue-600'); b.classList.add('border-transparent', 'text-slate-500'); });
+    const aB = document.getElementById('tabBtn_' + t);
+    if(aB) { aB.classList.remove('border-transparent', 'text-slate-500'); aB.classList.add('border-blue-600', 'text-blue-600'); }
+}
+
+// YENİ KAYIT FORMU YATAY SEKME (TAB) FONKSİYONLARI
+let currentFormTabIdx = 0;
+const formTabs = ['kisisel', 'kurum', 'iletisim'];
+
+function switchFormTab(t) {
+    currentFormTabIdx = formTabs.indexOf(t);
+    document.querySelectorAll('.form-tab-panel').forEach(el => {
+        el.classList.add('hidden'); el.classList.remove('animate-fadeIn');
+    });
+    const aT = document.getElementById('formTab_' + t); 
+    if(aT) { aT.classList.remove('hidden'); aT.classList.add('animate-fadeIn'); }
+    
+    document.querySelectorAll('.form-tab-btn').forEach(b => { 
         b.classList.remove('border-blue-600', 'text-blue-600'); 
         b.classList.add('border-transparent', 'text-slate-500'); 
     });
-    const aB = document.getElementById('tabBtn_' + t);
+    const aB = document.getElementById('formTabBtn_' + t);
     if(aB) { 
         aB.classList.remove('border-transparent', 'text-slate-500'); 
         aB.classList.add('border-blue-600', 'text-blue-600'); 
+    }
+
+    // İleri / Geri Butonlarının Görünürlüğünü Ayarla
+    const btnPrev = document.getElementById('formBtnPrev');
+    const btnNext = document.getElementById('formBtnNext');
+    if(btnPrev) btnPrev.classList.toggle('hidden', currentFormTabIdx === 0);
+    if(btnNext) btnNext.classList.toggle('hidden', currentFormTabIdx === formTabs.length - 1);
+}
+
+function navigateFormTab(dir) {
+    let newIdx = currentFormTabIdx + dir;
+    if(newIdx >= 0 && newIdx < formTabs.length) {
+        switchFormTab(formTabs[newIdx]);
     }
 }
 
@@ -738,17 +760,10 @@ function saveBulkIzin() {
     
     setTimeout(() => {
         let islenenPersonelSayisi = 0;
-        
         personnelData.forEach(p => {
             if(p.durum === "Aktif" || p.durum === "AKTİF") {
                 p.izinler = p.izinler || [];
-                p.izinler.push({ 
-                    id: Date.now() + Math.floor(Math.random()*10000), 
-                    tur: tur, 
-                    baslangic: bas, 
-                    bitis: bit, 
-                    aciklama: acik 
-                });
+                p.izinler.push({ id: Date.now() + Math.floor(Math.random()*10000), tur: tur, baslangic: bas, bitis: bit, aciklama: acik });
                 islenenPersonelSayisi++;
             }
         });
@@ -759,9 +774,7 @@ function saveBulkIzin() {
             if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
             hideSpinner();
             showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
-        } else {
-            hideSpinner();
-        }
+        } else { hideSpinner(); }
     }, 500);
 }
 
@@ -771,17 +784,10 @@ function changeMonth(dir) {
     generateTimeline();
 }
 
-// TİTREME (FLICKER) HATASI İÇİN YENİ TOOLTIP YÖNETİMİ
 window.showTooltip = function(e, el) {
-    // EĞER ÖNCEKİ KUTUDAN KALAN BİR KAPANMA EMRİ VARSA ONU İPTAL ET
-    if (window.tooltipTimeout) {
-        clearTimeout(window.tooltipTimeout);
-        window.tooltipTimeout = null;
-    }
-
+    if (window.tooltipTimeout) { clearTimeout(window.tooltipTimeout); window.tooltipTimeout = null; }
     const tt = document.getElementById('global-tooltip');
     if(!tt) return;
-    
     const tur = el.getAttribute('data-tur');
     const tarih = el.getAttribute('data-tarih');
     const desc = el.getAttribute('data-desc');
@@ -812,10 +818,7 @@ window.hideTooltip = function() {
     const tt = document.getElementById('global-tooltip');
     if(tt) { 
         tt.style.opacity = '0'; 
-        // KAPANMA EMRİNİ HAFIZAYA AL
-        window.tooltipTimeout = setTimeout(() => { 
-            tt.style.display = 'none'; 
-        }, 200); 
+        window.tooltipTimeout = setTimeout(() => { tt.style.display = 'none'; }, 200); 
     }
 }
 
@@ -950,13 +953,23 @@ function checkDurumStatus() {
     }
 }
 
+// YENİ KAYIT FORMU AÇILIŞ MANTIĞI (Hayalet fotoğraf sıfırlandı, Tab en başa alındı)
 function openPersonnelForm() { 
     document.getElementById("personnelForm").reset(); 
     document.getElementById("formId").value = ""; 
-    uploadedBase64Foto = "";
+    
+    // Hayalet fotoğrafı siliyoruz
+    uploadedBase64Foto = ""; 
+    const fileInput = document.getElementById("f_fotoFile");
+    if(fileInput) fileInput.value = ""; // Dosya seçici metnini temizle
+
     document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-plus text-blue-600"></i> Yeni Personel Kaydı';
+    
+    switchFormTab('kisisel'); // Her zaman 1. sekmeden başlasın
     openModal('personnelModal'); 
-    updateFormSilhouette(); 
+    
+    // Select kutusunun "Erkek/Kadın" verisini okuyabilmesi için minik bir gecikmeyle silüeti güncelliyoruz
+    setTimeout(() => { updateFormSilhouette(); }, 50); 
 }
 
 function editPersonnelFromProfile() { 
@@ -964,11 +977,16 @@ function editPersonnelFromProfile() {
     setTimeout(() => {
         const p = personnelData.find(x => x.id === selectedUserId);
         document.getElementById("formId").value = p.id;
-        uploadedBase64Foto = ""; 
+        
+        // Sadece gerçek bir fotoğraf varsa hafızaya al, silüet ise boş bırak
+        uploadedBase64Foto = p.fotoUrl && !p.fotoUrl.includes('data:image/svg') && !p.fotoUrl.includes('placeholder') ? p.fotoUrl : "";
+        
+        const fileInput = document.getElementById("f_fotoFile");
+        if(fileInput) fileInput.value = ""; // Dosya seçici metnini temizle
+
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
         
-        // YENİ ALAN İSİMLERİ FORMA AKTARILIYOR
         const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
         
         fields.forEach(f => { 
@@ -981,6 +999,8 @@ function editPersonnelFromProfile() {
                 } else { el.value = val; }
             }
         });
+        
+        switchFormTab('kisisel'); // Düzenle derken de 1. sekmeden başlasın
         openModal('personnelModal');
     }, 350); 
 }
@@ -998,11 +1018,14 @@ function savePersonnel() {
         const ayrilisVal = document.getElementById("f_ayrilisTarihi").value;
         if((durumVal === "Pasif" || durumVal === "PASİF") && !ayrilisVal) {
             showToast("Durumu 'Pasif' olan personel için 'Ayrılış Tarihi' girmek zorunludur!", "error");
-            document.getElementById("f_ayrilisTarihi").focus(); return;
+            
+            // Eğer form Kurum sekmesinde değilse kullanıcı göremez, onu o sekmeye at
+            switchFormTab('kurum');
+            document.getElementById("f_ayrilisTarihi").focus(); 
+            return;
         }
-        const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "" };
         
-        // YENİ ALAN İSİMLERİ VERİTABANINA AKTARILIYOR
+        const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "" };
         const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
         
         fields.forEach(f => { 
@@ -1010,6 +1033,7 @@ function savePersonnel() {
             if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "tcNo"].includes(f)) { pData[f] = rawVal; } 
             else { pData[f] = rawVal ? rawVal.toLocaleUpperCase('tr-TR') : ""; }
         });
+
         if(idVal) {
             const old = personnelData.find(x=>x.id === pData.id);
             pData.izinler = old.izinler || []; pData.zimmetler = old.zimmetler || [];
