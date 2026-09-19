@@ -65,6 +65,7 @@ SYSTEM_TODAY.setHours(0,0,0,0);
 let selectedUserId = null;
 let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
+window.tooltipTimeout = null; // YENİ: Titreme sorununu çözecek hafıza mekanizması
 
 const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
@@ -93,15 +94,16 @@ function getAge(dateString) {
     return age;
 }
 
+// YENİ: NUMARATAJ ŞUBE MÜDÜRLÜĞÜ SABİT AYARLARI
 let systemSettings = {
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
         medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli", "Boşanmış"] },
         tahsil: { label: "Tahsil", values: ["İlköğretim", "Lise", "Önlisans", "Lisans", "Yüksek Lisans"] },
-        sirket: { label: "Şirket / Kurum", values: ["ABB Kadrolu", "PORTAŞ", "BUGSAŞ", "ANFA", "BELKA"] },
-        bina: { label: "Bina / Birim", values: ["ABB Ana Bina", "101 Harita Şefliği", "Arazi Ekibi", "Arşiv"] },
-        kadro: { label: "Kadro Türü", values: ["Memur", "Sözleşmeli Memur", "İşçi", "Şirket Elemanı"] },
-        gorev: { label: "Fiili Görev", values: ["Harita Mühendisi", "Harita Teknikeri", "Veri Giriş Personeli", "Topoğraf", "Şef"] },
+        kadroSirket: { label: "Kadro / Şirket", values: ["MEMUR", "ŞİRKET (BELTAŞ)", "ŞİRKET (BELKA)"] },
+        unvan: { label: "Ünvanı", values: ["GIDA MÜHENDİSİ", "TEKNİKER", "TEKNİSYEN", "BİLGİSAYAR İŞLETMENİ", "BEKÇİ", "MUTEMET", "VERİ HAZIRLAMA", "HARİTA MÜHENDİSİ", "HARİTA TEKNİKERİ", "VASIFSIZ ELEMAN", "OFİS TEKNİKERİ", "ENGELLİ İŞÇİ", "ŞANTİYE TEKNİKERİ", "ŞANTİYE SÜRVEYANI", "ÇAĞRI MERKEZİ OPERATÖRÜ", "MAKAM PERSONELİ", "BÜRO PERSONELİ", "YARDIMCI PERSONEL", "HALKLA İLİŞKİLER", "OPERATÖR", "USTA", "AĞIR VASITA ŞOFÖRÜ", "KISIM ŞEFİ", "KANTAR İŞÇİSİ", "BİYOLOG"] },
+        seflik: { label: "Çalıştığı Şeflik", values: ["MÜDÜR", "NUMARATAJ ŞEFLİĞİ", "BÜRO ŞEFLİĞİ", "ADRES YÖNETİM VE UYGULAMA ŞEFLİĞİ"] },
+        bina: { label: "Çalıştığı Bina", values: ["ANA BİNA", "1011 YERLEŞKESİ"] },
         kanGrubu: { label: "Kan Grubu", values: ["Belirtilmemiş", "A Rh+", "A Rh-", "B Rh+", "B Rh-", "AB Rh+", "AB Rh-", "0 Rh+", "0 Rh-"] },
         acilYakinlik: { label: "Yakınlık", values: ["Eşi", "Babası", "Annesi", "Kardeşi", "Çocuğu", "Arkadaşı"] },
         durum: { label: "Çalışma Durumu", values: ["Aktif", "Pasif"] }
@@ -110,14 +112,13 @@ let systemSettings = {
         { id: "total", title: "Toplam Personel", type: "all", active: true },
         { id: "active", title: "Aktif Çalışan", type: "durum", value: "Aktif", active: true },
         { id: "passive", title: "Pasif Personel", type: "durum", value: "Pasif", active: false },
-        { id: "memur", title: "Kadrolu Memur", type: "kadro", value: "Memur", active: true },
-        { id: "isci", title: "İşçi Personel", type: "kadro", value: "İşçi", active: true },
-        { id: "muhendis", title: "Mühendisler", type: "gorev", value: "Harita Mühendisi", active: true },
+        { id: "memur", title: "Kadrolu Memur", type: "kadroSirket", value: "MEMUR", active: true },
+        { id: "beltas", title: "Beltaş Personeli", type: "kadroSirket", value: "ŞİRKET (BELTAŞ)", active: true },
+        { id: "belka", title: "Belka Personeli", type: "kadroSirket", value: "ŞİRKET (BELKA)", active: true },
+        { id: "muhendis", title: "Harita Mühendisleri", type: "unvan", value: "HARİTA MÜHENDİSİ", active: false },
+        { id: "numarataj", title: "Numarataj Şefliği", type: "seflik", value: "NUMARATAJ ŞEFLİĞİ", active: false },
         { id: "kadin", title: "Kadın Personel", type: "cinsiyet", value: "Kadın", active: false },
         { id: "erkek", title: "Erkek Personel", type: "cinsiyet", value: "Erkek", active: false },
-        { id: "sozlesmeli", title: "Sözleşmeli Personel", type: "kadro", value: "Sözleşmeli Memur", active: false },
-        { id: "sirket_elemani", title: "Şirket Personeli", type: "kadro", value: "Şirket Elemanı", active: false },
-        { id: "tekniker", title: "Teknikerler", type: "gorev", value: "Harita Teknikeri", active: false },
         { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
         { id: "izinli", title: "Şu An İzinde", type: "custom", func: "izinli", active: true }
     ]
@@ -128,14 +129,13 @@ const statColorsAndIcons = {
     "Aktif Çalışan": { bg: "bg-white", text: "text-emerald-600", border: "border-slate-200", icon: "fa-user-check" },
     "Pasif Personel": { bg: "bg-white", text: "text-rose-600", border: "border-slate-200", icon: "fa-user-times" },
     "Kadrolu Memur": { bg: "bg-white", text: "text-blue-600", border: "border-slate-200", icon: "fa-user-tie" },
-    "İşçi Personel": { bg: "bg-white", text: "text-amber-600", border: "border-slate-200", icon: "fa-hard-hat" },
-    "Mühendisler": { bg: "bg-white", text: "text-indigo-600", border: "border-slate-200", icon: "fa-drafting-compass" },
+    "Beltaş Personeli": { bg: "bg-white", text: "text-amber-600", border: "border-slate-200", icon: "fa-hard-hat" },
+    "Belka Personeli": { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-id-badge" },
+    "Harita Mühendisleri": { bg: "bg-white", text: "text-indigo-600", border: "border-slate-200", icon: "fa-drafting-compass" },
+    "Numarataj Şefliği": { bg: "bg-white", text: "text-fuchsia-600", border: "border-slate-200", icon: "fa-sitemap" },
     "Kadın Personel": { bg: "bg-white", text: "text-pink-600", border: "border-slate-200", icon: "fa-female" },
-    "Şu An İzinde": { bg: "bg-white", text: "text-orange-500", border: "border-slate-200", icon: "fa-umbrella-beach" },
     "Erkek Personel": { bg: "bg-white", text: "text-cyan-600", border: "border-slate-200", icon: "fa-male" },
-    "Sözleşmeli Personel": { bg: "bg-white", text: "text-teal-600", border: "border-slate-200", icon: "fa-file-signature" },
-    "Şirket Personeli": { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-id-badge" },
-    "Teknikerler": { bg: "bg-white", text: "text-fuchsia-600", border: "border-slate-200", icon: "fa-tools" },
+    "Şu An İzinde": { bg: "bg-white", text: "text-orange-500", border: "border-slate-200", icon: "fa-umbrella-beach" },
     "Demirbaş Sahipleri": { bg: "bg-white", text: "text-lime-600", border: "border-slate-200", icon: "fa-laptop" }
 };
 
@@ -158,11 +158,12 @@ function exportToExcel() {
             "Telefon Numarası": p.tel || "",
             "Kan Grubu": p.kanGrubu || "",
             "Ev Adresi": p.adres || "",
-            "Şirket / Kurum": p.sirket || "",
+            "Kadro / Şirket": p.kadroSirket || "",
+            "Ünvanı": p.unvan || "",
+            "Çalıştığı Şeflik": p.seflik || "",
             "Çalıştığı Bina": p.bina || "",
-            "Kadro Türü": p.kadro || "",
             "Sicil Numarası": p.sicil || "",
-            "Fiili Görev": p.gorev || "",
+            "Fiilen Yaptığı Görev": p.fiiliGorev || "",
             "İşe Başlama Tarihi": p.gelisTarihi ? formatDateTR(p.gelisTarihi) : "",
             "İşten Ayrılış Tarihi": p.ayrilisTarihi ? formatDateTR(p.ayrilisTarihi) : "",
             "Çalışma Durumu": p.durum || "",
@@ -238,9 +239,7 @@ function checkLogin() {
 async function browseFolder() {
     if (typeof window.api === 'undefined') return;
     const folderPath = await window.api.selectFolder();
-    if (folderPath) {
-        document.getElementById('selectedDbPath').value = folderPath;
-    }
+    if (folderPath) { document.getElementById('selectedDbPath').value = folderPath; }
 }
 
 async function saveNewDbPath() {
@@ -286,7 +285,6 @@ function startPolling() {
             if (newData && newData.personnel) {
                 let parsedData = Array.isArray(newData.personnel) ? newData.personnel : Object.values(newData.personnel);
                 personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
-                
                 personnelData.forEach(p => {
                     if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
                     if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
@@ -304,7 +302,6 @@ function startPolling() {
     }, 5000);
 }
 
-// Çıkış (LogOut) Fonksiyonu: HTML'deki Buton Silinmiş Olsa da Teknik Güvenlik İçin Kodda Durabilir
 function logOut() {
     if(confirm("Sistemden çıkış yapmak istediğinize emin misiniz?")) {
         showSpinner("Çıkış Yapılıyor...");
@@ -477,8 +474,8 @@ function renderTable(data) {
                     </div>
                 </td>
                 <td class="px-5 py-3 border-b border-slate-100">
-                    <div class="font-bold text-slate-700 text-xs uppercase">${p.sirket}</div>
-                    <div class="text-slate-600 text-[11px] mt-1 font-semibold">💼 <span class="text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">${p.gorev}</span> (${p.kadro})</div>
+                    <div class="font-bold text-slate-700 text-xs uppercase">${p.unvan || '-'}</div>
+                    <div class="text-slate-600 text-[11px] mt-1 font-semibold">💼 <span class="text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">${p.seflik || '-'}</span> (${p.kadroSirket || '-'})</div>
                     <div class="text-[10px] text-slate-500 font-mono mt-1 font-medium flex items-center gap-2 uppercase">🏷️ Sicil: ${p.sicil || '-'} <span class="text-slate-300">|</span> ${tarihBilgisi}</div>
                 </td>
                 <td class="px-5 py-3 border-b border-slate-100">
@@ -508,16 +505,18 @@ function applyFilters() {
         let pAd = p.adSoyad ? p.adSoyad.toLocaleUpperCase('tr-TR') : "";
         let pSicil = p.sicil ? p.sicil.toLocaleUpperCase('tr-TR') : "";
         let matchSearch = pAd.includes(search) || p.tcNo.includes(search) || pSicil.includes(search) || (p.tel||"").includes(search);
+        
         let mDurum = !document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value.toLocaleUpperCase('tr-TR');
-        let mSirket = !document.getElementById("filter-sirket").value || p.sirket === document.getElementById("filter-sirket").value || p.sirket === document.getElementById("filter-sirket").value.toLocaleUpperCase('tr-TR');
-        let mBina = !document.getElementById("filter-bina").value || p.bina === document.getElementById("filter-bina").value || p.bina === document.getElementById("filter-bina").value.toLocaleUpperCase('tr-TR');
-        let mKadro = !document.getElementById("filter-kadro").value || p.kadro === document.getElementById("filter-kadro").value || p.kadro === document.getElementById("filter-kadro").value.toLocaleUpperCase('tr-TR');
-        return matchSearch && mDurum && mSirket && mBina && mKadro;
+        let mKadroSirket = !document.getElementById("filter-kadroSirket").value || p.kadroSirket === document.getElementById("filter-kadroSirket").value || p.kadroSirket === document.getElementById("filter-kadroSirket").value.toLocaleUpperCase('tr-TR');
+        let mUnvan = !document.getElementById("filter-unvan").value || p.unvan === document.getElementById("filter-unvan").value || p.unvan === document.getElementById("filter-unvan").value.toLocaleUpperCase('tr-TR');
+        let mSeflik = !document.getElementById("filter-seflik").value || p.seflik === document.getElementById("filter-seflik").value || p.seflik === document.getElementById("filter-seflik").value.toLocaleUpperCase('tr-TR');
+        
+        return matchSearch && mDurum && mKadroSirket && mUnvan && mSeflik;
     });
     renderTable(currentFilteredData);
 }
 
-["filter-search", "filter-durum", "filter-sirket", "filter-bina", "filter-kadro"].forEach(id => {
+["filter-search", "filter-durum", "filter-kadroSirket", "filter-unvan", "filter-seflik"].forEach(id => {
     document.getElementById(id).addEventListener(id === "filter-search" ? "input" : "change", applyFilters);
 });
 
@@ -530,7 +529,7 @@ function openProfileModal(id) {
 
     document.getElementById("pv_foto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
     setVal("pv_ad", (p.adSoyad || "").toLocaleUpperCase('tr-TR'));
-    setVal("pv_gorev", `${p.sirket || ""} / ${p.gorev || ""}`.toLocaleUpperCase('tr-TR'));
+    setVal("pv_gorev", `${p.unvan || ""} / ${p.seflik || ""}`.toLocaleUpperCase('tr-TR'));
     
     const durumEl = document.getElementById("pv_durum");
     if(durumEl) {
@@ -549,11 +548,14 @@ function openProfileModal(id) {
     setVal("pv_acilAd", (p.acilKisi||"-").toLocaleUpperCase('tr-TR'));
     setVal("pv_acilYakinlik", (p.acilYakinlik||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_acilTel", p.acilTel || '-'); 
-    setVal("pv_sirket", (p.sirket||"-").toLocaleUpperCase('tr-TR'));
+    
+    // YENİ ALANLAR PROFİL EKRANINA EŞLENDİ
+    setVal("pv_kadroSirket", (p.kadroSirket||"-").toLocaleUpperCase('tr-TR'));
+    setVal("pv_unvan", (p.unvan||"-").toLocaleUpperCase('tr-TR')); 
+    setVal("pv_seflik", (p.seflik||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_bina", (p.bina||"-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_kadro", (p.kadro||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_sicil", (p.sicil||"-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_gorevModal", (p.gorev||"-").toLocaleUpperCase('tr-TR')); 
+    setVal("pv_fiiliGorev", (p.fiiliGorev||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_baslama", formatDateTR(p.gelisTarihi) || '-'); 
     setVal("pv_ayrilis", formatDateTR(p.ayrilisTarihi) || 'Halen Çalışıyor');
 
@@ -600,7 +602,6 @@ function openIzinForm() {
     openModal('addIzinModal');
 }
 
-// YENİ: TOPLU İZİN FORMU AÇILIŞI
 function openBulkIzinForm() {
     document.getElementById('bi_tur').selectedIndex = 0;
     document.getElementById('bi_bas').value = '';
@@ -646,7 +647,6 @@ function renderIzinTable() {
     const tb = document.getElementById("izinTableBody"); if(!tb) return; tb.innerHTML = "";
     const p = personnelData.find(x => x.id === selectedUserId);
     
-    // YENİ: YILLIK İZİN HESAPLAMA (ÖZET KUTULARI İÇİN)
     let yillik = 0, rapor = 0, idari = 0, saatlik = 0;
     const currentYear = SYSTEM_TODAY.getFullYear();
 
@@ -655,7 +655,6 @@ function renderIzinTable() {
             let dBas = new Date(iz.baslangic); dBas.setHours(0,0,0,0);
             let dBit = new Date(iz.bitis); dBit.setHours(23,59,59,999);
             
-            // İzin aralığındaki her bir günü kontrol edip, sadece BU YILA ait olanları sayar
             let tempDate = new Date(dBas);
             let gunSayisi = 0;
             while(tempDate <= dBit) {
@@ -672,7 +671,6 @@ function renderIzinTable() {
         });
     }
 
-    // ÖZET KUTULARINI HTML'E YAZDIRMA
     const summaryContainer = document.getElementById("izinSummaryContainer");
     if(summaryContainer) {
         summaryContainer.innerHTML = `
@@ -722,7 +720,6 @@ function deleteIzin(id) {
     } catch (error) { showToast("İzin silinirken hata oluştu.", "error"); }
 }
 
-// YENİ: TOPLU İZİN KAYDETME FONKSİYONU
 function saveBulkIzin() {
     const tur = document.getElementById("bi_tur").value;
     const bas = document.getElementById("bi_bas").value;
@@ -765,7 +762,7 @@ function saveBulkIzin() {
         } else {
             hideSpinner();
         }
-    }, 500); // 500ms işlem efekti vererek donmayı önler
+    }, 500);
 }
 
 function changeMonth(dir) {
@@ -774,9 +771,17 @@ function changeMonth(dir) {
     generateTimeline();
 }
 
+// TİTREME (FLICKER) HATASI İÇİN YENİ TOOLTIP YÖNETİMİ
 window.showTooltip = function(e, el) {
+    // EĞER ÖNCEKİ KUTUDAN KALAN BİR KAPANMA EMRİ VARSA ONU İPTAL ET
+    if (window.tooltipTimeout) {
+        clearTimeout(window.tooltipTimeout);
+        window.tooltipTimeout = null;
+    }
+
     const tt = document.getElementById('global-tooltip');
     if(!tt) return;
+    
     const tur = el.getAttribute('data-tur');
     const tarih = el.getAttribute('data-tarih');
     const desc = el.getAttribute('data-desc');
@@ -805,7 +810,13 @@ window.updateTooltip = function(e) {
 
 window.hideTooltip = function() { 
     const tt = document.getElementById('global-tooltip');
-    if(tt) { tt.style.opacity = '0'; setTimeout(() => { tt.style.display = 'none'; }, 200); }
+    if(tt) { 
+        tt.style.opacity = '0'; 
+        // KAPANMA EMRİNİ HAFIZAYA AL
+        window.tooltipTimeout = setTimeout(() => { 
+            tt.style.display = 'none'; 
+        }, 200); 
+    }
 }
 
 function generateTimeline() {
@@ -956,7 +967,10 @@ function editPersonnelFromProfile() {
         uploadedBase64Foto = ""; 
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
-        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
+        
+        // YENİ ALAN İSİMLERİ FORMA AKTARILIYOR
+        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
+        
         fields.forEach(f => { 
             let el = document.getElementById("f_"+f);
             if(el) {
@@ -987,7 +1001,10 @@ function savePersonnel() {
             document.getElementById("f_ayrilisTarihi").focus(); return;
         }
         const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "" };
-        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "sirket", "bina", "sicil", "kadro", "gorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
+        
+        // YENİ ALAN İSİMLERİ VERİTABANINA AKTARILIYOR
+        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
+        
         fields.forEach(f => { 
             let rawVal = document.getElementById("f_"+f).value;
             if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "tcNo"].includes(f)) { pData[f] = rawVal; } 
