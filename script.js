@@ -1,4 +1,6 @@
-// YARDIMCI ARAÇLAR
+// YARDIMCI ARAÇLAR VE VERSİYON BİLGİSİ
+const APP_VERSION = "2.0.0"; // SİSTEMİN GÜVENLİK BARİYERİ İÇİN GÜNCEL VERSİYONU
+
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
     document.getElementById("spinner-overlay").style.display = "flex"; 
@@ -91,8 +93,19 @@ function getAge(dateString) {
     return age;
 }
 
-// SABİT AYARLAR (BOŞANMIŞ KALDIRILDI)
+// VERSİYON KARŞILAŞTIRMA (Bariyer Sistemi İçin)
+function compareVersions(v1, v2) {
+    let p1 = v1.split('.').map(Number);
+    let p2 = v2.split('.').map(Number);
+    for(let i=0; i<3; i++) {
+        if ((p1[i] || 0) > (p2[i] || 0)) return 1;  // v1 daha yeni
+        if ((p1[i] || 0) < (p2[i] || 0)) return -1; // v2 daha yeni
+    }
+    return 0; // Eşit
+}
+
 let systemSettings = {
+    version: APP_VERSION,
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
         medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli"] },
@@ -136,7 +149,7 @@ const statColorsAndIcons = {
     "Demirbaş Sahipleri": { bg: "bg-white", text: "text-lime-600", border: "border-slate-200", icon: "fa-laptop" }
 };
 
-// EXCEL ÇIKTISI ALMA FONKSİYONU
+// EXCEL ÇIKTISI ALMA
 function exportToExcel() {
     if(currentFilteredData.length === 0) {
         showToast("Dışa aktarılacak personel kaydı bulunamadı!", "error");
@@ -185,7 +198,7 @@ function exportToExcel() {
     }, 800);
 }
 
-// VERİTABANI YEDEKLEME FONKSİYONU
+// VERİTABANI YEDEKLEME
 async function backupDatabase() {
     if(typeof window.api === 'undefined') {
         showToast("Tarayıcı modunda yedekleme yapılamaz.", "error");
@@ -198,26 +211,22 @@ async function backupDatabase() {
     else if(result.message !== "İşlem iptal edildi.") { showToast("Yedekleme hatası: " + result.message, "error"); }
 }
 
-// UYGULAMA MANTIĞI
+// UYGULAMA MANTIĞI VE ŞİFRE (numarataj26)
 function checkLogin() {
     const pass = document.getElementById('loginPass').value;
     if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
     
     showSpinner("Sistem Kontrol Ediliyor...");
     setTimeout(async () => {
-        if(pass === "123456") {
+        if(pass === "numarataj26") {
             if (typeof window.api !== 'undefined') {
                 const dbCheck = await window.api.checkDatabase();
-                hideSpinner();
                 if (dbCheck.requirePath) {
+                    hideSpinner();
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('dbPathModal').style.display = 'flex';
                 } else {
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('appContainer').style.display = 'flex';
-                    if (window.api) window.api.maximizeWindow(); 
-                    fetchDataFromLocalDB();
-                    startPolling();
+                    fetchDataFromLocalDB(); // Bu fonksiyon içinde Versiyon kontrolü yapılacak
                 }
             } else {
                 hideSpinner();
@@ -307,13 +316,37 @@ function logOut() {
 }
 
 function fetchDataFromLocalDB() {
-    showSpinner("Veriler Yükleniyor...");
     if(typeof window.api === 'undefined') {
         hideSpinner();
         initSystem();
         return;
     }
     window.api.getData().then((data) => {
+        
+        // YENİ: VERSİYON GÜVENLİK BARİYERİ MANTIĞI
+        let dbVersion = "1.0.0";
+        if(data && data.settings && data.settings.version) {
+            dbVersion = data.settings.version;
+        }
+
+        if(compareVersions(APP_VERSION, dbVersion) === -1) {
+            // Eğer exe sürümü (2.0.0), veritabanındaki sürümden KÜÇÜKSE -> Engelle!
+            hideSpinner();
+            document.getElementById('loginFormContainer').style.display = 'none'; // Şifre girme kutusunu gizle
+            document.getElementById('versionError').classList.remove('hidden'); // Uyarı kutusunu göster
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('appContainer').style.display = 'none';
+            return; // SİSTEMİ DURDUR, GİRİŞE İZİN VERME
+        } else if(compareVersions(APP_VERSION, dbVersion) === 1) {
+            // Eğer exe sürümü YENİ ve veritabanı eskiyse -> Veritabanını yeni sürüme (2.0.0) yükselt
+            systemSettings.version = APP_VERSION;
+            saveSettingsToDatabase();
+        } else {
+            // Eşitse devam et
+            systemSettings.version = APP_VERSION;
+        }
+
+        // VERİLERİ YÜKLE
         if(data && data.personnel) {
             let parsedData = Array.isArray(data.personnel) ? data.personnel : Object.values(data.personnel);
             personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
@@ -334,9 +367,17 @@ function fetchDataFromLocalDB() {
                 });
             }
         }
+
+        // GİRİŞ BAŞARILI, UYGULAMAYA GEÇ
         hideSpinner();
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appContainer').style.display = 'flex';
+        if (window.api) window.api.maximizeWindow(); 
+        
         initSystem();
+        startPolling();
         showToast("Sisteme başarıyla giriş yapıldı.", "success");
+
     }).catch(e => {
         hideSpinner();
         showToast("Ağ klasörüne ulaşılamıyor!", "error");
@@ -505,7 +546,6 @@ function applyFilters() {
         
         let mDurum = !document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value.toLocaleUpperCase('tr-TR');
         let mKadroSirket = !document.getElementById("filter-kadroSirket").value || p.kadroSirket === document.getElementById("filter-kadroSirket").value || p.kadroSirket === document.getElementById("filter-kadroSirket").value.toLocaleUpperCase('tr-TR');
-        // YENİ: BİNA FİLTRESİ (UNVAN YERİNE)
         let mBina = !document.getElementById("filter-bina").value || p.bina === document.getElementById("filter-bina").value || p.bina === document.getElementById("filter-bina").value.toLocaleUpperCase('tr-TR');
         let mSeflik = !document.getElementById("filter-seflik").value || p.seflik === document.getElementById("filter-seflik").value || p.seflik === document.getElementById("filter-seflik").value.toLocaleUpperCase('tr-TR');
         
@@ -514,7 +554,6 @@ function applyFilters() {
     renderTable(currentFilteredData);
 }
 
-// FİLTRE DİNLEYİCİLERİ GÜNCELLENDİ
 ["filter-search", "filter-durum", "filter-kadroSirket", "filter-bina", "filter-seflik"].forEach(id => {
     document.getElementById(id).addEventListener(id === "filter-search" ? "input" : "change", applyFilters);
 });
@@ -573,7 +612,6 @@ function switchTab(t) {
     if(aB) { aB.classList.remove('border-transparent', 'text-slate-500'); aB.classList.add('border-blue-600', 'text-blue-600'); }
 }
 
-// YENİ KAYIT FORMU YATAY SEKME (TAB) FONKSİYONLARI
 let currentFormTabIdx = 0;
 const formTabs = ['kisisel', 'kurum', 'iletisim'];
 
@@ -595,7 +633,6 @@ function switchFormTab(t) {
         aB.classList.add('border-blue-600', 'text-blue-600'); 
     }
 
-    // İleri / Geri Butonlarının Görünürlüğünü Ayarla
     const btnPrev = document.getElementById('formBtnPrev');
     const btnNext = document.getElementById('formBtnNext');
     if(btnPrev) btnPrev.classList.toggle('hidden', currentFormTabIdx === 0);
@@ -604,9 +641,7 @@ function switchFormTab(t) {
 
 function navigateFormTab(dir) {
     let newIdx = currentFormTabIdx + dir;
-    if(newIdx >= 0 && newIdx < formTabs.length) {
-        switchFormTab(formTabs[newIdx]);
-    }
+    if(newIdx >= 0 && newIdx < formTabs.length) { switchFormTab(formTabs[newIdx]); }
 }
 
 function openZimmetForm() {
@@ -953,22 +988,17 @@ function checkDurumStatus() {
     }
 }
 
-// YENİ KAYIT FORMU AÇILIŞ MANTIĞI (Hayalet fotoğraf sıfırlandı, Tab en başa alındı)
 function openPersonnelForm() { 
     document.getElementById("personnelForm").reset(); 
     document.getElementById("formId").value = ""; 
     
-    // Hayalet fotoğrafı siliyoruz
     uploadedBase64Foto = ""; 
     const fileInput = document.getElementById("f_fotoFile");
-    if(fileInput) fileInput.value = ""; // Dosya seçici metnini temizle
+    if(fileInput) fileInput.value = "";
 
     document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-plus text-blue-600"></i> Yeni Personel Kaydı';
-    
-    switchFormTab('kisisel'); // Her zaman 1. sekmeden başlasın
+    switchFormTab('kisisel'); 
     openModal('personnelModal'); 
-    
-    // Select kutusunun "Erkek/Kadın" verisini okuyabilmesi için minik bir gecikmeyle silüeti güncelliyoruz
     setTimeout(() => { updateFormSilhouette(); }, 50); 
 }
 
@@ -978,11 +1008,10 @@ function editPersonnelFromProfile() {
         const p = personnelData.find(x => x.id === selectedUserId);
         document.getElementById("formId").value = p.id;
         
-        // Sadece gerçek bir fotoğraf varsa hafızaya al, silüet ise boş bırak
         uploadedBase64Foto = p.fotoUrl && !p.fotoUrl.includes('data:image/svg') && !p.fotoUrl.includes('placeholder') ? p.fotoUrl : "";
         
         const fileInput = document.getElementById("f_fotoFile");
-        if(fileInput) fileInput.value = ""; // Dosya seçici metnini temizle
+        if(fileInput) fileInput.value = "";
 
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
@@ -1000,7 +1029,7 @@ function editPersonnelFromProfile() {
             }
         });
         
-        switchFormTab('kisisel'); // Düzenle derken de 1. sekmeden başlasın
+        switchFormTab('kisisel');
         openModal('personnelModal');
     }, 350); 
 }
@@ -1018,8 +1047,6 @@ function savePersonnel() {
         const ayrilisVal = document.getElementById("f_ayrilisTarihi").value;
         if((durumVal === "Pasif" || durumVal === "PASİF") && !ayrilisVal) {
             showToast("Durumu 'Pasif' olan personel için 'Ayrılış Tarihi' girmek zorunludur!", "error");
-            
-            // Eğer form Kurum sekmesinde değilse kullanıcı göremez, onu o sekmeye at
             switchFormTab('kurum');
             document.getElementById("f_ayrilisTarihi").focus(); 
             return;
