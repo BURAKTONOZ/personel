@@ -10,7 +10,7 @@ contextBridge.exposeInMainWorld('api', {
   setCustomDbPath: (path) => ipcRenderer.invoke('set-custom-db-path', path),
   getDbStatus: () => ipcRenderer.invoke('get-db-status'),
   backupDatabase: () => ipcRenderer.invoke('backup-database'),
-  
+  silentBackup: (backupPath) => ipcRenderer.invoke('silent-backup', backupPath),
   windowMinimize: () => ipcRenderer.send('window-minimize'),
   windowMaximizeToggle: () => ipcRenderer.send('window-maximize-toggle'),
   windowClose: () => ipcRenderer.send('window-close'),
