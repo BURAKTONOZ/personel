@@ -129,8 +129,8 @@
                     <button onclick="if(window.api) window.api.windowMinimize()" title="Küçült" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-500 transition-all"><i class="fas fa-minus text-xs"></i></button>
                     <button onclick="if(window.api) window.api.windowMaximizeToggle()" title="Tam Ekran / Daralt" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-500 transition-all"><i class="far fa-window-maximize text-xs"></i></button>
                     
-                    <!-- YENİ: Kapatma butonu artık sadece pencereyi kapatmıyor, yedek alıp kapatıyor -->
-                    <button onclick="appCloseHandler()" title="Kapat" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-rose-500 border border-slate-200 hover:border-rose-500 flex items-center justify-center text-slate-500 hover:text-white transition-all"><i class="fas fa-times text-xs"></i></button>
+                    <!-- X butonu düzeltildi (Sadece kapatma işlemi yapar) -->
+                    <button onclick="if(window.api) window.api.windowClose()" title="Kapat" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-rose-500 border border-slate-200 hover:border-rose-500 flex items-center justify-center text-slate-500 hover:text-white transition-all"><i class="fas fa-times text-xs"></i></button>
                 </div>
             </div>
         </header>
@@ -414,29 +414,13 @@
             
             <div class="p-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar bg-slate-50">
                 
-                <!-- YENİ: OTOMATİK YEDEKLEME ARAYÜZÜ -->
-                <div class="bg-gradient-to-r from-emerald-50 to-white p-5 rounded-xl border border-emerald-200 shadow-sm">
-                    <div class="flex justify-between items-center mb-3">
-                        <h4 class="font-bold text-sm text-emerald-800 uppercase flex items-center gap-2"><i class="fas fa-sync-alt text-emerald-600"></i> Otomatik Yedekleme (Çıkışta)</h4>
-                        <div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
-                            <input type="checkbox" id="set_autoBackup" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 border-emerald-400 appearance-none cursor-pointer transition-all"/>
-                            <label for="set_autoBackup" class="toggle-label block overflow-hidden h-5 rounded-full bg-emerald-200 cursor-pointer transition-colors"></label>
-                        </div>
-                    </div>
-                    <p class="text-[11px] text-emerald-700 mb-3 font-semibold">Bu bilgisayardan program kapatılırken seçtiğiniz klasöre sessizce yedek alınır (Son 7 gün tutulur).</p>
-                    <div class="flex gap-2">
-                        <input type="text" id="set_autoBackupPath" readonly placeholder="Kişisel yedek klasörünüzü seçin..." class="w-full bg-white p-2.5 rounded-lg text-xs font-mono border border-emerald-200 text-emerald-800 outline-none">
-                        <button onclick="browseAutoBackupFolder()" class="bg-white border border-emerald-300 px-4 py-2.5 rounded-lg text-xs font-bold text-emerald-700 hover:bg-emerald-100 shadow-sm transition-all whitespace-nowrap"><i class="fas fa-folder mr-1 text-emerald-500"></i> Klasör Seç</button>
-                    </div>
-                </div>
-
                 <div class="bg-white p-5 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
                     <div>
                         <h4 class="font-bold text-sm text-slate-800 uppercase flex items-center gap-2"><i class="fas fa-database text-blue-500"></i> Veritabanı İşlemleri</h4>
                         <p id="settingsDbPath" class="text-xs text-slate-500 font-mono mt-1 mb-3">Yükleniyor...</p>
                         <div class="flex gap-2">
                             <button onclick="changeDbPathFromSettings()" class="bg-white border border-slate-300 px-4 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-slate-100 shadow-sm transition-all"><i class="fas fa-folder-open mr-1 text-blue-500"></i> Yolu Değiştir</button>
-                            <button onclick="backupDatabase()" class="bg-white border border-slate-300 px-4 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-blue-50 hover:border-blue-300 shadow-sm transition-all"><i class="fas fa-save mr-1 text-blue-600"></i> Şimdi Yedek Al</button>
+                            <button onclick="backupDatabase()" class="bg-white border border-slate-300 px-4 py-2 rounded-lg text-xs font-bold text-slate-700 hover:bg-emerald-50 hover:border-emerald-300 shadow-sm transition-all"><i class="fas fa-save mr-1 text-emerald-600"></i> Yedeğini Al</button>
                         </div>
                     </div>
                 </div>
