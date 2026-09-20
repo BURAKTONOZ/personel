@@ -42,7 +42,6 @@
 
     <!-- GİRİŞ EKRANI -->
     <div id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center transition-all duration-500 bg-transparent">
-        <!-- Pencerenin altını biraz uzattık (pb-12) ki imzaya yer kalsın -->
         <div class="glass-modal p-8 pb-12 rounded-3xl w-full max-w-sm flex flex-col gap-5 text-center shadow-2xl bg-white/95 backdrop-blur-md relative border border-slate-200" style="-webkit-app-region: drag;">
             
             <button onclick="if(window.api) window.api.windowClose()" class="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-100 hover:bg-rose-500 hover:text-white text-slate-500 flex items-center justify-center transition-all shadow-sm cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;">
@@ -57,7 +56,7 @@
                 <p class="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">Numarataj Şube Müdürlüğü</p>
             </div>
             
-            <!-- YENİ: VERSİYON BARİYERİ UYARI KUTUSU (Normalde Gizlidir) -->
+            <!-- VERSİYON BARİYERİ UYARI KUTUSU -->
             <div id="versionError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold text-center mb-1 shadow-sm animate-fadeIn" style="-webkit-app-region: no-drag;">
                 <i class="fas fa-exclamation-triangle text-rose-500 text-2xl mb-3 block"></i>
                 <span class="block font-bold text-sm mb-1 uppercase tracking-wide">Güncel Versiyon Mevcut!</span>
@@ -78,14 +77,16 @@
                     <input type="password" id="loginPass" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-center tracking-[0.5em] focus:border-blue-500 focus:bg-white transition-all outline-none" placeholder="••••••" onkeypress="if(event.key === 'Enter') checkLogin()">
                 </div>
                 
-                <button onclick="checkLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-xl font-bold transition-all shadow-md shadow-blue-500/20 text-sm mt-5 flex items-center justify-center gap-2">
+                <button id="loginBtn" onclick="checkLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-xl font-bold transition-all shadow-md shadow-blue-500/20 text-sm mt-5 flex items-center justify-center gap-2">
                     GİRİŞ YAP <i class="fas fa-arrow-right"></i>
                 </button>
+
+                <!-- YENİ: ŞIK DURUM ANİMASYON METNİ -->
+                <div id="loginStatusText" class="hidden text-xs font-bold text-slate-600 mt-5 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl"></div>
             </div>
 
-            <!-- YENİ: TASARIMIN ALTINDAKİ ZARİF İMZA VE VERSİYON BİLGİSİ -->
             <div class="absolute bottom-4 left-0 w-full px-7 flex justify-between items-center text-[10px] text-slate-400 font-bold tracking-wide" style="-webkit-app-region: no-drag;">
-                <span>v2.0.0</span>
+                <span>v3.0.0</span>
                 <span>Copyright &copy; 2026 - TONOZ</span>
             </div>
         </div>
@@ -467,7 +468,6 @@
         </div>
     </div>
 
-    <!-- TOPLU İZİN MODALI -->
     <div id="addBulkIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[110]">
         <div class="glass-modal p-7 rounded-xl w-[400px] shadow-2xl modal-content border-0">
             <h3 class="font-bold text-lg mb-2 text-slate-800 flex items-center gap-2"><i class="fas fa-users text-blue-500"></i> Toplu İzin Girişi</h3>
