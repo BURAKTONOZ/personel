@@ -24,7 +24,6 @@
         <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white bg-slate-100">
     </div>
 
-    <!-- Veritabanı Yolu İsteme Modalı -->
     <div id="dbPathModal" class="fixed inset-0 flex-col items-center justify-center z-[105] p-4 bg-slate-100 rounded-2xl shadow-2xl border border-slate-300" style="display:none; -webkit-app-region: drag;">
         <div class="w-full flex justify-end mb-2" style="-webkit-app-region: drag;">
             <button onclick="if(window.api) window.api.windowClose()" class="text-slate-400 hover:text-red-500 transition-colors p-2 cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;"><i class="fas fa-times text-xl"></i></button>
@@ -64,29 +63,32 @@
             </div>
 
             <div id="loginFormContainer" style="-webkit-app-region: no-drag;" class="w-full">
-                <div class="text-left mt-2">
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-building mr-1 text-slate-400"></i> Yetkili Birim</label>
-                    <div class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-semibold text-xs text-slate-700 flex items-center justify-between">
-                        <span>Numarataj Şube Md.</span>
-                        <i class="fas fa-check-circle text-emerald-500"></i>
+                <!-- ŞİFRE ALANI VE BUTONU GİZLEMEK İÇİN KAPSAYICI -->
+                <div id="loginInputArea">
+                    <div class="text-left mt-2">
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-building mr-1 text-slate-400"></i> Yetkili Birim</label>
+                        <div class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-semibold text-xs text-slate-700 flex items-center justify-between">
+                            <span>Numarataj Şube Md.</span>
+                            <i class="fas fa-check-circle text-emerald-500"></i>
+                        </div>
                     </div>
+                    
+                    <div class="text-left mt-4">
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-lock mr-1 text-slate-400"></i> Sistem Şifresi</label>
+                        <input type="password" id="loginPass" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-center tracking-[0.5em] focus:border-blue-500 focus:bg-white transition-all outline-none" placeholder="••••••" onkeypress="if(event.key === 'Enter') checkLogin()">
+                    </div>
+                    
+                    <button id="loginBtn" onclick="checkLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-xl font-bold transition-all shadow-md shadow-blue-500/20 text-sm mt-5 flex items-center justify-center gap-2">
+                        GİRİŞ YAP <i class="fas fa-arrow-right"></i>
+                    </button>
                 </div>
-                
-                <div class="text-left mt-4">
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-lock mr-1 text-slate-400"></i> Sistem Şifresi</label>
-                    <input type="password" id="loginPass" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-center tracking-[0.5em] focus:border-blue-500 focus:bg-white transition-all outline-none" placeholder="••••••" onkeypress="if(event.key === 'Enter') checkLogin()">
-                </div>
-                
-                <button id="loginBtn" onclick="checkLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-xl font-bold transition-all shadow-md shadow-blue-500/20 text-sm mt-5 flex items-center justify-center gap-2">
-                    GİRİŞ YAP <i class="fas fa-arrow-right"></i>
-                </button>
 
                 <!-- ŞIK DURUM ANİMASYON METNİ -->
-                <div id="loginStatusText" class="hidden text-xs font-bold text-slate-600 mt-5 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl"></div>
+                <div id="loginStatusText" class="hidden text-xs font-bold text-slate-600 mt-2 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl"></div>
             </div>
 
             <div class="absolute bottom-4 left-0 w-full px-7 flex justify-between items-center text-[10px] text-slate-400 font-bold tracking-wide" style="-webkit-app-region: no-drag;">
-                <span>v3.0.0</span>
+                <span>v5.0.0</span>
                 <span>Copyright &copy; 2026 - TONOZ</span>
             </div>
         </div>
