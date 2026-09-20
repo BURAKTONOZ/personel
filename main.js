@@ -157,3 +157,36 @@ ipcMain.handle('save-settings', async (event, data) => {
     db.run(`REPLACE INTO store (key, value) VALUES ('settings', ?)`, [JSON.stringify(data)], (err) => resolve(!err));
   });
 });
+
+// Otomatik Sessiz Yedekleme (Çıkışta tetiklenir)
+ipcMain.handle('silent-backup', async (event, backupDir) => {
+    try {
+        const fs = require('fs');
+        const path = require('path');
+        
+        if (!currentDbPath || !fs.existsSync(currentDbPath)) return { success: false, message: 'DB bulunamadı.' };
+        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+
+        // Veritabanını tarih damgasıyla kopyala
+        const dateStr = new Date().toISOString().replace(/T/, '_').replace(/:/g, '-').split('.')[0];
+        const dest = path.join(backupDir, `PersonelDB_${dateStr}.sqlite`);
+        fs.copyFileSync(currentDbPath, dest);
+
+        // Kendi Kendini Temizleyen Çöpçü (Sadece son 7 yedeği tutar)
+        const files = fs.readdirSync(backupDir).filter(f => f.startsWith('PersonelDB_') && f.endsWith('.sqlite'));
+        if (files.length > 7) {
+            // Eskiden yeniye sırala
+            files.sort((a, b) => {
+                return fs.statSync(path.join(backupDir, a)).mtime.getTime() - fs.statSync(path.join(backupDir, b)).mtime.getTime();
+            });
+            // En eskileri sil
+            const toDelete = files.length - 7;
+            for(let i=0; i<toDelete; i++) {
+                fs.unlinkSync(path.join(backupDir, files[i]));
+            }
+        }
+        return { success: true };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+});
