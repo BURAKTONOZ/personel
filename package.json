@@ -1,6 +1,6 @@
 {
   "name": "pys",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Numarataj Şube Müdürlüğü Personel Yönetim Sistemi",
   "main": "main.js",
   "scripts": {
@@ -13,8 +13,11 @@
     "productName": "Numarataj Personel",
     "copyright": "Copyright © 2026 - TONOZ",
     "win": {
-      "executableName": "pys",
+      "target": "portable",
       "icon": "build/icon.ico"
+    },
+    "portable": {
+      "artifactName": "pys.exe"
     }
   },
   "dependencies": {
