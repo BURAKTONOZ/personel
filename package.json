@@ -4,7 +4,6 @@
   "description": "Numarataj Şube Müdürlüğü Personel Yönetim Sistemi",
   "main": "main.js",
   "scripts": {
-   "scripts": {
     "start": "electron .",
     "build": "electron-builder --publish never"
   },
