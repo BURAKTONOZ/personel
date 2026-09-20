@@ -55,15 +55,21 @@
                 <p class="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">Numarataj Şube Müdürlüğü</p>
             </div>
             
-            <!-- VERSİYON BARİYERİ UYARI KUTUSU -->
             <div id="versionError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold text-center mb-1 shadow-sm animate-fadeIn" style="-webkit-app-region: no-drag;">
                 <i class="fas fa-exclamation-triangle text-rose-500 text-2xl mb-3 block"></i>
                 <span class="block font-bold text-sm mb-1 uppercase tracking-wide">Güncel Versiyon Mevcut!</span>
                 Eski bir versiyon kullanıyorsunuz. Veritabanı güvenliği için giriş engellendi. Lütfen ağ klasöründeki güncel programı kullanın.
             </div>
 
-            <div id="loginFormContainer" style="-webkit-app-region: no-drag;" class="w-full">
-                <!-- ŞİFRE ALANI VE BUTONU GİZLEMEK İÇİN KAPSAYICI -->
+            <div id="loginFormContainer" style="-webkit-app-region: no-drag;" class="w-full relative">
+                
+                <!-- YENİ: UZAKTAN KİLİTLENDİĞİNDE ÇIKACAK EKRAN -->
+                <div id="lockScreenInfo" class="hidden flex-col items-center justify-center p-4 bg-rose-50 border border-rose-200 rounded-2xl animate-fadeIn">
+                    <i class="fas fa-lock text-4xl text-rose-500 mb-3"></i>
+                    <h3 class="font-bold text-[13px] text-rose-700 uppercase tracking-wide mb-1.5">Sistem Erişime Kapatıldı</h3>
+                    <p id="lockMessageText" class="text-xs font-semibold text-slate-700 leading-relaxed"></p>
+                </div>
+
                 <div id="loginInputArea">
                     <div class="text-left mt-2">
                         <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-building mr-1 text-slate-400"></i> Yetkili Birim</label>
@@ -83,12 +89,11 @@
                     </button>
                 </div>
 
-                <!-- ŞIK DURUM ANİMASYON METNİ -->
                 <div id="loginStatusText" class="hidden text-xs font-bold text-slate-600 mt-2 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl"></div>
             </div>
 
             <div class="absolute bottom-4 left-0 w-full px-7 flex justify-between items-center text-[10px] text-slate-400 font-bold tracking-wide" style="-webkit-app-region: no-drag;">
-                <span>v5.0.0</span>
+                <span>v6.0.0</span>
                 <span>Copyright &copy; 2026 - TONOZ</span>
             </div>
         </div>
