@@ -1,5 +1,5 @@
 // YARDIMCI ARAÇLAR VE VERSİYON BİLGİSİ
-const APP_VERSION = "3.0.0"; 
+const APP_VERSION = "5.0.0"; 
 
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
@@ -167,12 +167,12 @@ function exportToExcel() {
             "Telefon Numarası": p.tel || "",
             "Kan Grubu": p.kanGrubu || "",
             "Ev Adresi": p.adres || "",
-            "Kadro / Şirket": p.kadroSirket || p.sirket || p.kadro || "",
-            "Ünvanı": p.unvan || p.gorev || "",
-            "Çalıştığı Şeflik": p.seflik || p.bina || "",
+            "Kadro / Şirket": p.kadroSirket || "",
+            "Ünvanı": p.unvan || "",
+            "Çalıştığı Şeflik": p.seflik || "",
             "Çalıştığı Bina": p.bina || "",
             "Sicil Numarası": p.sicil || "",
-            "Fiilen Yaptığı Görev": p.fiiliGorev || p.gorev || "",
+            "Fiilen Yaptığı Görev": p.fiiliGorev || "",
             "İşe Başlama Tarihi": p.gelisTarihi ? formatDateTR(p.gelisTarihi) : "",
             "İşten Ayrılış Tarihi": p.ayrilisTarihi ? formatDateTR(p.ayrilisTarihi) : "",
             "Çalışma Durumu": p.durum || "",
@@ -209,17 +209,18 @@ async function backupDatabase() {
     else if(result.message !== "İşlem iptal edildi.") { showToast("Yedekleme hatası: " + result.message, "error"); }
 }
 
-// BEYAZ YÜKLEME EKRANI (showSpinner) İPTAL EDİLDİ - AKICI ANİMASYON EKLENDİ
+// ŞİFRE ALANI GİZLEME (UX) MANTIĞIYLA ANİMASYONLU GİRİŞ
 function checkLogin() {
     const pass = document.getElementById('loginPass').value;
-    const loginBtn = document.getElementById('loginBtn');
+    const inputArea = document.getElementById('loginInputArea');
     const statusText = document.getElementById('loginStatusText');
 
     if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
     
-    loginBtn.style.display = 'none';
+    // Formu tamamen gizle, animasyonlu yazıyı göster
+    inputArea.style.display = 'none';
     statusText.style.display = 'block';
-    statusText.className = 'text-xs font-bold text-slate-600 mt-5 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl animate-pulse';
+    statusText.className = 'text-xs font-bold text-slate-600 mt-2 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl animate-pulse';
     statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Şifre kontrol ediliyor...';
     
     setTimeout(async () => {
@@ -229,6 +230,10 @@ function checkLogin() {
             if (typeof window.api !== 'undefined') {
                 const dbCheck = await window.api.checkDatabase();
                 if (dbCheck.requirePath) {
+                    // Yol bulunamazsa inputu geri gösterip modalı aç
+                    inputArea.style.display = 'block';
+                    statusText.style.display = 'none';
+                    document.getElementById('loginPass').value = '';
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('dbPathModal').style.display = 'flex';
                 } else {
@@ -236,7 +241,7 @@ function checkLogin() {
                     setTimeout(() => { fetchDataFromLocalDB(); }, 800); 
                 }
             } else {
-                statusText.className = 'text-xs font-bold text-emerald-700 mt-5 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
+                statusText.className = 'text-xs font-bold text-emerald-700 mt-2 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
                 statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Tarayıcı Modu Başarılı!';
                 setTimeout(() => {
                     document.getElementById('loginScreen').style.display = 'none';
@@ -247,7 +252,8 @@ function checkLogin() {
             }
         } else {
             statusText.style.display = 'none';
-            loginBtn.style.display = 'flex';
+            inputArea.style.display = 'block';
+            document.getElementById('loginPass').value = '';
             showToast("Hatalı şifre girdiniz!", "error");
         }
     }, 800);
@@ -306,7 +312,9 @@ function startPolling() {
                     if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
                     if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
                 });
+                
                 applyFilters(); 
+                
                 const now = new Date();
                 document.getElementById('db-last-update').innerText = `Son Yenileme: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
             }
@@ -324,8 +332,10 @@ function logOut() {
     }
 }
 
+// SIKI BARİYER KONTROLÜ (DÖNÜŞTÜRME/FALLBACK YOK)
 function fetchDataFromLocalDB() {
     const statusText = document.getElementById('loginStatusText');
+    const inputArea = document.getElementById('loginInputArea');
 
     if(typeof window.api === 'undefined') {
         initSystem();
@@ -337,9 +347,10 @@ function fetchDataFromLocalDB() {
         let dbVersion = "1.0.0";
         if(data && data.settings && data.settings.version) { dbVersion = data.settings.version; }
 
-        // SIKI BARİYER: Eski sürüm asla giremez!
+        // SIKI BARİYER: Sürüm eskiyse kapı duvar! Animasyonu iptal et, hatayı bas.
         if(compareVersions(APP_VERSION, dbVersion) === -1) {
-            document.getElementById('loginFormContainer').style.display = 'none'; 
+            inputArea.style.display = 'none'; 
+            statusText.style.display = 'none';
             document.getElementById('versionError').classList.remove('hidden'); 
             return; 
         } 
@@ -351,6 +362,7 @@ function fetchDataFromLocalDB() {
             systemSettings.version = APP_VERSION;
         }
 
+        // VERİLERİ OLDUĞU GİBİ OKU
         if(data && data.personnel) {
             let parsedData = Array.isArray(data.personnel) ? data.personnel : Object.values(data.personnel);
             personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
@@ -372,20 +384,23 @@ function fetchDataFromLocalDB() {
             }
         }
 
-        statusText.className = 'text-xs font-bold text-emerald-700 mt-5 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
+        // BAŞARILI GİRİŞ ANİMASYONU VE GEÇİŞ
+        statusText.className = 'text-xs font-bold text-emerald-700 mt-2 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
         statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Giriş Başarılı!';
 
         setTimeout(() => {
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('appContainer').style.display = 'flex';
             if (window.api) window.api.maximizeWindow(); 
+            
             initSystem();
             startPolling();
         }, 800);
 
     }).catch(e => {
         statusText.style.display = 'none';
-        document.getElementById('loginBtn').style.display = 'flex';
+        inputArea.style.display = 'block';
+        document.getElementById('loginPass').value = '';
         showToast("Ağ klasörüne ulaşılamıyor!", "error");
         console.error(e);
     });
@@ -506,10 +521,10 @@ function renderTable(data) {
         let zimmetCount = p.zimmetler ? p.zimmetler.length : 0;
         let tarihBilgisi = isAktif ? `🗓️ Başlama: <span class="font-semibold text-slate-600">${formatDateTR(p.gelisTarihi) || '-'}</span>` : `🚪 Ayrılış: <span class="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">${formatDateTR(p.ayrilisTarihi) || 'Belirtilmedi'}</span>`;
 
-        // ESKİ VERİLERİN GÖRÜNMESİ İÇİN (|| p.sirket gibi fallbackler kullanıldı)
-        let fUnvan = p.unvan || p.gorev || '-';
-        let fSeflik = p.seflik || p.bina || '-';
-        let fKadroSirket = p.kadroSirket || p.sirket || '-';
+        // TEMİZ VERİ OKUMA: Asla dönüştürme veya p.sirket gibi fallback yok
+        let fUnvan = p.unvan || '-';
+        let fSeflik = p.seflik || '-';
+        let fKadroSirket = p.kadroSirket || '-';
 
         tbody.innerHTML += `
             <tr onclick="openProfileModal(${p.id})" class="row-hover cursor-pointer group ${!isAktif ? 'opacity-70 bg-slate-50 grayscale-[20%]' : ''}">
@@ -548,7 +563,7 @@ function renderTable(data) {
     setTimeout(adjustStickyElements, 50); 
 }
 
-// ESKİ VERİLERİN FİLTREDE BULUNABİLMESİ İÇİN YENİ ZEKİ FİLTRELEME
+// TEMİZ FİLTRELEME MANTIĞI
 function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
     currentFilteredData = personnelData.filter(p => {
@@ -561,7 +576,7 @@ function applyFilters() {
         let mDurum = !valDurum || (p.durum||"").toLocaleUpperCase('tr-TR') === valDurum;
 
         let valKadroSirket = document.getElementById("filter-kadroSirket").value.toLocaleUpperCase('tr-TR');
-        let pKadroSirket = (p.kadroSirket || p.sirket || p.kadro || "").toLocaleUpperCase('tr-TR');
+        let pKadroSirket = (p.kadroSirket || "").toLocaleUpperCase('tr-TR');
         let mKadroSirket = !valKadroSirket || pKadroSirket === valKadroSirket || pKadroSirket.includes(valKadroSirket);
 
         let valBina = document.getElementById("filter-bina").value.toLocaleUpperCase('tr-TR');
@@ -569,7 +584,7 @@ function applyFilters() {
         let mBina = !valBina || pBina === valBina;
 
         let valSeflik = document.getElementById("filter-seflik").value.toLocaleUpperCase('tr-TR');
-        let pSeflik = (p.seflik || p.bina || p.gorev || "").toLocaleUpperCase('tr-TR');
+        let pSeflik = (p.seflik || "").toLocaleUpperCase('tr-TR');
         let mSeflik = !valSeflik || pSeflik === valSeflik || pSeflik.includes(valSeflik);
         
         return matchSearch && mDurum && mKadroSirket && mBina && mSeflik;
@@ -591,8 +606,8 @@ function openProfileModal(id) {
     document.getElementById("pv_foto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
     setVal("pv_ad", (p.adSoyad || "").toLocaleUpperCase('tr-TR'));
     
-    let fUnvan = p.unvan || p.gorev || "";
-    let fSeflik = p.seflik || p.bina || "";
+    let fUnvan = p.unvan || "";
+    let fSeflik = p.seflik || "";
     setVal("pv_gorev", `${fUnvan} / ${fSeflik}`.toLocaleUpperCase('tr-TR'));
     
     const durumEl = document.getElementById("pv_durum");
@@ -613,12 +628,12 @@ function openProfileModal(id) {
     setVal("pv_acilYakinlik", (p.acilYakinlik||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_acilTel", p.acilTel || '-'); 
     
-    setVal("pv_kadroSirket", (p.kadroSirket || p.sirket || "-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_unvan", (fUnvan || "-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_seflik", (fSeflik || "-").toLocaleUpperCase('tr-TR')); 
+    setVal("pv_kadroSirket", (p.kadroSirket || "-").toLocaleUpperCase('tr-TR'));
+    setVal("pv_unvan", (p.unvan || "-").toLocaleUpperCase('tr-TR')); 
+    setVal("pv_seflik", (p.seflik || "-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_bina", (p.bina||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_sicil", (p.sicil||"-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_fiiliGorev", (p.fiiliGorev || p.gorev || "-").toLocaleUpperCase('tr-TR')); 
+    setVal("pv_fiiliGorev", (p.fiiliGorev || "-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_baslama", formatDateTR(p.gelisTarihi) || '-'); 
     setVal("pv_ayrilis", formatDateTR(p.ayrilisTarihi) || 'Halen Çalışıyor');
 
@@ -979,7 +994,6 @@ function handleFileUpload(event) {
     if (!file) return;
     if (!file.type.match('image.*')) { showToast("Sadece resim dosyası yükleyebilirsiniz.", "error"); return; }
     
-    // FOTOĞRAF YÜKLERKEN SPINNER ÇIKABİLİR, BU BEYAZ EKRANI BOZMAZ ÇÜNKÜ GİRİŞ EKRANINDA DEĞİLİZ
     showSpinner("Fotoğraf İşleniyor...");
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -1044,17 +1058,17 @@ function editPersonnelFromProfile() {
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
         
-        // ESKİ VERİLERİN (sirket, gorev vb.) DÜZENLEME EKRANINA AKTARILMASI (Fallback mantığı)
+        // DÜZENLEME EKRANI (TEMİZ VERİ)
         const fieldsMap = {
             tcNo: p.tcNo, adSoyad: p.adSoyad, cinsiyet: p.cinsiyet, dogumTarihi: p.dogumTarihi,
             medeniHal: p.medeniHal, cocukSayisi: p.cocukSayisi, tahsil: p.tahsil,
             anaAdi: p.anaAdi, babaAdi: p.babaAdi, 
-            kadroSirket: p.kadroSirket || p.sirket || p.kadro,
-            unvan: p.unvan || p.gorev,
-            seflik: p.seflik || p.bina,
+            kadroSirket: p.kadroSirket,
+            unvan: p.unvan,
+            seflik: p.seflik,
             bina: p.bina,
             sicil: p.sicil,
-            fiiliGorev: p.fiiliGorev || p.gorev,
+            fiiliGorev: p.fiiliGorev,
             durum: p.durum, gelisTarihi: p.gelisTarihi, ayrilisTarihi: p.ayrilisTarihi,
             tel: p.tel, kanGrubu: p.kanGrubu, adres: p.adres,
             acilKisi: p.acilKisi, acilYakinlik: p.acilYakinlik, acilTel: p.acilTel
