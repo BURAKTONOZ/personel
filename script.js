@@ -1,5 +1,4 @@
 const APP_VERSION = "6.0.0"; 
-
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
 function showSpinner(text="İşleniyor...") { 
@@ -60,6 +59,31 @@ function closePhotoModal() {
     setTimeout(() => { m.style.display = 'none'; }, 300);
 }
 
+// YENİ: YEREL YEDEKLEME HAFIZASI
+let localBackupSettings = { enabled: false, path: "" };
+
+function loadLocalBackupSettings() {
+    let saved = localStorage.getItem("pys_autobackup");
+    if(saved) { localBackupSettings = JSON.parse(saved); }
+}
+
+async function browseAutoBackupFolder() {
+    if (typeof window.api === 'undefined') return;
+    const folderPath = await window.api.selectFolder();
+    if (folderPath) { document.getElementById('set_autoBackupPath').value = folderPath; }
+}
+
+// YENİ: X BUTONUNA BASILINCA ÇALIŞACAK KAPANIŞ YAKALAYICISI (HOOK)
+async function appCloseHandler() {
+    if (localBackupSettings.enabled && localBackupSettings.path && typeof window.api !== 'undefined') {
+        showSpinner("Otomatik Yedek Alınıyor...");
+        if(window.api.silentBackup) {
+            await window.api.silentBackup(localBackupSettings.path);
+        }
+    }
+    if (window.api) window.api.windowClose();
+}
+
 let personnelData = [];
 let currentFilteredData = [];
 const SYSTEM_TODAY = new Date();
@@ -68,6 +92,9 @@ let selectedUserId = null;
 let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
 window.tooltipTimeout = null; 
+
+// YENİ: KART FİLTRELEME İÇİN SEÇİLİ KART HAFIZASI
+let activeCardId = 'total'; 
 
 const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
@@ -133,19 +160,20 @@ let systemSettings = {
     ]
 };
 
+// YENİ: KARTLARIN SOFT GRADİENT RENKLERİ VE TASARIMLARI
 const statColorsAndIcons = {
-    "Toplam Personel": { bg: "bg-white", text: "text-blue-600", border: "border-slate-200", icon: "fa-users" },
-    "Aktif Çalışan": { bg: "bg-white", text: "text-emerald-600", border: "border-slate-200", icon: "fa-user-check" },
-    "Pasif Personel": { bg: "bg-white", text: "text-rose-600", border: "border-slate-200", icon: "fa-user-times" },
-    "Kadrolu Memur": { bg: "bg-white", text: "text-blue-600", border: "border-slate-200", icon: "fa-user-tie" },
-    "Beltaş Personeli": { bg: "bg-white", text: "text-amber-600", border: "border-slate-200", icon: "fa-hard-hat" },
-    "Belka Personeli": { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-id-badge" },
-    "Harita Mühendisleri": { bg: "bg-white", text: "text-indigo-600", border: "border-slate-200", icon: "fa-drafting-compass" },
-    "Numarataj Şefliği": { bg: "bg-white", text: "text-fuchsia-600", border: "border-slate-200", icon: "fa-sitemap" },
-    "Kadın Personel": { bg: "bg-white", text: "text-pink-600", border: "border-slate-200", icon: "fa-female" },
-    "Erkek Personel": { bg: "bg-white", text: "text-cyan-600", border: "border-slate-200", icon: "fa-male" },
-    "Şu An İzinde": { bg: "bg-white", text: "text-orange-500", border: "border-slate-200", icon: "fa-umbrella-beach" },
-    "Demirbaş Sahipleri": { bg: "bg-white", text: "text-lime-600", border: "border-slate-200", icon: "fa-laptop" }
+    "Toplam Personel": { bg: "bg-gradient-to-br from-slate-50 to-white", text: "text-slate-700", border: "border-slate-200", icon: "fa-users", ring: "ring-slate-400" },
+    "Aktif Çalışan": { bg: "bg-gradient-to-br from-emerald-50 to-white", text: "text-emerald-600", border: "border-emerald-200", icon: "fa-user-check", ring: "ring-emerald-400" },
+    "Pasif Personel": { bg: "bg-gradient-to-br from-rose-50 to-white", text: "text-rose-600", border: "border-rose-200", icon: "fa-user-times", ring: "ring-rose-400" },
+    "Kadrolu Memur": { bg: "bg-gradient-to-br from-blue-50 to-white", text: "text-blue-600", border: "border-blue-200", icon: "fa-user-tie", ring: "ring-blue-400" },
+    "Beltaş Personeli": { bg: "bg-gradient-to-br from-amber-50 to-white", text: "text-amber-600", border: "border-amber-200", icon: "fa-hard-hat", ring: "ring-amber-400" },
+    "Belka Personeli": { bg: "bg-gradient-to-br from-indigo-50 to-white", text: "text-indigo-600", border: "border-indigo-200", icon: "fa-id-badge", ring: "ring-indigo-400" },
+    "Harita Mühendisleri": { bg: "bg-gradient-to-br from-violet-50 to-white", text: "text-violet-600", border: "border-violet-200", icon: "fa-drafting-compass", ring: "ring-violet-400" },
+    "Numarataj Şefliği": { bg: "bg-gradient-to-br from-fuchsia-50 to-white", text: "text-fuchsia-600", border: "border-fuchsia-200", icon: "fa-sitemap", ring: "ring-fuchsia-400" },
+    "Kadın Personel": { bg: "bg-gradient-to-br from-pink-50 to-white", text: "text-pink-600", border: "border-pink-200", icon: "fa-female", ring: "ring-pink-400" },
+    "Erkek Personel": { bg: "bg-gradient-to-br from-cyan-50 to-white", text: "text-cyan-600", border: "border-cyan-200", icon: "fa-male", ring: "ring-cyan-400" },
+    "Şu An İzinde": { bg: "bg-gradient-to-br from-orange-50 to-white", text: "text-orange-500", border: "border-orange-200", icon: "fa-umbrella-beach", ring: "ring-orange-400" },
+    "Demirbaş Sahipleri": { bg: "bg-gradient-to-br from-lime-50 to-white", text: "text-lime-600", border: "border-lime-200", icon: "fa-laptop", ring: "ring-lime-400" }
 };
 
 function exportToExcel() {
@@ -277,38 +305,6 @@ async function checkLogin() {
     }
 }
 
-async function browseFolder() {
-    if (typeof window.api === 'undefined') return;
-    const folderPath = await window.api.selectFolder();
-    if (folderPath) { document.getElementById('selectedDbPath').value = folderPath; }
-}
-
-async function saveNewDbPath() {
-    const path = document.getElementById('selectedDbPath').value;
-    if (!path) return showToast("Lütfen gözat butonuna basarak bir klasör seçin!", "error");
-    
-    showSpinner("Veritabanı Oluşturuluyor...");
-    const result = await window.api.setCustomDbPath(path);
-    hideSpinner();
-    
-    if (result.success) {
-        document.getElementById('dbPathModal').style.display = 'none';
-        document.getElementById('appContainer').style.display = 'flex';
-        if (window.api) window.api.maximizeWindow();
-        showToast("Veritabanı yolu kaydedildi.", "success");
-        fetchDataFromLocalDB();
-        startPolling();
-    } else {
-        showToast("Bu klasöre bağlanılamadı, yazma yetkiniz olmayabilir.", "error");
-    }
-}
-
-function changeDbPathFromSettings() {
-    closeModal('settingsModal');
-    document.getElementById('appContainer').style.display = 'none';
-    document.getElementById('dbPathModal').style.display = 'flex';
-}
-
 function startPolling() {
     if (typeof window.api === 'undefined') return;
     setInterval(async () => {
@@ -330,7 +326,6 @@ function startPolling() {
                     if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
                     if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
                 });
-                
                 applyFilters(); 
                 
                 const now = new Date();
@@ -341,13 +336,6 @@ function startPolling() {
             statusText.innerText = 'Bağlantı Koptu!';
         }
     }, 5000);
-}
-
-function logOut() {
-    if(confirm("Sistemden çıkış yapmak istediğinize emin misiniz?")) {
-        showSpinner("Çıkış Yapılıyor...");
-        setTimeout(() => { location.reload(); }, 500);
-    }
 }
 
 function fetchDataFromLocalDB() {
@@ -453,6 +441,7 @@ function closeModal(id) {
 }
 
 function initSystem() {
+    loadLocalBackupSettings();
     populateSelectOptions();
     applyFilters();
     setTimeout(adjustStickyElements, 100); 
@@ -471,6 +460,34 @@ function populateSelectOptions() {
     });
 }
 
+// YENİ: KARTA TIKLAYINCA FİLTREYİ TETİKLEYEN ZEKİ FONKSİYON
+function filterFromCard(cardId) {
+    activeCardId = cardId;
+    const card = systemSettings.cards.find(c => c.id === cardId);
+    if(!card) return;
+
+    // Önce alttaki tüm manuel filtre kutularını sıfırla
+    ["durum", "kadroSirket", "bina", "seflik"].forEach(id => {
+        document.getElementById("filter-" + id).value = "";
+    });
+
+    // Eğer tıklanan kart bir filtre dropdown'ına aitse, o dropdown'ı otomatik seç
+    if (card.type !== 'all' && card.type !== 'custom' && card.type !== 'cinsiyet' && card.type !== 'unvan') {
+        const drop = document.getElementById("filter-" + card.type);
+        if(drop) {
+            for(let i=0; i<drop.options.length; i++) {
+                if(drop.options[i].value.toLocaleUpperCase('tr-TR') === card.value.toLocaleUpperCase('tr-TR')) {
+                    drop.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+    
+    applyFilters();
+}
+
+// YENİ: KARTLAR ARTIK YUMUŞAK RENK GEÇİŞLİ (GRADİENT) VE SEÇİLEBİLİR
 function renderStatsCards() {
     const container = document.getElementById("stats-container");
     container.innerHTML = "";
@@ -493,12 +510,16 @@ function renderStatsCards() {
             count = personnelData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
         }
         
-        const styling = statColorsAndIcons[card.title] || { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-info-circle" };
+        const styling = statColorsAndIcons[card.title] || { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-info-circle", ring: "ring-slate-400" };
         
+        // Seçili karta gölge, parlaklık ve çerçeve efekti ver
+        const isActive = (activeCardId === card.id);
+        const activeClass = isActive ? `ring-2 ${styling.ring} ring-offset-2 scale-105 shadow-md z-10 opacity-100` : `hover:-translate-y-1 hover:shadow-md opacity-90 hover:opacity-100`;
+
         container.innerHTML += `
-            <div class="${styling.bg} p-4 rounded-xl border ${styling.border} flex-1 shadow-sm flex flex-col justify-between transition-transform hover:-translate-y-1">
+            <div onclick="filterFromCard('${card.id}')" class="cursor-pointer ${styling.bg} p-4 rounded-xl border ${styling.border} flex-1 flex flex-col justify-between transition-all duration-300 ${activeClass}">
                 <h3 class="text-[10px] font-bold uppercase text-slate-500 tracking-wide flex items-center gap-1.5"><i class="fas ${styling.icon} ${styling.text}"></i> ${card.title}</h3>
-                <p class="text-2xl font-black ${styling.text} mt-2">${count}</p>
+                <p class="text-2xl font-black ${styling.text} mt-2 drop-shadow-sm">${count}</p>
             </div>`;
     });
 }
@@ -572,10 +593,13 @@ function renderTable(data) {
             </tr>
         `;
     });
+    
+    // Tablo yenilendikten sonra üstteki kart sayılarını da yenile
     renderStatsCards();
     setTimeout(adjustStickyElements, 50); 
 }
 
+// YENİ: KART FİLTRELERİ BÖLÜMÜ GÜNCELLENDİ
 function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
     currentFilteredData = personnelData.filter(p => {
@@ -599,13 +623,46 @@ function applyFilters() {
         let pSeflik = (p.seflik || "").toLocaleUpperCase('tr-TR');
         let mSeflik = !valSeflik || pSeflik === valSeflik || pSeflik.includes(valSeflik);
         
-        return matchSearch && mDurum && mKadroSirket && mBina && mSeflik;
+        // EĞER KARTA TIKLANARAK ÖZEL BİR FİLTRE YAPILDIYSA (İzinliler, Demirbaş Sahipleri vb.)
+        let matchCard = true;
+        if (activeCardId !== 'total') {
+            let c = systemSettings.cards.find(x => x.id === activeCardId);
+            if (c) {
+                if (c.type === 'custom') {
+                    if (c.func === 'izinli') {
+                        let izinde = false;
+                        if(p.durum === "Aktif" || p.durum === "AKTİF") {
+                            if(p.izinler) {
+                                izinde = p.izinler.some(iz => {
+                                    let b = new Date(iz.baslangic); b.setHours(0,0,0,0);
+                                    let bit = new Date(iz.bitis); bit.setHours(23,59,59,999);
+                                    return SYSTEM_TODAY >= b && SYSTEM_TODAY <= bit;
+                                });
+                            }
+                        }
+                        matchCard = izinde;
+                    } else if (c.func === 'zimmetli') {
+                        matchCard = (p.durum === "Aktif" || p.durum === "AKTİF") && p.zimmetler && p.zimmetler.length > 0;
+                    }
+                } else if (c.type === 'cinsiyet') {
+                    matchCard = (p.cinsiyet || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
+                } else if (c.type === 'unvan') {
+                    matchCard = (p.unvan || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
+                }
+            }
+        }
+        
+        return matchSearch && mDurum && mKadroSirket && mBina && mSeflik && matchCard;
     });
     renderTable(currentFilteredData);
 }
 
+// Filtre kutularına manuel dokunulduğunda "Toplam Personel" kartına geri dön (Resetle)
 ["filter-search", "filter-durum", "filter-kadroSirket", "filter-bina", "filter-seflik"].forEach(id => {
-    document.getElementById(id).addEventListener(id === "filter-search" ? "input" : "change", applyFilters);
+    document.getElementById(id).addEventListener(id === "filter-search" ? "input" : "change", () => {
+        if(id !== "filter-search" && activeCardId !== 'total') activeCardId = 'total'; 
+        applyFilters();
+    });
 });
 
 function openProfileModal(id) {
@@ -704,13 +761,11 @@ function openZimmetForm() {
     openModal('addZimmetModal');
 }
 
-// YENİ: ÇİZELGEDEN KISA YOL İLE İZİN AÇMA FONKSİYONU
 function openIzinFromTimeline(id) {
     selectedUserId = id;
     openIzinForm();
 }
 
-// GÜNCELLENDİ: ARTIK BAŞLIĞA KİŞİNİN ADINI YAZIYOR
 function openIzinForm() {
     document.getElementById('i_tur').selectedIndex = 0;
     document.getElementById('i_bas').value = '';
@@ -813,10 +868,8 @@ function renderIzinTable() {
         let cl = iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK') ? 'izin-y' : (iz.tur.includes('Rapor') || iz.tur.includes('RAPOR') ? 'izin-r' : (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 'izin-s'));
         tb.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-4"><span class="px-2 py-1 text-[10px] font-bold rounded ${cl} uppercase">${iz.tur}</span></td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.baslangic)}</td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.bitis)}</td><td class="p-4 text-slate-600 uppercase">${iz.aciklama}</td><td class="p-4 text-center"><button onclick="deleteIzin(${iz.id})" class="text-rose-500 hover:text-rose-700 bg-white border border-slate-200 hover:bg-rose-50 w-8 h-8 rounded-md transition"><i class="fas fa-trash-alt"></i></button></td></tr>`;
     });
-    applyFilters(); 
 }
 
-// GÜNCELLENDİ: PROFİL VEYA ÇİZELGE EKRANINI ALGILAYIP ÇÖKMEDEN YENİLER
 function saveIzin() {
     try {
         const bas = document.getElementById("i_bas").value;
@@ -935,7 +988,6 @@ window.hideTooltip = function() {
     }
 }
 
-// GÜNCELLENDİ: ÇİZELGEDEKİ İSİMLER ARTIK TIKLANABİLİR BİRER BUTON ("+" İKONUYLA BİRLİKTE)
 function generateTimeline() {
     const inputVal = document.getElementById("timelineMonth").value;
     if(inputVal) {
@@ -960,10 +1012,7 @@ function generateTimeline() {
     html += '</div>';
 
     personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
-        
-        // SİHİRLİ DOKUNUŞ BURADA: İsimleri butonlaştırıp openIzinFromTimeline(id) fonksiyonuna bağladık
         html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors" title="${p.adSoyad} (Tıkla ve İzin İşle)" onclick="openIzinFromTimeline(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
-        
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
@@ -996,6 +1045,10 @@ function generateTimeline() {
 }
 
 function buildSettingsMenu() {
+    // Otomatik Yedekleme UI
+    document.getElementById("set_autoBackup").checked = localBackupSettings.enabled;
+    document.getElementById("set_autoBackupPath").value = localBackupSettings.path;
+
     const tc = document.getElementById("settings-textareas-container"); tc.innerHTML = "";
     Object.keys(systemSettings.dropdowns).forEach(key => {
         if(key !== 'durum') {
@@ -1017,6 +1070,10 @@ function buildSettingsMenu() {
 }
 
 function saveSettings() {
+    localBackupSettings.enabled = document.getElementById("set_autoBackup").checked;
+    localBackupSettings.path = document.getElementById("set_autoBackupPath").value;
+    localStorage.setItem("pys_autobackup", JSON.stringify(localBackupSettings));
+
     Object.keys(systemSettings.dropdowns).forEach(key => {
         if(key !== 'durum') {
             let vals = document.getElementById("set_" + key).value.toLocaleUpperCase('tr-TR').split('\n').map(s=>s.trim()).filter(s=>s!=="");
@@ -1099,15 +1156,29 @@ function editPersonnelFromProfile() {
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
         
-        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
-        
-        fields.forEach(f => { 
+        const fieldsMap = {
+            tcNo: p.tcNo, adSoyad: p.adSoyad, cinsiyet: p.cinsiyet, dogumTarihi: p.dogumTarihi,
+            medeniHal: p.medeniHal, cocukSayisi: p.cocukSayisi, tahsil: p.tahsil,
+            anaAdi: p.anaAdi, babaAdi: p.babaAdi, 
+            kadroSirket: p.kadroSirket,
+            unvan: p.unvan,
+            seflik: p.seflik,
+            bina: p.bina,
+            sicil: p.sicil,
+            fiiliGorev: p.fiiliGorev,
+            durum: p.durum, gelisTarihi: p.gelisTarihi, ayrilisTarihi: p.ayrilisTarihi,
+            tel: p.tel, kanGrubu: p.kanGrubu, adres: p.adres,
+            acilKisi: p.acilKisi, acilYakinlik: p.acilYakinlik, acilTel: p.acilTel
+        };
+
+        Object.keys(fieldsMap).forEach(f => {
             let el = document.getElementById("f_"+f);
             if(el) {
-                let val = p[f] || "";
+                let val = fieldsMap[f] || "";
                 if(el.tagName === 'SELECT' && val) {
                     let option = Array.from(el.options).find(o => o.value.toLocaleUpperCase('tr-TR') === val.toLocaleUpperCase('tr-TR'));
                     if (option) el.value = option.value;
+                    else el.value = ""; 
                 } else { el.value = val; }
             }
         });
