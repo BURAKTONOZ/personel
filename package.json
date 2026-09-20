@@ -14,10 +14,11 @@
     "copyright": "Copyright © 2026 - TONOZ",
     "win": {
       "target": "portable",
+      "executableName": "PYS",
       "icon": "build/icon.ico"
     },
     "portable": {
-      "artifactName": "pys.exe"
+      "artifactName": "PYS.exe"
     }
   },
   "dependencies": {
