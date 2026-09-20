@@ -1,5 +1,5 @@
 // YARDIMCI ARAÇLAR VE VERSİYON BİLGİSİ
-const APP_VERSION = "2.0.0"; // SİSTEMİN GÜVENLİK BARİYERİ İÇİN GÜNCEL VERSİYONU
+const APP_VERSION = "3.0.0"; 
 
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
@@ -93,15 +93,15 @@ function getAge(dateString) {
     return age;
 }
 
-// VERSİYON KARŞILAŞTIRMA (Bariyer Sistemi İçin)
+// VERSİYON KONTROLCÜSÜ (KATI BARİYER)
 function compareVersions(v1, v2) {
     let p1 = v1.split('.').map(Number);
     let p2 = v2.split('.').map(Number);
     for(let i=0; i<3; i++) {
-        if ((p1[i] || 0) > (p2[i] || 0)) return 1;  // v1 daha yeni
-        if ((p1[i] || 0) < (p2[i] || 0)) return -1; // v2 daha yeni
+        if ((p1[i] || 0) > (p2[i] || 0)) return 1;  
+        if ((p1[i] || 0) < (p2[i] || 0)) return -1; 
     }
-    return 0; // Eşit
+    return 0; 
 }
 
 let systemSettings = {
@@ -149,7 +149,6 @@ const statColorsAndIcons = {
     "Demirbaş Sahipleri": { bg: "bg-white", text: "text-lime-600", border: "border-slate-200", icon: "fa-laptop" }
 };
 
-// EXCEL ÇIKTISI ALMA
 function exportToExcel() {
     if(currentFilteredData.length === 0) {
         showToast("Dışa aktarılacak personel kaydı bulunamadı!", "error");
@@ -168,12 +167,12 @@ function exportToExcel() {
             "Telefon Numarası": p.tel || "",
             "Kan Grubu": p.kanGrubu || "",
             "Ev Adresi": p.adres || "",
-            "Kadro / Şirket": p.kadroSirket || "",
-            "Ünvanı": p.unvan || "",
-            "Çalıştığı Şeflik": p.seflik || "",
+            "Kadro / Şirket": p.kadroSirket || p.sirket || p.kadro || "",
+            "Ünvanı": p.unvan || p.gorev || "",
+            "Çalıştığı Şeflik": p.seflik || p.bina || "",
             "Çalıştığı Bina": p.bina || "",
             "Sicil Numarası": p.sicil || "",
-            "Fiilen Yaptığı Görev": p.fiiliGorev || "",
+            "Fiilen Yaptığı Görev": p.fiiliGorev || p.gorev || "",
             "İşe Başlama Tarihi": p.gelisTarihi ? formatDateTR(p.gelisTarihi) : "",
             "İşten Ayrılış Tarihi": p.ayrilisTarihi ? formatDateTR(p.ayrilisTarihi) : "",
             "Çalışma Durumu": p.durum || "",
@@ -198,7 +197,6 @@ function exportToExcel() {
     }, 800);
 }
 
-// VERİTABANI YEDEKLEME
 async function backupDatabase() {
     if(typeof window.api === 'undefined') {
         showToast("Tarayıcı modunda yedekleme yapılamaz.", "error");
@@ -211,35 +209,48 @@ async function backupDatabase() {
     else if(result.message !== "İşlem iptal edildi.") { showToast("Yedekleme hatası: " + result.message, "error"); }
 }
 
-// UYGULAMA MANTIĞI VE ŞİFRE (numarataj26)
+// BEYAZ YÜKLEME EKRANI (showSpinner) İPTAL EDİLDİ - AKICI ANİMASYON EKLENDİ
 function checkLogin() {
     const pass = document.getElementById('loginPass').value;
+    const loginBtn = document.getElementById('loginBtn');
+    const statusText = document.getElementById('loginStatusText');
+
     if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
     
-    showSpinner("Sistem Kontrol Ediliyor...");
+    loginBtn.style.display = 'none';
+    statusText.style.display = 'block';
+    statusText.className = 'text-xs font-bold text-slate-600 mt-5 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl animate-pulse';
+    statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Şifre kontrol ediliyor...';
+    
     setTimeout(async () => {
         if(pass === "numarataj26") {
+            statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Veritabanı aranıyor...';
+            
             if (typeof window.api !== 'undefined') {
                 const dbCheck = await window.api.checkDatabase();
                 if (dbCheck.requirePath) {
-                    hideSpinner();
                     document.getElementById('loginScreen').style.display = 'none';
                     document.getElementById('dbPathModal').style.display = 'flex';
                 } else {
-                    fetchDataFromLocalDB(); // Bu fonksiyon içinde Versiyon kontrolü yapılacak
+                    statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Sürüm kontrol ediliyor...';
+                    setTimeout(() => { fetchDataFromLocalDB(); }, 800); 
                 }
             } else {
-                hideSpinner();
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'flex';
-                showToast("Tarayıcı modundasınız, veritabanına bağlanılamaz.", "error");
-                initSystem();
+                statusText.className = 'text-xs font-bold text-emerald-700 mt-5 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
+                statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Tarayıcı Modu Başarılı!';
+                setTimeout(() => {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('appContainer').style.display = 'flex';
+                    showToast("Tarayıcı modundasınız, veritabanına bağlanılamaz.", "error");
+                    initSystem();
+                }, 800);
             }
         } else {
-            hideSpinner();
+            statusText.style.display = 'none';
+            loginBtn.style.display = 'flex';
             showToast("Hatalı şifre girdiniz!", "error");
         }
-    }, 600);
+    }, 800);
 }
 
 async function browseFolder() {
@@ -295,9 +306,7 @@ function startPolling() {
                     if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
                     if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
                 });
-                
                 applyFilters(); 
-                
                 const now = new Date();
                 document.getElementById('db-last-update').innerText = `Son Yenileme: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
             }
@@ -316,37 +325,32 @@ function logOut() {
 }
 
 function fetchDataFromLocalDB() {
+    const statusText = document.getElementById('loginStatusText');
+
     if(typeof window.api === 'undefined') {
-        hideSpinner();
         initSystem();
         return;
     }
+    
     window.api.getData().then((data) => {
         
-        // YENİ: VERSİYON GÜVENLİK BARİYERİ MANTIĞI
         let dbVersion = "1.0.0";
-        if(data && data.settings && data.settings.version) {
-            dbVersion = data.settings.version;
-        }
+        if(data && data.settings && data.settings.version) { dbVersion = data.settings.version; }
 
+        // SIKI BARİYER: Eski sürüm asla giremez!
         if(compareVersions(APP_VERSION, dbVersion) === -1) {
-            // Eğer exe sürümü (2.0.0), veritabanındaki sürümden KÜÇÜKSE -> Engelle!
-            hideSpinner();
-            document.getElementById('loginFormContainer').style.display = 'none'; // Şifre girme kutusunu gizle
-            document.getElementById('versionError').classList.remove('hidden'); // Uyarı kutusunu göster
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('appContainer').style.display = 'none';
-            return; // SİSTEMİ DURDUR, GİRİŞE İZİN VERME
-        } else if(compareVersions(APP_VERSION, dbVersion) === 1) {
-            // Eğer exe sürümü YENİ ve veritabanı eskiyse -> Veritabanını yeni sürüme (2.0.0) yükselt
+            document.getElementById('loginFormContainer').style.display = 'none'; 
+            document.getElementById('versionError').classList.remove('hidden'); 
+            return; 
+        } 
+        else if(compareVersions(APP_VERSION, dbVersion) === 1) {
             systemSettings.version = APP_VERSION;
             saveSettingsToDatabase();
-        } else {
-            // Eşitse devam et
+        } 
+        else {
             systemSettings.version = APP_VERSION;
         }
 
-        // VERİLERİ YÜKLE
         if(data && data.personnel) {
             let parsedData = Array.isArray(data.personnel) ? data.personnel : Object.values(data.personnel);
             personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
@@ -368,18 +372,20 @@ function fetchDataFromLocalDB() {
             }
         }
 
-        // GİRİŞ BAŞARILI, UYGULAMAYA GEÇ
-        hideSpinner();
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('appContainer').style.display = 'flex';
-        if (window.api) window.api.maximizeWindow(); 
-        
-        initSystem();
-        startPolling();
-        showToast("Sisteme başarıyla giriş yapıldı.", "success");
+        statusText.className = 'text-xs font-bold text-emerald-700 mt-5 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
+        statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Giriş Başarılı!';
+
+        setTimeout(() => {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'flex';
+            if (window.api) window.api.maximizeWindow(); 
+            initSystem();
+            startPolling();
+        }, 800);
 
     }).catch(e => {
-        hideSpinner();
+        statusText.style.display = 'none';
+        document.getElementById('loginBtn').style.display = 'flex';
         showToast("Ağ klasörüne ulaşılamıyor!", "error");
         console.error(e);
     });
@@ -500,6 +506,11 @@ function renderTable(data) {
         let zimmetCount = p.zimmetler ? p.zimmetler.length : 0;
         let tarihBilgisi = isAktif ? `🗓️ Başlama: <span class="font-semibold text-slate-600">${formatDateTR(p.gelisTarihi) || '-'}</span>` : `🚪 Ayrılış: <span class="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">${formatDateTR(p.ayrilisTarihi) || 'Belirtilmedi'}</span>`;
 
+        // ESKİ VERİLERİN GÖRÜNMESİ İÇİN (|| p.sirket gibi fallbackler kullanıldı)
+        let fUnvan = p.unvan || p.gorev || '-';
+        let fSeflik = p.seflik || p.bina || '-';
+        let fKadroSirket = p.kadroSirket || p.sirket || '-';
+
         tbody.innerHTML += `
             <tr onclick="openProfileModal(${p.id})" class="row-hover cursor-pointer group ${!isAktif ? 'opacity-70 bg-slate-50 grayscale-[20%]' : ''}">
                 <td class="px-5 py-3 border-b border-slate-100">
@@ -512,8 +523,8 @@ function renderTable(data) {
                     </div>
                 </td>
                 <td class="px-5 py-3 border-b border-slate-100">
-                    <div class="font-bold text-slate-700 text-xs uppercase">${p.unvan || '-'}</div>
-                    <div class="text-slate-600 text-[11px] mt-1 font-semibold">💼 <span class="text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">${p.seflik || '-'}</span> (${p.kadroSirket || '-'})</div>
+                    <div class="font-bold text-slate-700 text-xs uppercase">${fUnvan}</div>
+                    <div class="text-slate-600 text-[11px] mt-1 font-semibold">💼 <span class="text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">${fSeflik}</span> (${fKadroSirket})</div>
                     <div class="text-[10px] text-slate-500 font-mono mt-1 font-medium flex items-center gap-2 uppercase">🏷️ Sicil: ${p.sicil || '-'} <span class="text-slate-300">|</span> ${tarihBilgisi}</div>
                 </td>
                 <td class="px-5 py-3 border-b border-slate-100">
@@ -537,17 +548,29 @@ function renderTable(data) {
     setTimeout(adjustStickyElements, 50); 
 }
 
+// ESKİ VERİLERİN FİLTREDE BULUNABİLMESİ İÇİN YENİ ZEKİ FİLTRELEME
 function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
     currentFilteredData = personnelData.filter(p => {
         let pAd = p.adSoyad ? p.adSoyad.toLocaleUpperCase('tr-TR') : "";
         let pSicil = p.sicil ? p.sicil.toLocaleUpperCase('tr-TR') : "";
-        let matchSearch = pAd.includes(search) || p.tcNo.includes(search) || pSicil.includes(search) || (p.tel||"").includes(search);
+        let pTel = p.tel || "";
+        let matchSearch = pAd.includes(search) || (p.tcNo||"").includes(search) || pSicil.includes(search) || pTel.includes(search);
         
-        let mDurum = !document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value || p.durum === document.getElementById("filter-durum").value.toLocaleUpperCase('tr-TR');
-        let mKadroSirket = !document.getElementById("filter-kadroSirket").value || p.kadroSirket === document.getElementById("filter-kadroSirket").value || p.kadroSirket === document.getElementById("filter-kadroSirket").value.toLocaleUpperCase('tr-TR');
-        let mBina = !document.getElementById("filter-bina").value || p.bina === document.getElementById("filter-bina").value || p.bina === document.getElementById("filter-bina").value.toLocaleUpperCase('tr-TR');
-        let mSeflik = !document.getElementById("filter-seflik").value || p.seflik === document.getElementById("filter-seflik").value || p.seflik === document.getElementById("filter-seflik").value.toLocaleUpperCase('tr-TR');
+        let valDurum = document.getElementById("filter-durum").value.toLocaleUpperCase('tr-TR');
+        let mDurum = !valDurum || (p.durum||"").toLocaleUpperCase('tr-TR') === valDurum;
+
+        let valKadroSirket = document.getElementById("filter-kadroSirket").value.toLocaleUpperCase('tr-TR');
+        let pKadroSirket = (p.kadroSirket || p.sirket || p.kadro || "").toLocaleUpperCase('tr-TR');
+        let mKadroSirket = !valKadroSirket || pKadroSirket === valKadroSirket || pKadroSirket.includes(valKadroSirket);
+
+        let valBina = document.getElementById("filter-bina").value.toLocaleUpperCase('tr-TR');
+        let pBina = (p.bina || "").toLocaleUpperCase('tr-TR');
+        let mBina = !valBina || pBina === valBina;
+
+        let valSeflik = document.getElementById("filter-seflik").value.toLocaleUpperCase('tr-TR');
+        let pSeflik = (p.seflik || p.bina || p.gorev || "").toLocaleUpperCase('tr-TR');
+        let mSeflik = !valSeflik || pSeflik === valSeflik || pSeflik.includes(valSeflik);
         
         return matchSearch && mDurum && mKadroSirket && mBina && mSeflik;
     });
@@ -567,7 +590,10 @@ function openProfileModal(id) {
 
     document.getElementById("pv_foto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
     setVal("pv_ad", (p.adSoyad || "").toLocaleUpperCase('tr-TR'));
-    setVal("pv_gorev", `${p.unvan || ""} / ${p.seflik || ""}`.toLocaleUpperCase('tr-TR'));
+    
+    let fUnvan = p.unvan || p.gorev || "";
+    let fSeflik = p.seflik || p.bina || "";
+    setVal("pv_gorev", `${fUnvan} / ${fSeflik}`.toLocaleUpperCase('tr-TR'));
     
     const durumEl = document.getElementById("pv_durum");
     if(durumEl) {
@@ -587,12 +613,12 @@ function openProfileModal(id) {
     setVal("pv_acilYakinlik", (p.acilYakinlik||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_acilTel", p.acilTel || '-'); 
     
-    setVal("pv_kadroSirket", (p.kadroSirket||"-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_unvan", (p.unvan||"-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_seflik", (p.seflik||"-").toLocaleUpperCase('tr-TR')); 
+    setVal("pv_kadroSirket", (p.kadroSirket || p.sirket || "-").toLocaleUpperCase('tr-TR'));
+    setVal("pv_unvan", (fUnvan || "-").toLocaleUpperCase('tr-TR')); 
+    setVal("pv_seflik", (fSeflik || "-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_bina", (p.bina||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_sicil", (p.sicil||"-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_fiiliGorev", (p.fiiliGorev||"-").toLocaleUpperCase('tr-TR')); 
+    setVal("pv_fiiliGorev", (p.fiiliGorev || p.gorev || "-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_baslama", formatDateTR(p.gelisTarihi) || '-'); 
     setVal("pv_ayrilis", formatDateTR(p.ayrilisTarihi) || 'Halen Çalışıyor');
 
@@ -952,6 +978,8 @@ function handleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
     if (!file.type.match('image.*')) { showToast("Sadece resim dosyası yükleyebilirsiniz.", "error"); return; }
+    
+    // FOTOĞRAF YÜKLERKEN SPINNER ÇIKABİLİR, BU BEYAZ EKRANI BOZMAZ ÇÜNKÜ GİRİŞ EKRANINDA DEĞİLİZ
     showSpinner("Fotoğraf İşleniyor...");
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -1016,15 +1044,30 @@ function editPersonnelFromProfile() {
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
         
-        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
-        
-        fields.forEach(f => { 
+        // ESKİ VERİLERİN (sirket, gorev vb.) DÜZENLEME EKRANINA AKTARILMASI (Fallback mantığı)
+        const fieldsMap = {
+            tcNo: p.tcNo, adSoyad: p.adSoyad, cinsiyet: p.cinsiyet, dogumTarihi: p.dogumTarihi,
+            medeniHal: p.medeniHal, cocukSayisi: p.cocukSayisi, tahsil: p.tahsil,
+            anaAdi: p.anaAdi, babaAdi: p.babaAdi, 
+            kadroSirket: p.kadroSirket || p.sirket || p.kadro,
+            unvan: p.unvan || p.gorev,
+            seflik: p.seflik || p.bina,
+            bina: p.bina,
+            sicil: p.sicil,
+            fiiliGorev: p.fiiliGorev || p.gorev,
+            durum: p.durum, gelisTarihi: p.gelisTarihi, ayrilisTarihi: p.ayrilisTarihi,
+            tel: p.tel, kanGrubu: p.kanGrubu, adres: p.adres,
+            acilKisi: p.acilKisi, acilYakinlik: p.acilYakinlik, acilTel: p.acilTel
+        };
+
+        Object.keys(fieldsMap).forEach(f => {
             let el = document.getElementById("f_"+f);
             if(el) {
-                let val = p[f] || "";
+                let val = fieldsMap[f] || "";
                 if(el.tagName === 'SELECT' && val) {
                     let option = Array.from(el.options).find(o => o.value.toLocaleUpperCase('tr-TR') === val.toLocaleUpperCase('tr-TR'));
                     if (option) el.value = option.value;
+                    else el.value = ""; 
                 } else { el.value = val; }
             }
         });
