@@ -1,5 +1,7 @@
-// YARDIMCI ARAÇLAR VE VERSİYON BİLGİSİ
-const APP_VERSION = "5.0.0"; 
+const APP_VERSION = "6.0.0"; 
+
+// SENİN UZAKTAN KUMANDA (FİREBASE) LİNKİN
+const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
@@ -59,7 +61,6 @@ function closePhotoModal() {
     setTimeout(() => { m.style.display = 'none'; }, 300);
 }
 
-// DEĞİŞKENLER VE SİLÜETLER
 let personnelData = [];
 let currentFilteredData = [];
 const SYSTEM_TODAY = new Date();
@@ -93,7 +94,7 @@ function getAge(dateString) {
     return age;
 }
 
-// VERSİYON KONTROLCÜSÜ (KATI BARİYER)
+// VERSİYON KONTROLCÜSÜ
 function compareVersions(v1, v2) {
     let p1 = v1.split('.').map(Number);
     let p2 = v2.split('.').map(Number);
@@ -104,13 +105,14 @@ function compareVersions(v1, v2) {
     return 0; 
 }
 
+// ŞİRKET İSİMLERİ SADELEŞTİRİLDİ (MEMUR, BELTAŞ, BELKA)
 let systemSettings = {
     version: APP_VERSION,
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
         medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli"] },
         tahsil: { label: "Tahsil", values: ["İlköğretim", "Lise", "Önlisans", "Lisans", "Yüksek Lisans"] },
-        kadroSirket: { label: "Kadro / Şirket", values: ["MEMUR", "ŞİRKET (BELTAŞ)", "ŞİRKET (BELKA)"] },
+        kadroSirket: { label: "Kadro / Şirket", values: ["MEMUR", "BELTAŞ", "BELKA"] },
         unvan: { label: "Ünvanı", values: ["GIDA MÜHENDİSİ", "TEKNİKER", "TEKNİSYEN", "BİLGİSAYAR İŞLETMENİ", "BEKÇİ", "MUTEMET", "VERİ HAZIRLAMA", "HARİTA MÜHENDİSİ", "HARİTA TEKNİKERİ", "VASIFSIZ ELEMAN", "OFİS TEKNİKERİ", "ENGELLİ İŞÇİ", "ŞANTİYE TEKNİKERİ", "ŞANTİYE SÜRVEYANI", "ÇAĞRI MERKEZİ OPERATÖRÜ", "MAKAM PERSONELİ", "BÜRO PERSONELİ", "YARDIMCI PERSONEL", "HALKLA İLİŞKİLER", "OPERATÖR", "USTA", "AĞIR VASITA ŞOFÖRÜ", "KISIM ŞEFİ", "KANTAR İŞÇİSİ", "BİYOLOG"] },
         seflik: { label: "Çalıştığı Şeflik", values: ["MÜDÜR", "NUMARATAJ ŞEFLİĞİ", "BÜRO ŞEFLİĞİ", "ADRES YÖNETİM VE UYGULAMA ŞEFLİĞİ"] },
         bina: { label: "Çalıştığı Bina", values: ["ANA BİNA", "1011 YERLEŞKESİ"] },
@@ -123,8 +125,8 @@ let systemSettings = {
         { id: "active", title: "Aktif Çalışan", type: "durum", value: "Aktif", active: true },
         { id: "passive", title: "Pasif Personel", type: "durum", value: "Pasif", active: false },
         { id: "memur", title: "Kadrolu Memur", type: "kadroSirket", value: "MEMUR", active: true },
-        { id: "beltas", title: "Beltaş Personeli", type: "kadroSirket", value: "ŞİRKET (BELTAŞ)", active: true },
-        { id: "belka", title: "Belka Personeli", type: "kadroSirket", value: "ŞİRKET (BELKA)", active: true },
+        { id: "beltas", title: "Beltaş Personeli", type: "kadroSirket", value: "BELTAŞ", active: true },
+        { id: "belka", title: "Belka Personeli", type: "kadroSirket", value: "BELKA", active: true },
         { id: "muhendis", title: "Harita Mühendisleri", type: "unvan", value: "HARİTA MÜHENDİSİ", active: false },
         { id: "numarataj", title: "Numarataj Şefliği", type: "seflik", value: "NUMARATAJ ŞEFLİĞİ", active: false },
         { id: "kadin", title: "Kadın Personel", type: "cinsiyet", value: "Kadın", active: false },
@@ -209,28 +211,49 @@ async function backupDatabase() {
     else if(result.message !== "İşlem iptal edildi.") { showToast("Yedekleme hatası: " + result.message, "error"); }
 }
 
-// ŞİFRE ALANI GİZLEME (UX) MANTIĞIYLA ANİMASYONLU GİRİŞ
-function checkLogin() {
+// UZAKTAN KUMANDALI (FİREBASE) GİRİŞ MANTIĞI
+async function checkLogin() {
     const pass = document.getElementById('loginPass').value;
     const inputArea = document.getElementById('loginInputArea');
     const statusText = document.getElementById('loginStatusText');
+    const lockScreenInfo = document.getElementById('lockScreenInfo');
+    const lockMessageText = document.getElementById('lockMessageText');
 
     if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
     
-    // Formu tamamen gizle, animasyonlu yazıyı göster
+    // Şifre kutusunu gizle, güvenli bağlantı animasyonunu başlat
     inputArea.style.display = 'none';
     statusText.style.display = 'block';
     statusText.className = 'text-xs font-bold text-slate-600 mt-2 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl animate-pulse';
-    statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Şifre kontrol ediliyor...';
+    statusText.innerHTML = '<i class="fas fa-satellite-dish text-blue-500 mr-2 text-sm"></i> Güvenlik politikaları sunucudan alınıyor...';
     
-    setTimeout(async () => {
-        if(pass === "numarataj26") {
+    try {
+        // 1. ADIM: FİREBASE'E BAĞLANIP ŞALTERİ VE ŞİFREYİ SOR
+        let response = await fetch(FIREBASE_URL);
+        let fbData = await response.json();
+
+        // Veritabanı boşsa veya okunamadıysa güvenlik amaçlı standart değerleri ayarla
+        let isSystemOpen = fbData && fbData.sistemAcikMi !== undefined ? fbData.sistemAcikMi : true;
+        let remotePassword = fbData && fbData.sifre ? fbData.sifre : "numarataj26";
+        let lockMsg = fbData && fbData.kilitMesaji ? fbData.kilitMesaji : "Sistem lisansınız sona ermiştir. Lütfen sistem yöneticisi ile görüşün.";
+
+        // 2. ADIM: KILL-SWITCH (ŞALTER) KONTROLÜ
+        if (isSystemOpen === false || isSystemOpen === "false") {
+            // ŞALTER İNDİRİLMİŞ! Sistemi tamamen kilitle.
+            statusText.style.display = 'none';
+            lockScreenInfo.style.display = 'flex';
+            lockMessageText.innerText = lockMsg;
+            return; // Kod burada durur, asla içeri giremez.
+        }
+
+        // 3. ADIM: ŞİFRE KONTROLÜ (Uzaktaki şifre ile eşleşiyor mu?)
+        if(pass === remotePassword) {
             statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Veritabanı aranıyor...';
             
+            // Buradan sonrası yerel SQLite veritabanı kontrolüdür
             if (typeof window.api !== 'undefined') {
                 const dbCheck = await window.api.checkDatabase();
                 if (dbCheck.requirePath) {
-                    // Yol bulunamazsa inputu geri gösterip modalı aç
                     inputArea.style.display = 'block';
                     statusText.style.display = 'none';
                     document.getElementById('loginPass').value = '';
@@ -238,7 +261,7 @@ function checkLogin() {
                     document.getElementById('dbPathModal').style.display = 'flex';
                 } else {
                     statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Sürüm kontrol ediliyor...';
-                    setTimeout(() => { fetchDataFromLocalDB(); }, 800); 
+                    setTimeout(() => { fetchDataFromLocalDB(); }, 600); 
                 }
             } else {
                 statusText.className = 'text-xs font-bold text-emerald-700 mt-2 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
@@ -251,12 +274,20 @@ function checkLogin() {
                 }, 800);
             }
         } else {
+            // ŞİFRE YANLIŞ!
             statusText.style.display = 'none';
             inputArea.style.display = 'block';
             document.getElementById('loginPass').value = '';
             showToast("Hatalı şifre girdiniz!", "error");
         }
-    }, 800);
+
+    } catch (error) {
+        // İNTERNET YOKSA VEYA FİREBASE ÇÖKTÜYSE GÜVENLİK İÇİN GİRİŞİ İPTAL ET
+        statusText.style.display = 'none';
+        inputArea.style.display = 'block';
+        document.getElementById('loginPass').value = '';
+        showToast("Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.", "error");
+    }
 }
 
 async function browseFolder() {
@@ -332,7 +363,6 @@ function logOut() {
     }
 }
 
-// SIKI BARİYER KONTROLÜ (DÖNÜŞTÜRME/FALLBACK YOK)
 function fetchDataFromLocalDB() {
     const statusText = document.getElementById('loginStatusText');
     const inputArea = document.getElementById('loginInputArea');
@@ -347,7 +377,7 @@ function fetchDataFromLocalDB() {
         let dbVersion = "1.0.0";
         if(data && data.settings && data.settings.version) { dbVersion = data.settings.version; }
 
-        // SIKI BARİYER: Sürüm eskiyse kapı duvar! Animasyonu iptal et, hatayı bas.
+        // SIKI BARİYER: Sürüm eskiyse kapı duvar!
         if(compareVersions(APP_VERSION, dbVersion) === -1) {
             inputArea.style.display = 'none'; 
             statusText.style.display = 'none';
@@ -384,7 +414,6 @@ function fetchDataFromLocalDB() {
             }
         }
 
-        // BAŞARILI GİRİŞ ANİMASYONU VE GEÇİŞ
         statusText.className = 'text-xs font-bold text-emerald-700 mt-2 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
         statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Giriş Başarılı!';
 
@@ -521,7 +550,6 @@ function renderTable(data) {
         let zimmetCount = p.zimmetler ? p.zimmetler.length : 0;
         let tarihBilgisi = isAktif ? `🗓️ Başlama: <span class="font-semibold text-slate-600">${formatDateTR(p.gelisTarihi) || '-'}</span>` : `🚪 Ayrılış: <span class="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">${formatDateTR(p.ayrilisTarihi) || 'Belirtilmedi'}</span>`;
 
-        // TEMİZ VERİ OKUMA: Asla dönüştürme veya p.sirket gibi fallback yok
         let fUnvan = p.unvan || '-';
         let fSeflik = p.seflik || '-';
         let fKadroSirket = p.kadroSirket || '-';
@@ -563,7 +591,6 @@ function renderTable(data) {
     setTimeout(adjustStickyElements, 50); 
 }
 
-// TEMİZ FİLTRELEME MANTIĞI
 function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
     currentFilteredData = personnelData.filter(p => {
@@ -1058,7 +1085,6 @@ function editPersonnelFromProfile() {
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
         
-        // DÜZENLEME EKRANI (TEMİZ VERİ)
         const fieldsMap = {
             tcNo: p.tcNo, adSoyad: p.adSoyad, cinsiyet: p.cinsiyet, dogumTarihi: p.dogumTarihi,
             medeniHal: p.medeniHal, cocukSayisi: p.cocukSayisi, tahsil: p.tahsil,
