@@ -4,8 +4,8 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const sqlite3 = require('sqlite3').verbose();
 
+// Programın sadece kendi yerel hafızasına bakmasını sağlayan yapı
 const configPath = path.join(app.getPath('userData'), 'dbconfig.json');
-const defaultNetworkDir = '\\\\192.168.101.194\\Numarataj_tarama\\NUMARATAJ PROGRAMLAR\\PERSONEL YÖNETİM SİSTEMİ';
 let dbPath = '';
 let db = null;
 let isDbConnected = false;
@@ -53,7 +53,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     backgroundColor: '#00000000', 
-    icon: path.join(__dirname, 'icon.png'), // <--- UYGULAMA İKONU BURAYA EKLENDİ
+    icon: path.join(__dirname, 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -84,15 +84,14 @@ function createWindow() {
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
+// 45 saniyelik sabit IP araması iptal edildi, sadece yerel hafızaya bakar
 ipcMain.handle('check-db-connection', async () => {
-  let connected = await connectToDB(defaultNetworkDir);
-  if (connected) return { success: true, path: dbPath };
-
   const customPath = loadCustomPath();
   if (customPath) {
-    connected = await connectToDB(customPath);
+    let connected = await connectToDB(customPath);
     if (connected) return { success: true, path: dbPath };
   }
+  // Eğer daha önce yol seçilmemişse direkt "requirePath: true" döndürüp klasör seçme ekranını açtırır
   return { success: false, requirePath: true };
 });
 
@@ -101,6 +100,7 @@ ipcMain.handle('select-folder', async () => {
   return result.canceled ? null : result.filePaths[0];
 });
 
+// Güvenilir Manuel Yedekleme Sistemi
 ipcMain.handle('backup-database', async () => {
     if(!dbPath || !fs.existsSync(dbPath)) return {success: false, message: "Aktif veritabanı bulunamadı!"};
     
@@ -156,37 +156,4 @@ ipcMain.handle('save-settings', async (event, data) => {
   return new Promise((resolve) => {
     db.run(`REPLACE INTO store (key, value) VALUES ('settings', ?)`, [JSON.stringify(data)], (err) => resolve(!err));
   });
-});
-
-// Otomatik Sessiz Yedekleme (Çıkışta tetiklenir)
-ipcMain.handle('silent-backup', async (event, backupDir) => {
-    try {
-        const fs = require('fs');
-        const path = require('path');
-        
-        if (!currentDbPath || !fs.existsSync(currentDbPath)) return { success: false, message: 'DB bulunamadı.' };
-        if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
-
-        // Veritabanını tarih damgasıyla kopyala
-        const dateStr = new Date().toISOString().replace(/T/, '_').replace(/:/g, '-').split('.')[0];
-        const dest = path.join(backupDir, `PersonelDB_${dateStr}.sqlite`);
-        fs.copyFileSync(currentDbPath, dest);
-
-        // Kendi Kendini Temizleyen Çöpçü (Sadece son 7 yedeği tutar)
-        const files = fs.readdirSync(backupDir).filter(f => f.startsWith('PersonelDB_') && f.endsWith('.sqlite'));
-        if (files.length > 7) {
-            // Eskiden yeniye sırala
-            files.sort((a, b) => {
-                return fs.statSync(path.join(backupDir, a)).mtime.getTime() - fs.statSync(path.join(backupDir, b)).mtime.getTime();
-            });
-            // En eskileri sil
-            const toDelete = files.length - 7;
-            for(let i=0; i<toDelete; i++) {
-                fs.unlinkSync(path.join(backupDir, files[i]));
-            }
-        }
-        return { success: true };
-    } catch (error) {
-        return { success: false, message: error.message };
-    }
 });
