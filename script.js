@@ -1,6 +1,5 @@
 const APP_VERSION = "6.0.0"; 
 
-// SENİN UZAKTAN KUMANDA (FİREBASE) LİNKİN
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
 function showSpinner(text="İşleniyor...") { 
@@ -94,7 +93,6 @@ function getAge(dateString) {
     return age;
 }
 
-// VERSİYON KONTROLCÜSÜ
 function compareVersions(v1, v2) {
     let p1 = v1.split('.').map(Number);
     let p2 = v2.split('.').map(Number);
@@ -105,7 +103,6 @@ function compareVersions(v1, v2) {
     return 0; 
 }
 
-// ŞİRKET İSİMLERİ SADELEŞTİRİLDİ (MEMUR, BELTAŞ, BELKA)
 let systemSettings = {
     version: APP_VERSION,
     dropdowns: {
@@ -211,7 +208,6 @@ async function backupDatabase() {
     else if(result.message !== "İşlem iptal edildi.") { showToast("Yedekleme hatası: " + result.message, "error"); }
 }
 
-// UZAKTAN KUMANDALI (FİREBASE) GİRİŞ MANTIĞI
 async function checkLogin() {
     const pass = document.getElementById('loginPass').value;
     const inputArea = document.getElementById('loginInputArea');
@@ -221,36 +217,29 @@ async function checkLogin() {
 
     if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
     
-    // Şifre kutusunu gizle, güvenli bağlantı animasyonunu başlat
     inputArea.style.display = 'none';
     statusText.style.display = 'block';
     statusText.className = 'text-xs font-bold text-slate-600 mt-2 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl animate-pulse';
     statusText.innerHTML = '<i class="fas fa-satellite-dish text-blue-500 mr-2 text-sm"></i> Güvenlik politikaları sunucudan alınıyor...';
     
     try {
-        // 1. ADIM: FİREBASE'E BAĞLANIP ŞALTERİ VE ŞİFREYİ SOR
         let response = await fetch(FIREBASE_URL);
         let fbData = await response.json();
 
-        // Veritabanı boşsa veya okunamadıysa güvenlik amaçlı standart değerleri ayarla
         let isSystemOpen = fbData && fbData.sistemAcikMi !== undefined ? fbData.sistemAcikMi : true;
         let remotePassword = fbData && fbData.sifre ? fbData.sifre : "numarataj26";
         let lockMsg = fbData && fbData.kilitMesaji ? fbData.kilitMesaji : "Sistem lisansınız sona ermiştir. Lütfen sistem yöneticisi ile görüşün.";
 
-        // 2. ADIM: KILL-SWITCH (ŞALTER) KONTROLÜ
         if (isSystemOpen === false || isSystemOpen === "false") {
-            // ŞALTER İNDİRİLMİŞ! Sistemi tamamen kilitle.
             statusText.style.display = 'none';
             lockScreenInfo.style.display = 'flex';
             lockMessageText.innerText = lockMsg;
-            return; // Kod burada durur, asla içeri giremez.
+            return; 
         }
 
-        // 3. ADIM: ŞİFRE KONTROLÜ (Uzaktaki şifre ile eşleşiyor mu?)
         if(pass === remotePassword) {
             statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Veritabanı aranıyor...';
             
-            // Buradan sonrası yerel SQLite veritabanı kontrolüdür
             if (typeof window.api !== 'undefined') {
                 const dbCheck = await window.api.checkDatabase();
                 if (dbCheck.requirePath) {
@@ -274,7 +263,6 @@ async function checkLogin() {
                 }, 800);
             }
         } else {
-            // ŞİFRE YANLIŞ!
             statusText.style.display = 'none';
             inputArea.style.display = 'block';
             document.getElementById('loginPass').value = '';
@@ -282,7 +270,6 @@ async function checkLogin() {
         }
 
     } catch (error) {
-        // İNTERNET YOKSA VEYA FİREBASE ÇÖKTÜYSE GÜVENLİK İÇİN GİRİŞİ İPTAL ET
         statusText.style.display = 'none';
         inputArea.style.display = 'block';
         document.getElementById('loginPass').value = '';
@@ -377,7 +364,6 @@ function fetchDataFromLocalDB() {
         let dbVersion = "1.0.0";
         if(data && data.settings && data.settings.version) { dbVersion = data.settings.version; }
 
-        // SIKI BARİYER: Sürüm eskiyse kapı duvar!
         if(compareVersions(APP_VERSION, dbVersion) === -1) {
             inputArea.style.display = 'none'; 
             statusText.style.display = 'none';
@@ -392,7 +378,6 @@ function fetchDataFromLocalDB() {
             systemSettings.version = APP_VERSION;
         }
 
-        // VERİLERİ OLDUĞU GİBİ OKU
         if(data && data.personnel) {
             let parsedData = Array.isArray(data.personnel) ? data.personnel : Object.values(data.personnel);
             personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
@@ -719,11 +704,25 @@ function openZimmetForm() {
     openModal('addZimmetModal');
 }
 
+// YENİ: ÇİZELGEDEN KISA YOL İLE İZİN AÇMA FONKSİYONU
+function openIzinFromTimeline(id) {
+    selectedUserId = id;
+    openIzinForm();
+}
+
+// GÜNCELLENDİ: ARTIK BAŞLIĞA KİŞİNİN ADINI YAZIYOR
 function openIzinForm() {
     document.getElementById('i_tur').selectedIndex = 0;
     document.getElementById('i_bas').value = '';
     document.getElementById('i_bit').value = '';
     document.getElementById('i_aciklama').value = '';
+    
+    const p = personnelData.find(x => x.id === selectedUserId);
+    const titleEl = document.getElementById("addIzinModalTitle");
+    if(titleEl && p) {
+        titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
+    }
+    
     openModal('addIzinModal');
 }
 
@@ -752,7 +751,8 @@ function saveZimmet() {
         p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
         
         if(saveToDatabase()) {
-            renderZimmetTable(); applyFilters(); closeModal('addZimmetModal');
+            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
+            applyFilters(); closeModal('addZimmetModal');
             showToast("Demirbaş başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("Demirbaş eklenirken hata oluştu.", "error"); }
@@ -762,7 +762,9 @@ function deleteZimmet(id) {
     try {
         if(confirm("Silmek istediğinize emin misiniz?")) {
             personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
-            saveToDatabase(); renderZimmetTable(); applyFilters(); 
+            saveToDatabase(); 
+            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
+            applyFilters(); 
             showToast("Demirbaş silindi.", "success");
         }
     } catch (error) { showToast("Demirbaş silinirken hata oluştu.", "error"); }
@@ -814,6 +816,7 @@ function renderIzinTable() {
     applyFilters(); 
 }
 
+// GÜNCELLENDİ: PROFİL VEYA ÇİZELGE EKRANINI ALGILAYIP ÇÖKMEDEN YENİLER
 function saveIzin() {
     try {
         const bas = document.getElementById("i_bas").value;
@@ -827,8 +830,13 @@ function saveIzin() {
         p.izinler.push({ id: Date.now(), tur: document.getElementById("i_tur").value, baslangic: bas, bitis: bit, aciklama: acik });
         
         if(saveToDatabase()) {
-            renderIzinTable(); applyFilters(); closeModal('addIzinModal'); 
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
+            if(document.getElementById("profileModal").classList.contains("show")) {
+                renderIzinTable(); 
+            }
+            applyFilters(); closeModal('addIzinModal'); 
+            if(document.getElementById("timelineModal").classList.contains("show")) {
+                generateTimeline();
+            }
             showToast("İzin kaydı başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("İzin eklenirken hata oluştu.", "error"); }
@@ -838,7 +846,9 @@ function deleteIzin(id) {
     try {
         if(confirm("İzni silmek istediğinize emin misiniz?")) {
             personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
-            saveToDatabase(); renderIzinTable(); applyFilters(); 
+            saveToDatabase(); 
+            if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
+            applyFilters(); 
             if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
             showToast("İzin silindi.", "success");
         }
@@ -925,6 +935,7 @@ window.hideTooltip = function() {
     }
 }
 
+// GÜNCELLENDİ: ÇİZELGEDEKİ İSİMLER ARTIK TIKLANABİLİR BİRER BUTON ("+" İKONUYLA BİRLİKTE)
 function generateTimeline() {
     const inputVal = document.getElementById("timelineMonth").value;
     if(inputVal) {
@@ -949,7 +960,10 @@ function generateTimeline() {
     html += '</div>';
 
     personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-slate-700 font-semibold force-upper border-b border-slate-100" title="${p.adSoyad}">${p.adSoyad}</div>`;
+        
+        // SİHİRLİ DOKUNUŞ BURADA: İsimleri butonlaştırıp openIzinFromTimeline(id) fonksiyonuna bağladık
+        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors" title="${p.adSoyad} (Tıkla ve İzin İşle)" onclick="openIzinFromTimeline(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
+        
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
@@ -1085,29 +1099,15 @@ function editPersonnelFromProfile() {
         document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
         document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
         
-        const fieldsMap = {
-            tcNo: p.tcNo, adSoyad: p.adSoyad, cinsiyet: p.cinsiyet, dogumTarihi: p.dogumTarihi,
-            medeniHal: p.medeniHal, cocukSayisi: p.cocukSayisi, tahsil: p.tahsil,
-            anaAdi: p.anaAdi, babaAdi: p.babaAdi, 
-            kadroSirket: p.kadroSirket,
-            unvan: p.unvan,
-            seflik: p.seflik,
-            bina: p.bina,
-            sicil: p.sicil,
-            fiiliGorev: p.fiiliGorev,
-            durum: p.durum, gelisTarihi: p.gelisTarihi, ayrilisTarihi: p.ayrilisTarihi,
-            tel: p.tel, kanGrubu: p.kanGrubu, adres: p.adres,
-            acilKisi: p.acilKisi, acilYakinlik: p.acilYakinlik, acilTel: p.acilTel
-        };
-
-        Object.keys(fieldsMap).forEach(f => {
+        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
+        
+        fields.forEach(f => { 
             let el = document.getElementById("f_"+f);
             if(el) {
-                let val = fieldsMap[f] || "";
+                let val = p[f] || "";
                 if(el.tagName === 'SELECT' && val) {
                     let option = Array.from(el.options).find(o => o.value.toLocaleUpperCase('tr-TR') === val.toLocaleUpperCase('tr-TR'));
                     if (option) el.value = option.value;
-                    else el.value = ""; 
                 } else { el.value = val; }
             }
         });
