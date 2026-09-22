@@ -1,5 +1,7 @@
-const APP_VERSION = "6.0.0"; 
+const APP_VERSION = "7.0.0"; 
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
+
+let currentUserRole = 'admin'; // 'admin' veya '1011' olabilir
 
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
@@ -149,6 +151,14 @@ const statColorsAndIcons = {
     "Demirbaş Sahipleri": { bg: "bg-gradient-to-br from-lime-50 to-white", text: "text-lime-600", border: "border-lime-200", icon: "fa-laptop", ring: "ring-lime-400" }
 };
 
+// HAYALET FİLTRE MANTIĞI: Sistemin beyni artık bu fonksiyondur.
+function getVisiblePersonnel() {
+    if(currentUserRole === '1011') {
+        return personnelData.filter(p => p.bina && (p.bina === '1011 YERLEŞKESİ' || p.bina === '1011 Yerleşkesi'));
+    }
+    return personnelData;
+}
+
 function exportToExcel() {
     if(currentFilteredData.length === 0) {
         showToast("Dışa aktarılacak personel kaydı bulunamadı!", "error");
@@ -164,7 +174,8 @@ function exportToExcel() {
             "Medeni Hal": p.medeniHal || "",
             "Çocuk Sayısı": p.cocukSayisi || "0",
             "Tahsil Durumu": p.tahsil || "",
-            "Telefon Numarası": p.tel || "",
+            "Cep Telefonu": p.tel || "",
+            "Dahili No": p.dahili || "",
             "Kan Grubu": p.kanGrubu || "",
             "Ev Adresi": p.adres || "",
             "Kadro / Şirket": p.kadroSirket || "",
@@ -209,6 +220,19 @@ async function backupDatabase() {
     else if(result.message !== "İşlem iptal edildi.") { showToast("Yedekleme hatası: " + result.message, "error"); }
 }
 
+function updateHeaderBadge() {
+    const badge = document.getElementById('userBadge');
+    badge.style.display = 'inline-block';
+    
+    if(currentUserRole === 'admin') {
+        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-blue-50 text-blue-700 border-blue-200 shadow-sm';
+        badge.innerHTML = '👑 ANA KULLANICI';
+    } else {
+        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-violet-50 text-violet-700 border-violet-200 shadow-sm';
+        badge.innerHTML = '📍 1011 YÖNETİCİSİ';
+    }
+}
+
 async function checkLogin() {
     const pass = document.getElementById('loginPass').value;
     const inputArea = document.getElementById('loginInputArea');
@@ -229,6 +253,7 @@ async function checkLogin() {
 
         let isSystemOpen = fbData && fbData.sistemAcikMi !== undefined ? fbData.sistemAcikMi : true;
         let remotePassword = fbData && fbData.sifre ? fbData.sifre : "numarataj26";
+        let remote1011Password = fbData && fbData.sifre1011 ? fbData.sifre1011 : "bin11";
         let lockMsg = fbData && fbData.kilitMesaji ? fbData.kilitMesaji : "Sistem lisansınız sona ermiştir. Lütfen sistem yöneticisi ile görüşün.";
 
         if (isSystemOpen === false || isSystemOpen === "false") {
@@ -238,7 +263,18 @@ async function checkLogin() {
             return; 
         }
 
+        let loginSuccess = false;
+
         if(pass === remotePassword) {
+            currentUserRole = 'admin';
+            loginSuccess = true;
+        } else if (pass === remote1011Password) {
+            currentUserRole = '1011';
+            loginSuccess = true;
+        }
+
+        if(loginSuccess) {
+            updateHeaderBadge();
             statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Veritabanı aranıyor...';
             
             if (typeof window.api !== 'undefined') {
@@ -441,6 +477,10 @@ function openModal(id) {
     if(id === 'settingsModal') buildSettingsMenu();
     if(id === 'timelineModal') {
         document.getElementById("timelineMonth").value = `${tlCurrentDate.getFullYear()}-${String(tlCurrentDate.getMonth()+1).padStart(2,'0')}`;
+        
+        // 1011 Kullanıcısı için Toplu İzin Butonunu Gizle
+        document.getElementById("btnTopluIzin").style.display = (currentUserRole === '1011') ? 'none' : 'flex';
+        
         generateTimeline();
     }
 }
@@ -498,15 +538,17 @@ function filterFromCard(cardId) {
 function renderStatsCards() {
     const container = document.getElementById("stats-container");
     container.innerHTML = "";
+    
+    const baseData = getVisiblePersonnel(); // Hayalet Filtre
+
     systemSettings.cards.filter(c => c.active).forEach(card => {
         let count = 0;
         
-        // SİHİRLİ DÜZELTME BURADA: Artık Toplam Personel her zaman veritabanı sayısını (personnelData) okur.
         if (card.type === "all") {
-            count = personnelData.length; 
+            count = baseData.length; 
         } 
         else if (card.type === "custom" && card.func === "izinli") {
-            count = personnelData.filter(p => {
+            count = baseData.filter(p => {
                 if (p.durum !== "Aktif" && p.durum !== "AKTİF") return false;
                 if (!p.izinler) return false;
                 return p.izinler.some(iz => {
@@ -516,9 +558,9 @@ function renderStatsCards() {
                 });
             }).length;
         } else if (card.type === "custom" && card.func === "zimmetli") {
-            count = personnelData.filter(p => (p.durum === "Aktif" || p.durum === "AKTİF") && p.zimmetler && p.zimmetler.length > 0).length;
+            count = baseData.filter(p => (p.durum === "Aktif" || p.durum === "AKTİF") && p.zimmetler && p.zimmetler.length > 0).length;
         } else {
-            count = personnelData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
+            count = baseData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
         }
         
         const styling = statColorsAndIcons[card.title] || { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-info-circle", ring: "ring-slate-400" };
@@ -569,6 +611,7 @@ function renderTable(data) {
         let fUnvan = p.unvan || '-';
         let fSeflik = p.seflik || '-';
         let fKadroSirket = p.kadroSirket || '-';
+        let fDahili = p.dahili ? `<span class="text-slate-800 bg-slate-100 px-1.5 rounded border border-slate-200">${p.dahili}</span>` : '-';
 
         tbody.innerHTML += `
             <tr onclick="openProfileModal(${p.id})" class="row-hover cursor-pointer group ${!isAktif ? 'opacity-70 bg-slate-50 grayscale-[20%]' : ''}">
@@ -587,13 +630,14 @@ function renderTable(data) {
                     <div class="text-[10px] text-slate-500 font-mono mt-1 font-medium flex items-center gap-2 uppercase">🏷️ Sicil: ${p.sicil || '-'} <span class="text-slate-300">|</span> ${tarihBilgisi}</div>
                 </td>
                 <td class="px-5 py-3 border-b border-slate-100">
-                    <div class="font-bold text-slate-700 text-xs">📱 ${p.tel || '-'}</div>
-                    <div class="text-[10px] font-bold text-rose-600 mt-1">🩸 Kan Grubu: <span class="bg-rose-50 px-1.5 rounded border border-rose-100 uppercase">${p.kanGrubu}</span></div>
+                    <div class="font-bold text-slate-700 text-xs flex items-center gap-2">📱 ${p.tel || '-'}</div>
+                    <div class="text-[10px] font-bold text-slate-500 mt-1"><i class="fas fa-phone-square-alt"></i> Dahili: ${fDahili}</div>
                     <div class="text-[11px] text-slate-500 mt-1 truncate w-48 font-medium uppercase force-upper" title="${p.adres}">🏠 ${p.adres || '-'}</div>
                 </td>
                 <td class="px-5 py-3 border-b border-slate-100">
                     <div class="text-[11px] font-bold text-slate-700 whitespace-normal break-words leading-tight uppercase force-upper"><i class="fas fa-ambulance text-rose-500"></i> ${p.acilKisi || '-'} <span class="text-slate-400 font-normal">(${p.acilYakinlik || '-'})</span></div>
-                    <div class="text-[11px] text-slate-600 mt-1 font-medium">📞 ${p.acilTel || '-'}</div>
+                    <div class="text-[11px] text-slate-600 mt-0.5 font-medium mb-1">📞 ${p.acilTel || '-'}</div>
+                    <div class="text-[10px] font-bold text-rose-600 inline-flex">🩸 Kan: <span class="bg-rose-50 px-1 ml-1 rounded border border-rose-100 uppercase">${p.kanGrubu || '-'}</span></div>
                 </td>
                 <td class="px-5 py-3 border-b border-slate-100 text-center">
                     <div class="mb-2"><span class="px-3 py-1 text-[10px] font-bold ${isAktif?'bg-emerald-50 text-emerald-700 border border-emerald-200':'bg-rose-50 text-rose-700 border border-rose-200'} rounded-md uppercase">${p.durum}</span></div>
@@ -610,7 +654,9 @@ function renderTable(data) {
 
 function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
-    currentFilteredData = personnelData.filter(p => {
+    const baseData = getVisiblePersonnel(); // Hayalet Filtre uygulanmış asıl data
+
+    currentFilteredData = baseData.filter(p => {
         let pAd = p.adSoyad ? p.adSoyad.toLocaleUpperCase('tr-TR') : "";
         let pSicil = p.sicil ? p.sicil.toLocaleUpperCase('tr-TR') : "";
         let pTel = p.tel || "";
@@ -697,6 +743,7 @@ function openProfileModal(id) {
     setVal("pv_tahsil", (p.tahsil||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_anababa", `${(p.anaAdi||"-").toLocaleUpperCase('tr-TR')} / ${(p.babaAdi||"-").toLocaleUpperCase('tr-TR')}`); 
     setVal("pv_tel", p.tel || '-');
+    setVal("pv_dahili", p.dahili || '-');
     setVal("pv_kan", (p.kanGrubu||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_adres", (p.adres||"-").toLocaleUpperCase('tr-TR')); 
     setVal("pv_acilAd", (p.acilKisi||"-").toLocaleUpperCase('tr-TR'));
@@ -1007,7 +1054,8 @@ function generateTimeline() {
     
     document.getElementById("timelineCurrentLabel").innerText = `${monthNames[m]} ${y}`.toLocaleUpperCase('tr-TR');
 
-    let html = '<div class="inline-block min-w-full"><div class="tl-row tl-row-header"><div class="tl-name tl-name-header text-center justify-center text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200"><i class="fas fa-users mr-1.5"></i> PERSONEL</div>';
+    // Uzun isimlerin kesilmemesi için tl-name genişliği CSS kurgusuyla artırıldı (w-[180px])
+    let html = '<div class="inline-block min-w-full"><div class="tl-row tl-row-header"><div class="tl-name tl-name-header text-center justify-center text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200 w-[180px] min-w-[180px] shrink-0"><i class="fas fa-users mr-1.5"></i> PERSONEL</div>';
     
     for(let d=1; d<=daysInMonth; d++) {
         let currDate = new Date(y, m, d);
@@ -1017,8 +1065,10 @@ function generateTimeline() {
     }
     html += '</div>';
 
-    personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors" title="${p.adSoyad} (Tıkla ve İzin İşle)" onclick="openIzinFromTimeline(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
+    const baseData = getVisiblePersonnel(); // Hayalet Filtre
+
+    baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
+        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[180px] min-w-[180px] shrink-0" title="${p.adSoyad} (Tıkla ve İzin İşle)" onclick="openIzinFromTimeline(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
@@ -1135,6 +1185,18 @@ function openPersonnelForm() {
     if(fileInput) fileInput.value = "";
 
     document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-plus text-blue-600"></i> Yeni Personel Kaydı';
+    
+    // 1011 Form Kilidi Uygulaması
+    const binaEl = document.getElementById("f_bina");
+    if(currentUserRole === '1011') {
+        binaEl.value = "1011 YERLEŞKESİ";
+        binaEl.disabled = true;
+        binaEl.classList.add("bg-slate-100", "text-slate-400", "cursor-not-allowed");
+    } else {
+        binaEl.disabled = false;
+        binaEl.classList.remove("bg-slate-100", "text-slate-400", "cursor-not-allowed");
+    }
+
     switchFormTab('kisisel'); 
     openModal('personnelModal'); 
     setTimeout(() => { updateFormSilhouette(); }, 50); 
@@ -1165,7 +1227,7 @@ function editPersonnelFromProfile() {
             sicil: p.sicil,
             fiiliGorev: p.fiiliGorev,
             durum: p.durum, gelisTarihi: p.gelisTarihi, ayrilisTarihi: p.ayrilisTarihi,
-            tel: p.tel, kanGrubu: p.kanGrubu, adres: p.adres,
+            tel: p.tel, dahili: p.dahili, kanGrubu: p.kanGrubu, adres: p.adres,
             acilKisi: p.acilKisi, acilYakinlik: p.acilYakinlik, acilTel: p.acilTel
         };
 
@@ -1181,6 +1243,17 @@ function editPersonnelFromProfile() {
             }
         });
         
+        // 1011 Form Kilidi Uygulaması
+        const binaEl = document.getElementById("f_bina");
+        if(currentUserRole === '1011') {
+            binaEl.value = "1011 YERLEŞKESİ";
+            binaEl.disabled = true;
+            binaEl.classList.add("bg-slate-100", "text-slate-400", "cursor-not-allowed");
+        } else {
+            binaEl.disabled = false;
+            binaEl.classList.remove("bg-slate-100", "text-slate-400", "cursor-not-allowed");
+        }
+
         switchFormTab('kisisel');
         openModal('personnelModal');
     }, 350); 
@@ -1205,11 +1278,11 @@ function savePersonnel() {
         }
         
         const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "" };
-        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
+        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "dahili", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
         
         fields.forEach(f => { 
             let rawVal = document.getElementById("f_"+f).value;
-            if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "tcNo"].includes(f)) { pData[f] = rawVal; } 
+            if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "dahili", "tcNo"].includes(f)) { pData[f] = rawVal; } 
             else { pData[f] = rawVal ? rawVal.toLocaleUpperCase('tr-TR') : ""; }
         });
 
