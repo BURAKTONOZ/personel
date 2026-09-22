@@ -1,4 +1,4 @@
-const APP_VERSION = "7.1.0"; 
+const APP_VERSION = "7.2.0"; 
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
 let currentUserRole = 'admin'; 
@@ -474,7 +474,11 @@ function openModal(id) {
     m.style.display = "flex";
     setTimeout(() => { m.classList.add('show'); m.querySelector('.modal-content').classList.add('show'); }, 10);
     
-    if(id === 'settingsModal') buildSettingsMenu();
+    if(id === 'settingsModal') {
+        buildSettingsMenu();
+        const saveBtn = document.getElementById("settingsSaveBtn");
+        if(saveBtn) saveBtn.style.display = (currentUserRole === '1011') ? 'none' : 'flex';
+    }
     if(id === 'timelineModal') {
         document.getElementById("timelineMonth").value = `${tlCurrentDate.getFullYear()}-${String(tlCurrentDate.getMonth()+1).padStart(2,'0')}`;
         document.getElementById("timelineSearchInput").value = ""; 
@@ -600,7 +604,7 @@ function renderTable(data) {
                              (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 
                              (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ') ? 'izin-u' : 'izin-s')));
                     
-                    let turLabel = (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ')) ? 'Üİ' : iz.tur;
+                    let turLabel = iz.tur;
                     leaveBadge = `<span class="px-2.5 py-1 text-[10px] font-bold rounded-md ${cl} uppercase">${turLabel}</span>`;
                 }
             });
@@ -760,7 +764,6 @@ function openProfileModal(id) {
     setVal("pv_baslama", formatDateTR(p.gelisTarihi) || '-'); 
     setVal("pv_ayrilis", formatDateTR(p.ayrilisTarihi) || 'Halen Çalışıyor');
 
-    // Notlar sekmesini doldur
     const notlarInput = document.getElementById("pv_notlar_input");
     if(notlarInput) notlarInput.value = p.notlar || "";
 
@@ -940,7 +943,8 @@ function renderIzinTable() {
                  (iz.tur.includes('Rapor') || iz.tur.includes('RAPOR') ? 'izin-r' : 
                  (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 
                  (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ') ? 'izin-u' : 'izin-s')));
-        let turLabel = (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ')) ? 'Üİ' : iz.tur;
+        
+        let turLabel = iz.tur;
 
         tb.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-4"><span class="px-2 py-1 text-[10px] font-bold rounded ${cl} uppercase">${turLabel}</span></td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.baslangic)}</td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.bitis)}</td><td class="p-4 text-slate-600 uppercase">${iz.aciklama}</td><td class="p-4 text-center"><button onclick="deleteIzin(${iz.id})" class="text-rose-500 hover:text-rose-700 bg-white border border-slate-200 hover:bg-rose-50 w-8 h-8 rounded-md transition"><i class="fas fa-trash-alt"></i></button></td></tr>`;
     });
@@ -1078,14 +1082,12 @@ function generateTimeline() {
     
     document.getElementById("timelineCurrentLabel").innerText = `${monthNames[m]} ${y}`.toLocaleUpperCase('tr-TR');
 
-    // Arama Kutusu Filtreleme
     let searchVal = "";
     const searchInputEl = document.getElementById("timelineSearchInput");
     if(searchInputEl) {
         searchVal = searchInputEl.value.toLocaleUpperCase('tr-TR');
     }
 
-    // PERSONEL sütun genişliği 240px yapılarak uzun isimlerin kesilmesi engellendi
     let html = '<div class="inline-block min-w-full"><div class="tl-row tl-row-header"><div class="tl-name tl-name-header text-center justify-center text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200 w-[240px] min-w-[240px] shrink-0"><i class="fas fa-users mr-1.5"></i> PERSONEL</div>';
     
     for(let d=1; d<=daysInMonth; d++) {
@@ -1097,11 +1099,8 @@ function generateTimeline() {
     html += '</div>';
 
     let baseData = getVisiblePersonnel(); 
-    
-    // Aktif olan personelleri filtrele
     let activeData = baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
 
-    // İzin Çizelgesi için İsim Aramasını uygula
     if(searchVal) {
         activeData = activeData.filter(p => p.adSoyad && p.adSoyad.toLocaleUpperCase('tr-TR').includes(searchVal));
     }
@@ -1142,22 +1141,24 @@ function generateTimeline() {
 }
 
 function buildSettingsMenu() {
+    const is1011 = currentUserRole === '1011';
+    
     const tc = document.getElementById("settings-textareas-container"); tc.innerHTML = "";
     Object.keys(systemSettings.dropdowns).forEach(key => {
         if(key !== 'durum') {
             tc.innerHTML += `<div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
                 <label class="block text-[11px] font-bold uppercase text-slate-600 mb-2">${systemSettings.dropdowns[key].label}</label>
-                <textarea id="set_${key}" rows="4" class="w-full text-xs bg-white border border-slate-300 p-2.5 rounded-lg font-semibold text-slate-700 resize-none focus:outline-none focus:border-blue-500 uppercase force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')">${systemSettings.dropdowns[key].values.join('\n')}</textarea>
+                <textarea id="set_${key}" rows="4" class="w-full text-xs border border-slate-300 p-2.5 rounded-lg font-semibold text-slate-700 resize-none focus:outline-none focus:border-blue-500 uppercase force-upper ${is1011 ? 'bg-slate-100 opacity-70 cursor-not-allowed' : 'bg-white'}" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')" ${is1011 ? 'readonly' : ''}>${systemSettings.dropdowns[key].values.join('\n')}</textarea>
             </div>`;
         }
     });
     const cc = document.getElementById("settings-cards-container"); cc.innerHTML = "";
     systemSettings.cards.forEach((c, i) => {
-        cc.innerHTML += `<div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between transition hover:bg-slate-100">
+        cc.innerHTML += `<div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between transition hover:bg-slate-100 ${is1011 ? 'opacity-70' : ''}">
             <span class="text-[11px] font-bold uppercase text-slate-600 truncate mr-2" title="${c.title}">${c.title}</span>
             <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                <input type="checkbox" id="ct_${i}" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 border-slate-300 appearance-none cursor-pointer transition-all" ${c.active?'checked':''}/>
-                <label for="ct_${i}" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 cursor-pointer transition-colors"></label>
+                <input type="checkbox" id="ct_${i}" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 border-slate-300 appearance-none transition-all ${is1011 ? 'cursor-not-allowed' : 'cursor-pointer'}" ${c.active?'checked':''} ${is1011 ? 'disabled' : ''}/>
+                <label for="ct_${i}" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 transition-colors ${is1011 ? 'cursor-not-allowed' : 'cursor-pointer'}"></label>
             </div></div>`;
     });
 }
