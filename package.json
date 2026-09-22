@@ -1,6 +1,6 @@
 {
   "name": "npys",
-  "version": "7.1.0",
+  "version": "7.2.0",
   "description": "Numarataj Şube Müdürlüğü Personel Yönetim Sistemi",
   "main": "main.js",
   "scripts": {
