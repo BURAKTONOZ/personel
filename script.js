@@ -2,6 +2,7 @@ const APP_VERSION = "7.2.0";
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
 let currentUserRole = 'admin'; 
+let pollingTimer = null; // Kalkan için eklendi
 
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
@@ -106,7 +107,6 @@ function compareVersions(v1, v2) {
     return 0; 
 }
 
-// 1. GÜNCELLEME: YENİ KART LİSTESİ
 let systemSettings = {
     version: APP_VERSION,
     dropdowns: {
@@ -140,7 +140,6 @@ let systemSettings = {
     ]
 };
 
-// 2. GÜNCELLEME: YENİ KARTLAR İÇİN ÖZEL RENKLER VE İKONLAR
 const statColorsAndIcons = {
     "Toplam Personel": { bg: "bg-gradient-to-br from-slate-50 to-white", text: "text-slate-700", border: "border-slate-200", icon: "fa-users", ring: "ring-slate-400" },
     "Aktif Çalışan": { bg: "bg-gradient-to-br from-emerald-50 to-white", text: "text-emerald-600", border: "border-emerald-200", icon: "fa-user-check", ring: "ring-emerald-400" },
@@ -354,9 +353,13 @@ function changeDbPathFromSettings() {
     document.getElementById('dbPathModal').style.display = 'flex';
 }
 
+// 3. GÜNCELLEME: SESSİZ VERSİYON KALKANI BURAYA EKLENDİ
 function startPolling() {
     if (typeof window.api === 'undefined') return;
-    setInterval(async () => {
+    
+    if(pollingTimer) clearInterval(pollingTimer);
+    
+    pollingTimer = setInterval(async () => {
         const status = await window.api.getDbStatus();
         const led = document.getElementById('led-indicator');
         const statusText = document.getElementById('db-status-text');
@@ -368,6 +371,16 @@ function startPolling() {
             if (pathDisplay) pathDisplay.innerText = status.path;
 
             const newData = await window.api.getData();
+            
+            // YENİ ÖZELLİK: Versiyon kontrol Kalkanı
+            if (newData && newData.settings && newData.settings.version) {
+                if (compareVersions(APP_VERSION, newData.settings.version) === -1) {
+                    clearInterval(pollingTimer); // Sistemi zorlamayı kes
+                    document.getElementById('forceUpdateModal').style.display = 'flex'; // Modalı aç
+                    return; // Kodu durdur, alta geçme
+                }
+            }
+
             if (newData && newData.personnel) {
                 let parsedData = Array.isArray(newData.personnel) ? newData.personnel : Object.values(newData.personnel);
                 personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
