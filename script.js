@@ -106,6 +106,7 @@ function compareVersions(v1, v2) {
     return 0; 
 }
 
+// 1. GÜNCELLEME: YENİ KART LİSTESİ
 let systemSettings = {
     version: APP_VERSION,
     dropdowns: {
@@ -124,11 +125,14 @@ let systemSettings = {
         { id: "total", title: "Toplam Personel", type: "all", active: true },
         { id: "active", title: "Aktif Çalışan", type: "durum", value: "Aktif", active: true },
         { id: "passive", title: "Pasif Personel", type: "durum", value: "Pasif", active: false },
-        { id: "memur", title: "Kadrolu Memur", type: "kadroSirket", value: "MEMUR", active: true },
-        { id: "beltas", title: "Beltaş Personeli", type: "kadroSirket", value: "BELTAŞ", active: true },
-        { id: "belka", title: "Belka Personeli", type: "kadroSirket", value: "BELKA", active: true },
-        { id: "muhendis", title: "Harita Mühendisleri", type: "unvan", value: "HARİTA MÜHENDİSİ", active: false },
-        { id: "numarataj", title: "Numarataj Şefliği", type: "seflik", value: "NUMARATAJ ŞEFLİĞİ", active: false },
+        { id: "anabina", title: "Ana Bina", type: "bina", value: "ANA BİNA", active: true },
+        { id: "yerleske1011", title: "1011 Yerleşkesi", type: "bina", value: "1011 YERLEŞKESİ", active: true },
+        { id: "numarataj", title: "Numarataj Şefliği", type: "seflik", value: "NUMARATAJ ŞEFLİĞİ", active: true },
+        { id: "burosef", title: "Büro Şefliği", type: "seflik", value: "BÜRO ŞEFLİĞİ", active: true },
+        { id: "adresyonetim", title: "Adres Yön. ve Uyg.", type: "seflik", value: "ADRES YÖNETİM VE UYGULAMA ŞEFLİĞİ", active: true },
+        { id: "memur", title: "Kadrolu Memur", type: "kadroSirket", value: "MEMUR", active: false },
+        { id: "beltas", title: "Beltaş Personeli", type: "kadroSirket", value: "BELTAŞ", active: false },
+        { id: "belka", title: "Belka Personeli", type: "kadroSirket", value: "BELKA", active: false },
         { id: "kadin", title: "Kadın Personel", type: "cinsiyet", value: "Kadın", active: false },
         { id: "erkek", title: "Erkek Personel", type: "cinsiyet", value: "Erkek", active: false },
         { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
@@ -136,15 +140,19 @@ let systemSettings = {
     ]
 };
 
+// 2. GÜNCELLEME: YENİ KARTLAR İÇİN ÖZEL RENKLER VE İKONLAR
 const statColorsAndIcons = {
     "Toplam Personel": { bg: "bg-gradient-to-br from-slate-50 to-white", text: "text-slate-700", border: "border-slate-200", icon: "fa-users", ring: "ring-slate-400" },
     "Aktif Çalışan": { bg: "bg-gradient-to-br from-emerald-50 to-white", text: "text-emerald-600", border: "border-emerald-200", icon: "fa-user-check", ring: "ring-emerald-400" },
     "Pasif Personel": { bg: "bg-gradient-to-br from-rose-50 to-white", text: "text-rose-600", border: "border-rose-200", icon: "fa-user-times", ring: "ring-rose-400" },
+    "Ana Bina": { bg: "bg-gradient-to-br from-slate-100 to-white", text: "text-slate-800", border: "border-slate-300", icon: "fa-building", ring: "ring-slate-400" },
+    "1011 Yerleşkesi": { bg: "bg-gradient-to-br from-teal-50 to-white", text: "text-teal-600", border: "border-teal-200", icon: "fa-map-pin", ring: "ring-teal-400" },
+    "Numarataj Şefliği": { bg: "bg-gradient-to-br from-fuchsia-50 to-white", text: "text-fuchsia-600", border: "border-fuchsia-200", icon: "fa-sitemap", ring: "ring-fuchsia-400" },
+    "Büro Şefliği": { bg: "bg-gradient-to-br from-indigo-50 to-white", text: "text-indigo-600", border: "border-indigo-200", icon: "fa-desktop", ring: "ring-indigo-400" },
+    "Adres Yön. ve Uyg.": { bg: "bg-gradient-to-br from-cyan-50 to-white", text: "text-cyan-600", border: "border-cyan-200", icon: "fa-map-marked-alt", ring: "ring-cyan-400" },
     "Kadrolu Memur": { bg: "bg-gradient-to-br from-blue-50 to-white", text: "text-blue-600", border: "border-blue-200", icon: "fa-user-tie", ring: "ring-blue-400" },
     "Beltaş Personeli": { bg: "bg-gradient-to-br from-amber-50 to-white", text: "text-amber-600", border: "border-amber-200", icon: "fa-hard-hat", ring: "ring-amber-400" },
     "Belka Personeli": { bg: "bg-gradient-to-br from-indigo-50 to-white", text: "text-indigo-600", border: "border-indigo-200", icon: "fa-id-badge", ring: "ring-indigo-400" },
-    "Harita Mühendisleri": { bg: "bg-gradient-to-br from-violet-50 to-white", text: "text-violet-600", border: "border-violet-200", icon: "fa-drafting-compass", ring: "ring-violet-400" },
-    "Numarataj Şefliği": { bg: "bg-gradient-to-br from-fuchsia-50 to-white", text: "text-fuchsia-600", border: "border-fuchsia-200", icon: "fa-sitemap", ring: "ring-fuchsia-400" },
     "Kadın Personel": { bg: "bg-gradient-to-br from-pink-50 to-white", text: "text-pink-600", border: "border-pink-200", icon: "fa-female", ring: "ring-pink-400" },
     "Erkek Personel": { bg: "bg-gradient-to-br from-cyan-50 to-white", text: "text-cyan-600", border: "border-cyan-200", icon: "fa-male", ring: "ring-cyan-400" },
     "Şu An İzinde": { bg: "bg-gradient-to-br from-orange-50 to-white", text: "text-orange-500", border: "border-orange-200", icon: "fa-umbrella-beach", ring: "ring-orange-400" },
