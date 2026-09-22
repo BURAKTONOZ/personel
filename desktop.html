@@ -8,9 +8,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Ücretsiz İzin için CSS Eklentisi -->
+    <style>
+        .izin-u { background-color: #ede9fe !important; color: #6d28d9 !important; border: 1px solid #ddd6fe !important; }
+    </style>
 </head>
 <body class="text-sm">
 
@@ -24,7 +28,6 @@
         <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white bg-slate-100">
     </div>
 
-    <!-- Veritabanı Bulunamadı (İlk Kurulum) Modalı -->
     <div id="dbPathModal" class="fixed inset-0 flex-col items-center justify-center z-[105] p-4 bg-slate-100 rounded-2xl shadow-2xl border border-slate-300" style="display:none; -webkit-app-region: drag;">
         <div class="w-full flex justify-end mb-2" style="-webkit-app-region: drag;">
             <button onclick="if(window.api) window.api.windowClose()" class="text-slate-400 hover:text-red-500 transition-colors p-2 cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;"><i class="fas fa-times text-xl"></i></button>
@@ -63,13 +66,11 @@
             </div>
 
             <div id="loginFormContainer" style="-webkit-app-region: no-drag;" class="w-full relative">
-                
                 <div id="lockScreenInfo" class="hidden flex-col items-center justify-center p-4 bg-rose-50 border border-rose-200 rounded-2xl animate-fadeIn">
                     <i class="fas fa-lock text-4xl text-rose-500 mb-3"></i>
                     <h3 class="font-bold text-[13px] text-rose-700 uppercase tracking-wide mb-1.5">Sistem Erişime Kapatıldı</h3>
                     <p id="lockMessageText" class="text-xs font-semibold text-slate-700 leading-relaxed"></p>
                 </div>
-
                 <div id="loginInputArea">
                     <div class="text-left mt-2">
                         <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-building mr-1 text-slate-400"></i> Yetkili Birim</label>
@@ -78,22 +79,19 @@
                             <i class="fas fa-check-circle text-emerald-500"></i>
                         </div>
                     </div>
-                    
                     <div class="text-left mt-4">
                         <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-lock mr-1 text-slate-400"></i> Sistem Şifresi</label>
                         <input type="password" id="loginPass" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-center tracking-[0.5em] focus:border-blue-500 focus:bg-white transition-all outline-none" placeholder="••••••" onkeypress="if(event.key === 'Enter') checkLogin()">
                     </div>
-                    
                     <button id="loginBtn" onclick="checkLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-xl font-bold transition-all shadow-md shadow-blue-500/20 text-sm mt-5 flex items-center justify-center gap-2">
                         GİRİŞ YAP <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
-
                 <div id="loginStatusText" class="hidden text-xs font-bold text-slate-600 mt-2 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl"></div>
             </div>
 
             <div class="absolute bottom-4 left-0 w-full px-7 flex justify-between items-center text-[10px] text-slate-400 font-bold tracking-wide" style="-webkit-app-region: no-drag;">
-                <span>v7.0.0</span>
+                <span>v7.1.0</span>
                 <span>Copyright &copy; 2026 - TONOZ</span>
             </div>
         </div>
@@ -108,7 +106,6 @@
                     <h1 class="text-lg font-bold text-slate-800 leading-none tracking-tight">Numarataj Şube Müdürlüğü</h1>
                     <div class="flex items-center gap-2 mt-1.5">
                         <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Personel Yönetim Sistemi</p>
-                        <!-- KİMLİK ROZETİ (Giren Kullanıcıya Göre Değişir) -->
                         <span id="userBadge" class="hidden text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider"></span>
                     </div>
                 </div>
@@ -122,9 +119,9 @@
 
             <div class="flex items-center justify-end flex-1 gap-4" style="-webkit-app-region: no-drag;">
                 <div class="flex items-center gap-2">
-                    <button onclick="exportToExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-emerald-200 shadow-sm"><i class="fas fa-file-excel text-emerald-600"></i> Excel</button>
-                    <button onclick="openModal('timelineModal')" class="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-200 shadow-sm"><i class="fas fa-calendar-alt text-blue-600"></i> Çizelge</button>
-                    <button onclick="openPersonnelForm()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-sm shadow-blue-500/20"><i class="fas fa-user-plus"></i> Kayıt</button>
+                    <button onclick="exportToExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-emerald-200 shadow-sm"><i class="fas fa-file-excel text-emerald-600"></i> Excel Çıktısı</button>
+                    <button onclick="openModal('timelineModal')" class="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-200 shadow-sm"><i class="fas fa-calendar-alt text-blue-600"></i> İzin Çizelgesi</button>
+                    <button onclick="openPersonnelForm()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-sm shadow-blue-500/20"><i class="fas fa-user-plus"></i> Yeni Kayıt</button>
                     <button onclick="openModal('settingsModal')" class="bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-blue-600 text-sm w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 transition-all shadow-sm"><i class="fas fa-cog"></i></button>
                 </div>
                 
@@ -206,6 +203,7 @@
                 <button onclick="switchTab('acil')" id="tabBtn_acil" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-ambulance text-sm"></i> Acil Durum</button>
                 <button onclick="switchTab('zimmet')" id="tabBtn_zimmet" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-laptop text-sm"></i> Demirbaşlar</button>
                 <button onclick="switchTab('izin')" id="tabBtn_izin" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-plane-departure text-sm"></i> İzinler</button>
+                <button onclick="switchTab('notlar')" id="tabBtn_notlar" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-sticky-note text-sm"></i> Notlar</button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-5 text-sm relative bg-slate-50 custom-scrollbar">
@@ -235,7 +233,6 @@
                 </div>
 
                 <div id="tab_kurum" class="tab-panel hidden">
-                    <!-- Kurum Sekmesi İçeriği (Değişiklik Yok) -->
                     <div class="grid grid-cols-2 md:grid-cols-3 gap-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Kadro / Şirket</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="far fa-building text-slate-400"></i> <span id="pv_kadroSirket"></span></p></div>
                         <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Ünvanı</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="fas fa-clipboard-list text-slate-400"></i> <span id="pv_unvan"></span></p></div>
@@ -269,7 +266,7 @@
                         <button onclick="openIzinForm()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-1.5 shadow-sm text-xs"><i class="fas fa-calendar-plus text-blue-600"></i> İzin İşle</button>
                     </div>
                     
-                    <div id="izinSummaryContainer" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 shrink-0"></div>
+                    <div id="izinSummaryContainer" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 shrink-0"></div>
 
                     <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm custom-scrollbar">
                         <table class="min-w-full text-left border-collapse">
@@ -280,6 +277,15 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- YENİ: NOTLAR SEKMESİ -->
+                <div id="tab_notlar" class="tab-panel hidden h-full flex-col">
+                    <div class="flex justify-between items-center mb-4 shrink-0">
+                        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-sticky-note text-blue-500"></i> Personel Notları</h3>
+                        <button onclick="savePersonelNot()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2 text-xs"><i class="fas fa-save"></i> Notu Kaydet</button>
+                    </div>
+                    <textarea id="pv_notlar_input" class="w-full flex-1 glass-input p-5 rounded-xl text-sm font-semibold text-slate-700 resize-none outline-none focus:border-blue-500 transition-colors custom-scrollbar" placeholder="Bu personel ile ilgili özel durumlar, izin notları veya ek bilgiler buraya yazılabilir..."></textarea>
+                </div>
             </div>
         </div>
     </div>
@@ -289,16 +295,25 @@
         <div class="glass-modal rounded-2xl w-[96vw] max-w-[1600px] h-[85vh] flex flex-col modal-content overflow-hidden border-0 shadow-2xl">
             <div class="flex flex-col md:flex-row justify-between items-center p-5 bg-white border-b border-slate-200 gap-4 shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-calendar-alt text-blue-600"></i> İzin Çizelgesi</h3>
-                <div class="flex flex-wrap justify-center gap-5 text-xs font-semibold uppercase bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                
+                <div class="flex flex-wrap justify-center gap-3 text-xs font-semibold uppercase bg-slate-50 p-2.5 rounded-lg border border-slate-200">
                     <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-y text-[10px] font-bold">Y</span> Yıllık İzin</span>
                     <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-r text-[10px] font-bold">R</span> Rapor</span>
                     <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-i text-[10px] font-bold">İ</span> İdari İzin</span>
                     <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-s text-[10px] font-bold">S</span> Saatlik</span>
+                    <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-u text-[10px] font-bold">Ü</span> Ücretsiz İzin</span>
                 </div>
+                
                 <div class="flex items-center gap-3">
+                    <!-- Dinamik Çizelge Arama Kutusu -->
+                    <div class="relative group">
+                        <i class="fas fa-search absolute left-3 top-[10px] text-slate-400 text-xs transition-colors group-focus-within:text-blue-500"></i>
+                        <input type="text" id="timelineSearchInput" placeholder="Personel Ara..." class="glass-input pl-8 pr-3 py-2 rounded-lg text-xs font-bold w-44 outline-none focus:border-blue-500 uppercase force-upper" oninput="generateTimeline()">
+                    </div>
+
                     <button id="btnTopluIzin" onclick="openBulkIzinForm()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm"><i class="fas fa-users"></i> Toplu İzin</button>
                     <div class="w-px h-6 bg-slate-200 mx-1"></div>
-                    <input type="month" id="timelineMonth" class="glass-input px-3 py-2 rounded-lg text-sm font-semibold" onchange="generateTimeline()">
+                    <input type="month" id="timelineMonth" class="glass-input px-3 py-2 rounded-lg text-sm font-semibold outline-none" onchange="generateTimeline()">
                     <button onclick="closeModal('timelineModal')" class="bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 w-10 h-10 rounded-lg transition-all flex justify-center items-center text-lg"><i class="fas fa-times"></i></button>
                 </div>
             </div>
@@ -453,7 +468,6 @@
 
     <!-- MİNİ FORMLAR -->
     <div id="addZimmetModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90]">
-        <!-- (Değişiklik Yok) -->
         <div class="glass-modal p-6 rounded-xl w-80 shadow-2xl modal-content border-0">
             <h3 class="font-bold text-base mb-5 text-slate-800 flex items-center gap-2"><i class="fas fa-laptop text-blue-500"></i> Zimmet Ekle</h3>
             <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Demirbaş Adı *</label><input type="text" id="z_urun" placeholder="Örn: 3D Tarayıcı" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-semibold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
@@ -467,11 +481,11 @@
     </div>
     
     <div id="addIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90]">
-        <!-- (Değişiklik Yok) -->
         <div class="glass-modal p-6 rounded-xl w-80 shadow-2xl modal-content border-0">
             <h3 class="font-bold text-base mb-5 text-slate-800 flex items-center gap-2" id="addIzinModalTitle"><i class="fas fa-plane-departure text-blue-500"></i> İzin İşle</h3>
             <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">İzin Türü *</label><select id="i_tur" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-bold text-slate-700 force-upper">
                 <option value="Yıllık İzin">Yıllık İzin (Y)</option><option value="Sağlık Raporu">Sağlık Raporu (R)</option><option value="İdari İzin">İdari İzin (İ)</option><option value="Saatlik İzin">Saatlik İzin (S)</option>
+                <option value="Ücretsiz İzin">Ücretsiz İzin (Üİ)</option>
             </select></div>
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div><label class="block text-xs text-slate-500 font-semibold mb-1 uppercase">Başlangıç *</label><input type="date" id="i_bas" class="w-full glass-input p-2.5 rounded-lg text-sm font-semibold"></div>
@@ -486,13 +500,13 @@
     </div>
 
     <div id="addBulkIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[110]">
-        <!-- (Değişiklik Yok) -->
         <div class="glass-modal p-7 rounded-xl w-[400px] shadow-2xl modal-content border-0">
             <h3 class="font-bold text-lg mb-2 text-slate-800 flex items-center gap-2"><i class="fas fa-users text-blue-500"></i> Toplu İzin Girişi</h3>
             <p class="text-xs text-slate-500 font-medium mb-6">Dikkat: Bu işlem sistemdeki tüm <span class="font-bold text-emerald-600">"Aktif"</span> personellerin profiline aynı izni tek seferde otomatik olarak işler.</p>
             
             <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">İzin Türü *</label><select id="bi_tur" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-bold text-slate-700 force-upper">
                 <option value="İdari İzin">İdari İzin (İ)</option><option value="Yıllık İzin">Yıllık İzin (Y)</option><option value="Sağlık Raporu">Sağlık Raporu (R)</option><option value="Saatlik İzin">Saatlik İzin (S)</option>
+                <option value="Ücretsiz İzin">Ücretsiz İzin (Üİ)</option>
             </select></div>
             <div class="grid grid-cols-2 gap-3 mb-4">
                 <div><label class="block text-xs text-slate-500 font-semibold mb-1 uppercase">Başlangıç *</label><input type="date" id="bi_bas" class="w-full glass-input p-2.5 rounded-lg text-sm font-semibold"></div>
