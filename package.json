@@ -1,6 +1,6 @@
 {
-  "name": "pys",
-  "version": "6.0.0",
+  "name": "npys",
+  "version": "7.0.0",
   "description": "Numarataj Şube Müdürlüğü Personel Yönetim Sistemi",
   "main": "main.js",
   "scripts": {
@@ -9,16 +9,16 @@
   },
   "author": "BURAK TONOZ",
   "build": {
-    "appId": "com.tonoz.pys",
+    "appId": "com.tonoz.npys",
     "productName": "Numarataj Personel",
     "copyright": "Copyright © 2026 - TONOZ",
     "win": {
       "target": "portable",
-      "executableName": "PYS",
+      "executableName": "NPYS",
       "icon": "build/icon.ico"
     },
     "portable": {
-      "artifactName": "PYS.exe"
+      "artifactName": "NPYS.exe"
     }
   },
   "dependencies": {
