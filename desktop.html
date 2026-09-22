@@ -27,6 +27,20 @@
         <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white bg-slate-100">
     </div>
 
+    <!-- ZORUNLU GÜNCELLEME MODALI (Yeni Eklenen Kalkan) -->
+    <div id="forceUpdateModal" class="fixed inset-0 flex-col items-center justify-center z-[200] p-4 bg-slate-900/95 backdrop-blur-md transition-all duration-300" style="display:none; -webkit-app-region: drag;">
+        <div class="glass-modal p-8 rounded-3xl w-full max-w-md bg-white shadow-2xl flex flex-col items-center text-center border-0 pointer-events-auto" style="-webkit-app-region: no-drag;">
+            <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 text-4xl mb-4 shadow-inner border border-rose-200 animate-pulse">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 uppercase">Sistem Güncellendi</h2>
+            <p class="text-sm font-semibold text-slate-600 mb-6 leading-relaxed">Numarataj Personel Yönetim Sistemi'nin yeni bir versiyonu yayınlandı. Veri güvenliği ve bütünlüğü için mevcut oturumunuz sonlandırılmıştır. Lütfen programı kapatıp güncel versiyon üzerinden giriş yapınız.</p>
+            <button onclick="if(window.api) window.api.windowClose()" class="w-full bg-rose-600 hover:bg-rose-700 text-white p-4 rounded-xl text-sm font-bold shadow-lg shadow-rose-500/30 transition-all flex justify-center items-center gap-2">
+                <i class="fas fa-power-off"></i> Anladım, Kapat
+            </button>
+        </div>
+    </div>
+
     <div id="dbPathModal" class="fixed inset-0 flex-col items-center justify-center z-[105] p-4 bg-slate-100 rounded-2xl shadow-2xl border border-slate-300" style="display:none; -webkit-app-region: drag;">
         <div class="w-full flex justify-end mb-2" style="-webkit-app-region: drag;">
             <button onclick="if(window.api) window.api.windowClose()" class="text-slate-400 hover:text-red-500 transition-colors p-2 cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;"><i class="fas fa-times text-xl"></i></button>
