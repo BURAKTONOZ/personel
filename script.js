@@ -1,7 +1,7 @@
-const APP_VERSION = "7.0.0"; 
+const APP_VERSION = "7.1.0"; 
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
-let currentUserRole = 'admin'; // 'admin' veya '1011' olabilir
+let currentUserRole = 'admin'; 
 
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
@@ -151,7 +151,6 @@ const statColorsAndIcons = {
     "Demirbaş Sahipleri": { bg: "bg-gradient-to-br from-lime-50 to-white", text: "text-lime-600", border: "border-lime-200", icon: "fa-laptop", ring: "ring-lime-400" }
 };
 
-// HAYALET FİLTRE MANTIĞI: Sistemin beyni artık bu fonksiyondur.
 function getVisiblePersonnel() {
     if(currentUserRole === '1011') {
         return personnelData.filter(p => p.bina && (p.bina === '1011 YERLEŞKESİ' || p.bina === '1011 Yerleşkesi'));
@@ -191,7 +190,8 @@ function exportToExcel() {
             "Acil Kişi Yakınlık": p.acilYakinlik || "",
             "Acil Kişi Telefonu": p.acilTel || "",
             "Kayıtlı Demirbaş Sayısı": p.zimmetler ? p.zimmetler.length : 0,
-            "Kullanılan İzin Sayısı": p.izinler ? p.izinler.length : 0
+            "Kullanılan İzin Sayısı": p.izinler ? p.izinler.length : 0,
+            "Personel Notu": p.notlar || ""
         }));
 
         try {
@@ -477,10 +477,8 @@ function openModal(id) {
     if(id === 'settingsModal') buildSettingsMenu();
     if(id === 'timelineModal') {
         document.getElementById("timelineMonth").value = `${tlCurrentDate.getFullYear()}-${String(tlCurrentDate.getMonth()+1).padStart(2,'0')}`;
-        
-        // 1011 Kullanıcısı için Toplu İzin Butonunu Gizle
+        document.getElementById("timelineSearchInput").value = ""; 
         document.getElementById("btnTopluIzin").style.display = (currentUserRole === '1011') ? 'none' : 'flex';
-        
         generateTimeline();
     }
 }
@@ -539,7 +537,7 @@ function renderStatsCards() {
     const container = document.getElementById("stats-container");
     container.innerHTML = "";
     
-    const baseData = getVisiblePersonnel(); // Hayalet Filtre
+    const baseData = getVisiblePersonnel();
 
     systemSettings.cards.filter(c => c.active).forEach(card => {
         let count = 0;
@@ -599,8 +597,11 @@ function renderTable(data) {
                 if(SYSTEM_TODAY >= b && SYSTEM_TODAY <= bit) {
                     let cl = iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK') ? 'izin-y' : 
                              (iz.tur.includes('Rapor') || iz.tur.includes('RAPOR') ? 'izin-r' : 
-                             (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 'izin-s'));
-                    leaveBadge = `<span class="px-2.5 py-1 text-[10px] font-bold rounded-md ${cl} uppercase">${iz.tur}</span>`;
+                             (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 
+                             (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ') ? 'izin-u' : 'izin-s')));
+                    
+                    let turLabel = (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ')) ? 'Üİ' : iz.tur;
+                    leaveBadge = `<span class="px-2.5 py-1 text-[10px] font-bold rounded-md ${cl} uppercase">${turLabel}</span>`;
                 }
             });
         }
@@ -654,7 +655,7 @@ function renderTable(data) {
 
 function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
-    const baseData = getVisiblePersonnel(); // Hayalet Filtre uygulanmış asıl data
+    const baseData = getVisiblePersonnel();
 
     currentFilteredData = baseData.filter(p => {
         let pAd = p.adSoyad ? p.adSoyad.toLocaleUpperCase('tr-TR') : "";
@@ -759,10 +760,25 @@ function openProfileModal(id) {
     setVal("pv_baslama", formatDateTR(p.gelisTarihi) || '-'); 
     setVal("pv_ayrilis", formatDateTR(p.ayrilisTarihi) || 'Halen Çalışıyor');
 
+    // Notlar sekmesini doldur
+    const notlarInput = document.getElementById("pv_notlar_input");
+    if(notlarInput) notlarInput.value = p.notlar || "";
+
     renderZimmetTable();
     renderIzinTable();
     openModal('profileModal');
     switchTab('genel');
+}
+
+function savePersonelNot() {
+    const val = document.getElementById("pv_notlar_input").value;
+    const p = personnelData.find(x => x.id === selectedUserId);
+    if(p) {
+        p.notlar = val;
+        if(saveToDatabase()) {
+            showToast("Not başarıyla kaydedildi.", "success");
+        }
+    }
 }
 
 function switchTab(t) {
@@ -882,7 +898,7 @@ function renderIzinTable() {
     const tb = document.getElementById("izinTableBody"); if(!tb) return; tb.innerHTML = "";
     const p = personnelData.find(x => x.id === selectedUserId);
     
-    let yillik = 0, rapor = 0, idari = 0, saatlik = 0;
+    let yillik = 0, rapor = 0, idari = 0, saatlik = 0, ucretsiz = 0;
     const currentYear = SYSTEM_TODAY.getFullYear();
 
     if(p && p.izinler) {
@@ -902,6 +918,7 @@ function renderIzinTable() {
                 else if(iz.tur.includes('Rapor') || iz.tur.includes('RAPOR')) rapor += gunSayisi;
                 else if(iz.tur.includes('İdari') || iz.tur.includes('İDARİ')) idari += gunSayisi;
                 else if(iz.tur.includes('Saatlik') || iz.tur.includes('SAATLİK')) saatlik += gunSayisi; 
+                else if(iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ')) ucretsiz += gunSayisi; 
             }
         });
     }
@@ -912,14 +929,20 @@ function renderIzinTable() {
             <div class="bg-rose-50 border border-rose-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">${currentYear} YILLIK</div><div class="text-2xl font-black text-rose-700 leading-none">${yillik} <span class="text-[10px] font-semibold text-rose-500">GÜN</span></div></div>
             <div class="bg-emerald-50 border border-emerald-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">${currentYear} RAPOR</div><div class="text-2xl font-black text-emerald-800 leading-none">${rapor} <span class="text-[10px] font-semibold text-emerald-600">GÜN</span></div></div>
             <div class="bg-amber-50 border border-amber-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">${currentYear} İDARİ</div><div class="text-2xl font-black text-amber-800 leading-none">${idari} <span class="text-[10px] font-semibold text-amber-600">GÜN</span></div></div>
+            <div class="bg-violet-50 border border-violet-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-violet-600 uppercase tracking-widest mb-1">${currentYear} ÜCRETSİZ</div><div class="text-2xl font-black text-violet-800 leading-none">${ucretsiz} <span class="text-[10px] font-semibold text-violet-600">GÜN</span></div></div>
             <div class="bg-sky-50 border border-sky-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-sky-600 uppercase tracking-widest mb-1">${currentYear} SAATLİK</div><div class="text-2xl font-black text-sky-800 leading-none">${saatlik} <span class="text-[10px] font-semibold text-sky-600">KEZ</span></div></div>
         `;
     }
 
     if(!p.izinler || p.izinler.length === 0) { tb.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-500 font-semibold">Kayıtlı izin bulunmuyor.</td></tr>'; return; }
     p.izinler.sort((a,b)=>new Date(b.baslangic)-new Date(a.baslangic)).forEach(iz => {
-        let cl = iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK') ? 'izin-y' : (iz.tur.includes('Rapor') || iz.tur.includes('RAPOR') ? 'izin-r' : (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 'izin-s'));
-        tb.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-4"><span class="px-2 py-1 text-[10px] font-bold rounded ${cl} uppercase">${iz.tur}</span></td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.baslangic)}</td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.bitis)}</td><td class="p-4 text-slate-600 uppercase">${iz.aciklama}</td><td class="p-4 text-center"><button onclick="deleteIzin(${iz.id})" class="text-rose-500 hover:text-rose-700 bg-white border border-slate-200 hover:bg-rose-50 w-8 h-8 rounded-md transition"><i class="fas fa-trash-alt"></i></button></td></tr>`;
+        let cl = iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK') ? 'izin-y' : 
+                 (iz.tur.includes('Rapor') || iz.tur.includes('RAPOR') ? 'izin-r' : 
+                 (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 
+                 (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ') ? 'izin-u' : 'izin-s')));
+        let turLabel = (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ')) ? 'Üİ' : iz.tur;
+
+        tb.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-4"><span class="px-2 py-1 text-[10px] font-bold rounded ${cl} uppercase">${turLabel}</span></td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.baslangic)}</td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.bitis)}</td><td class="p-4 text-slate-600 uppercase">${iz.aciklama}</td><td class="p-4 text-center"><button onclick="deleteIzin(${iz.id})" class="text-rose-500 hover:text-rose-700 bg-white border border-slate-200 hover:bg-rose-50 w-8 h-8 rounded-md transition"><i class="fas fa-trash-alt"></i></button></td></tr>`;
     });
 }
 
@@ -1016,6 +1039,7 @@ window.showTooltip = function(e, el) {
     if(colorClass === "emerald") colorHex = "#34d399";
     if(colorClass === "amber") colorHex = "#fbbf24";
     if(colorClass === "sky") colorHex = "#38bdf8";
+    if(colorClass === "violet") colorHex = "#a78bfa";
 
     tt.innerHTML = `<div class='font-bold text-[12px] mb-1.5 flex items-center gap-1.5 uppercase' style='color:${colorHex}'><i class="fas fa-info-circle"></i> ${tur}</div><div class='text-slate-300 font-semibold mb-1.5 border-b border-slate-600 pb-2 text-[10px] uppercase tracking-wide'>Tarih: ${tarih}</div><div class='text-white mt-1 uppercase text-[11px] font-medium'>${desc}</div>`;
     tt.style.display = 'block';
@@ -1054,8 +1078,15 @@ function generateTimeline() {
     
     document.getElementById("timelineCurrentLabel").innerText = `${monthNames[m]} ${y}`.toLocaleUpperCase('tr-TR');
 
-    // Uzun isimlerin kesilmemesi için tl-name genişliği CSS kurgusuyla artırıldı (w-[180px])
-    let html = '<div class="inline-block min-w-full"><div class="tl-row tl-row-header"><div class="tl-name tl-name-header text-center justify-center text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200 w-[180px] min-w-[180px] shrink-0"><i class="fas fa-users mr-1.5"></i> PERSONEL</div>';
+    // Arama Kutusu Filtreleme
+    let searchVal = "";
+    const searchInputEl = document.getElementById("timelineSearchInput");
+    if(searchInputEl) {
+        searchVal = searchInputEl.value.toLocaleUpperCase('tr-TR');
+    }
+
+    // PERSONEL sütun genişliği 240px yapılarak uzun isimlerin kesilmesi engellendi
+    let html = '<div class="inline-block min-w-full"><div class="tl-row tl-row-header"><div class="tl-name tl-name-header text-center justify-center text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200 w-[240px] min-w-[240px] shrink-0"><i class="fas fa-users mr-1.5"></i> PERSONEL</div>';
     
     for(let d=1; d<=daysInMonth; d++) {
         let currDate = new Date(y, m, d);
@@ -1065,10 +1096,18 @@ function generateTimeline() {
     }
     html += '</div>';
 
-    const baseData = getVisiblePersonnel(); // Hayalet Filtre
+    let baseData = getVisiblePersonnel(); 
+    
+    // Aktif olan personelleri filtrele
+    let activeData = baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
 
-    baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[180px] min-w-[180px] shrink-0" title="${p.adSoyad} (Tıkla ve İzin İşle)" onclick="openIzinFromTimeline(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
+    // İzin Çizelgesi için İsim Aramasını uygula
+    if(searchVal) {
+        activeData = activeData.filter(p => p.adSoyad && p.adSoyad.toLocaleUpperCase('tr-TR').includes(searchVal));
+    }
+
+    activeData.forEach(p => {
+        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Tıkla ve İzin İşle)" onclick="openIzinFromTimeline(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
@@ -1085,6 +1124,8 @@ function generateTimeline() {
                         else if(iz.tur.includes("Rapor") || iz.tur.includes('RAPOR')) { cellClass = "izin-r"; content = "R"; clColor="emerald"; }
                         else if(iz.tur.includes("İdari") || iz.tur.includes('İDARİ')) { cellClass = "izin-i"; content = "İ"; clColor="amber"; }
                         else if(iz.tur.includes("Saatlik") || iz.tur.includes('SAATLİK')) { cellClass = "izin-s"; content = "S"; clColor="sky"; }
+                        else if(iz.tur.includes("Ücretsiz") || iz.tur.includes('ÜCRETSİZ')) { cellClass = "izin-u"; content = "Üİ"; clColor="violet"; }
+                        
                         let safeDesc = (iz.aciklama || 'Açıklama belirtilmemiş').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
                         let toolTipDate = String(d).padStart(2,'0') + "." + String(m+1).padStart(2,'0') + "." + y;
                         tooltipEvents = `data-tur="${iz.tur}" data-tarih="${toolTipDate}" data-desc="${safeDesc}" data-color="${clColor}" onmouseover="showTooltip(event, this)" onmousemove="updateTooltip(event)" onmouseout="hideTooltip()"`;
@@ -1186,7 +1227,6 @@ function openPersonnelForm() {
 
     document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-plus text-blue-600"></i> Yeni Personel Kaydı';
     
-    // 1011 Form Kilidi Uygulaması
     const binaEl = document.getElementById("f_bina");
     if(currentUserRole === '1011') {
         binaEl.value = "1011 YERLEŞKESİ";
@@ -1243,7 +1283,6 @@ function editPersonnelFromProfile() {
             }
         });
         
-        // 1011 Form Kilidi Uygulaması
         const binaEl = document.getElementById("f_bina");
         if(currentUserRole === '1011') {
             binaEl.value = "1011 YERLEŞKESİ";
@@ -1289,6 +1328,7 @@ function savePersonnel() {
         if(idVal) {
             const old = personnelData.find(x=>x.id === pData.id);
             pData.izinler = old.izinler || []; pData.zimmetler = old.zimmetler || [];
+            pData.notlar = old.notlar || "";
             if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl || ""; 
             personnelData[personnelData.findIndex(x=>x.id===pData.id)] = pData;
         } else { personnelData.unshift(pData); }
