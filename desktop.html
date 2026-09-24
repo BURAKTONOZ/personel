@@ -27,7 +27,7 @@
         <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white bg-slate-100">
     </div>
 
-    <!-- ZORUNLU GÜNCELLEME MODALI (Yeni Eklenen Kalkan) -->
+    <!-- ZORUNLU GÜNCELLEME MODALI -->
     <div id="forceUpdateModal" class="fixed inset-0 flex-col items-center justify-center z-[200] p-4 bg-slate-900/95 backdrop-blur-md transition-all duration-300" style="display:none; -webkit-app-region: drag;">
         <div class="glass-modal p-8 rounded-3xl w-full max-w-md bg-white shadow-2xl flex flex-col items-center text-center border-0 pointer-events-auto" style="-webkit-app-region: no-drag;">
             <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 text-4xl mb-4 shadow-inner border border-rose-200 animate-pulse">
@@ -104,7 +104,7 @@
             </div>
 
             <div class="absolute bottom-4 left-0 w-full px-7 flex justify-between items-center text-[10px] text-slate-400 font-bold tracking-wide" style="-webkit-app-region: no-drag;">
-                <span>v7.2.0</span>
+                <span>v7.3.0</span>
                 <span>Copyright &copy; 2026 - TONOZ</span>
             </div>
         </div>
@@ -124,10 +124,13 @@
                 </div>
             </div>
 
-            <div class="hidden md:flex items-center justify-center gap-2 bg-slate-50 px-4 py-2 rounded-full border border-slate-200 shadow-inner">
+            <div class="hidden md:flex items-center justify-center gap-2 bg-slate-50 px-4 py-2 rounded-full border border-slate-200 shadow-inner" style="-webkit-app-region: no-drag;">
                 <span id="led-indicator" class="led orange"></span>
                 <span id="db-status-text" class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Bağlantı Bekleniyor...</span>
-                <span id="db-last-update" class="text-[10px] font-semibold text-slate-400 ml-2"></span>
+                <div class="flex items-center border-l border-slate-200 pl-2 ml-1">
+                    <span id="db-last-update" class="text-[10px] font-semibold text-slate-400"></span>
+                    <button onclick="manualRefresh()" class="ml-2 w-6 h-6 rounded bg-slate-200 hover:bg-blue-100 text-slate-600 hover:text-blue-600 flex items-center justify-center transition-colors shadow-sm border border-slate-300" title="Veritabanını Yenile"><i class="fas fa-sync-alt text-[10px]"></i></button>
+                </div>
             </div>
 
             <div class="flex items-center justify-end flex-1 gap-4" style="-webkit-app-region: no-drag;">
@@ -204,8 +207,8 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
-                    <button onclick="editPersonnelFromProfile()" class="bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-slate-300 flex items-center gap-1.5 shadow-sm"><i class="fas fa-edit text-blue-600"></i> Düzenle</button>
-                    <button onclick="deletePersonnelFromProfile()" class="bg-white hover:bg-rose-50 text-rose-600 px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-slate-300 hover:border-rose-200 flex items-center gap-1.5 shadow-sm"><i class="fas fa-trash-alt"></i> Sil</button>
+                    <button id="btnProfileEdit" onclick="editPersonnelFromProfile()" class="bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-slate-300 flex items-center gap-1.5 shadow-sm"><i class="fas fa-edit text-blue-600"></i> Düzenle</button>
+                    <button id="btnProfileDelete" onclick="deletePersonnelFromProfile()" class="bg-white hover:bg-rose-50 text-rose-600 px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-slate-300 hover:border-rose-200 flex items-center gap-1.5 shadow-sm"><i class="fas fa-trash-alt"></i> Sil</button>
                     <button onclick="closeModal('profileModal')" class="ml-2 text-slate-400 hover:text-slate-700 transition-all w-9 h-9 rounded-lg flex items-center justify-center bg-slate-50 hover:bg-slate-100 border border-slate-200"><i class="fas fa-times text-lg"></i></button>
                 </div>
             </div>
@@ -305,10 +308,10 @@
     <!-- İZİN ÇİZELGESİ MODALI -->
     <div id="timelineModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] p-4">
         <div class="glass-modal rounded-2xl w-[96vw] max-w-[1600px] h-[85vh] flex flex-col modal-content overflow-hidden border-0 shadow-2xl">
-            <div class="flex flex-col md:flex-row justify-between items-center p-5 bg-white border-b border-slate-200 gap-4 shrink-0">
+            <div class="flex flex-col md:flex-row justify-between items-center p-5 bg-white border-b border-slate-200 gap-4 shrink-0" style="-webkit-app-region: drag;">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-calendar-alt text-blue-600"></i> İzin Çizelgesi</h3>
                 
-                <div class="flex flex-wrap justify-center gap-3 text-xs font-semibold uppercase bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                <div class="flex flex-wrap justify-center gap-3 text-xs font-semibold uppercase bg-slate-50 p-2.5 rounded-lg border border-slate-200" style="-webkit-app-region: no-drag;">
                     <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-y text-[10px] font-bold">Y</span> Yıllık İzin</span>
                     <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-r text-[10px] font-bold">R</span> Rapor</span>
                     <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-i text-[10px] font-bold">İ</span> İdari İzin</span>
@@ -316,16 +319,17 @@
                     <span class="flex items-center gap-1.5"><span class="w-5 h-5 flex items-center justify-center rounded izin-u text-[10px] font-bold">Üİ</span> Ücretsiz İzin</span>
                 </div>
                 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3" style="-webkit-app-region: no-drag;">
                     <div class="relative group">
                         <i class="fas fa-search absolute left-3 top-[10px] text-slate-400 text-xs transition-colors group-focus-within:text-blue-500"></i>
                         <input type="text" id="timelineSearchInput" placeholder="Personel Ara..." class="glass-input pl-8 pr-3 py-2 rounded-lg text-xs font-bold w-44 outline-none focus:border-blue-500 uppercase force-upper" oninput="generateTimeline()">
                     </div>
 
+                    <button onclick="manualRefresh()" class="bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 w-10 h-10 rounded-lg transition-all flex justify-center items-center text-lg" title="Verileri Yenile"><i class="fas fa-sync-alt"></i></button>
                     <button id="btnTopluIzin" onclick="openBulkIzinForm()" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm"><i class="fas fa-users"></i> Toplu İzin</button>
                     <div class="w-px h-6 bg-slate-200 mx-1"></div>
                     <input type="month" id="timelineMonth" class="glass-input px-3 py-2 rounded-lg text-sm font-semibold outline-none" onchange="generateTimeline()">
-                    <button onclick="closeModal('timelineModal')" class="bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 w-10 h-10 rounded-lg transition-all flex justify-center items-center text-lg"><i class="fas fa-times"></i></button>
+                    <button id="btnTimelineClose" onclick="closeModal('timelineModal')" class="bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 w-10 h-10 rounded-lg transition-all flex justify-center items-center text-lg"><i class="fas fa-times"></i></button>
                 </div>
             </div>
             <div class="flex-1 overflow-auto relative custom-scrollbar bg-slate-50" id="timelineContainer"></div>
