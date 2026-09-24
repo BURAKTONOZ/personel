@@ -72,6 +72,10 @@ window.tooltipTimeout = null;
 
 let activeCardId = 'total'; 
 
+// === YENİ: SÜRÜKLE BIRAK DEĞİŞKENLERİ ===
+let isTlDragging = false;
+let tlDragStart = null;
+
 const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
 
@@ -996,6 +1000,24 @@ function openIzinForm() {
     openModal('addIzinModal');
 }
 
+// === YENİ: SÜRÜKLE BIRAK FORMU AÇICI ===
+function openIzinFormWithDates(pid, date1, date2) {
+    selectedUserId = pid;
+    document.getElementById('i_tur').selectedIndex = 0;
+    
+    document.getElementById('i_bas').value = date1.getFullYear() + '-' + String(date1.getMonth()+1).padStart(2,'0') + '-' + String(date1.getDate()).padStart(2,'0');
+    document.getElementById('i_bit').value = date2.getFullYear() + '-' + String(date2.getMonth()+1).padStart(2,'0') + '-' + String(date2.getDate()).padStart(2,'0');
+    document.getElementById('i_aciklama').value = '';
+    
+    const p = personnelData.find(x => x.id === pid);
+    const titleEl = document.getElementById("addIzinModalTitle");
+    if(titleEl && p) {
+        titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
+    }
+    
+    openModal('addIzinModal');
+}
+
 function openBulkIzinForm() {
     document.getElementById('bi_tur').selectedIndex = 0;
     document.getElementById('bi_bas').value = '';
@@ -1212,6 +1234,63 @@ window.hideTooltip = function() {
     }
 }
 
+// === YENİ: SÜRÜKLE BIRAK OLAY İZLEYİCİLERİ ===
+window.tlMouseDown = function(e, pid, y, m, d) {
+    if(e.button !== 0) return; // Sadece sol tık
+    isTlDragging = true;
+    tlDragStart = { pid, y, m, d };
+    clearTlSelection();
+    highlightTlCells(pid, d, d);
+}
+
+window.tlMouseEnter = function(e, pid, y, m, d) {
+    if(!isTlDragging) return;
+    if(pid !== tlDragStart.pid) return; // Satır değişirse iptal
+    highlightTlCells(pid, tlDragStart.d, d);
+}
+
+window.tlMouseUp = function(e, pid, y, m, d) {
+    if(!isTlDragging) return;
+    if(pid !== tlDragStart.pid) { 
+        isTlDragging = false; 
+        clearTlSelection(); 
+        return; 
+    }
+    
+    let startD = Math.min(tlDragStart.d, d);
+    let endD = Math.max(tlDragStart.d, d);
+    
+    let d1 = new Date(y, m, startD);
+    let d2 = new Date(y, m, endD);
+    
+    isTlDragging = false;
+    clearTlSelection();
+    
+    openIzinFormWithDates(pid, d1, d2);
+}
+
+// Eğer fare basılıyken hücrelerin dışına çıkılırsa seçimi iptal et
+document.addEventListener('mouseup', () => {
+    if(isTlDragging) {
+        isTlDragging = false;
+        clearTlSelection();
+    }
+});
+
+function highlightTlCells(pid, start, end) {
+    clearTlSelection();
+    let s = Math.min(start, end);
+    let e = Math.max(start, end);
+    for(let i = s; i <= e; i++) {
+        let cell = document.getElementById(`tl-cell-${pid}-${i}`);
+        if(cell) cell.classList.add('tl-selected');
+    }
+}
+
+function clearTlSelection() {
+    document.querySelectorAll('.tl-selected').forEach(el => el.classList.remove('tl-selected'));
+}
+
 function generateTimeline() {
     const inputVal = document.getElementById("timelineMonth").value;
     if(inputVal) {
@@ -1249,8 +1328,7 @@ function generateTimeline() {
     }
 
     activeData.forEach(p => {
-        // TIKLAMA MANTIĞI: openIzinFromTimeline yerine openProfileModal yapıldı
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle / İzin İşle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
+        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle / İzin İşle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-id-card opacity-50 text-[10px]"></i></div>`;
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
@@ -1276,7 +1354,9 @@ function generateTimeline() {
                     }
                 }
             }
-            html += `<div class="tl-cell flex items-center justify-center font-bold text-[10px] ${cellClass}" ${tooltipEvents}>${content}</div>`;
+            
+            // Sensörler gün kutucuklarına eklendi (Sürükle bırak mantığı)
+            html += `<div id="tl-cell-${p.id}-${d}" class="tl-cell flex items-center justify-center font-bold text-[10px] cursor-pointer transition-colors duration-75 ${cellClass}" ${tooltipEvents} onmousedown="tlMouseDown(event, ${p.id}, ${y}, ${m}, ${d})" onmouseenter="tlMouseEnter(event, ${p.id}, ${y}, ${m}, ${d})" onmouseup="tlMouseUp(event, ${p.id}, ${y}, ${m}, ${d})">${content}</div>`;
         }
         html += `</div>`;
     });
