@@ -312,12 +312,29 @@ async function checkLogin() {
                 statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Tarayıcı Modu Başarılı!';
                 setTimeout(() => {
                     document.getElementById('loginScreen').style.display = 'none';
+                    document.getElementById('appContainer').style.display = 'flex';
+                    
                     if (currentUserRole === 'izin') {
-                        document.getElementById('appContainer').style.display = 'none';
+                        document.getElementById('main-content').style.display = 'none';
+                        document.getElementById('headerActionButtons').style.display = 'none';
+                        document.getElementById('main-header').classList.remove('z-[60]');
+                        document.getElementById('main-header').classList.add('z-[100]');
+                        
+                        const tm = document.getElementById('timelineModal');
+                        tm.classList.replace('p-4', 'pt-[90px]');
+                        tm.classList.replace('items-center', 'items-start');
+                        
+                        const tmContent = tm.querySelector('.modal-content');
+                        tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+                        tmContent.classList.replace('w-[96vw]', 'w-full');
+                        tmContent.classList.add('mx-4');
+                        
                         openModal('timelineModal');
                     } else {
-                        document.getElementById('appContainer').style.display = 'flex';
+                        document.getElementById('main-content').style.display = 'block';
+                        document.getElementById('headerActionButtons').style.display = 'flex';
                     }
+
                     showToast("Tarayıcı modundasınız, veritabanına bağlanılamaz.", "error");
                     initSystem();
                     updateRefreshTime();
@@ -354,12 +371,27 @@ async function saveNewDbPath() {
     
     if (result.success) {
         document.getElementById('dbPathModal').style.display = 'none';
+        document.getElementById('appContainer').style.display = 'flex';
         
         if (currentUserRole === 'izin') {
-            document.getElementById('appContainer').style.display = 'none';
+            document.getElementById('main-content').style.display = 'none';
+            document.getElementById('headerActionButtons').style.display = 'none';
+            document.getElementById('main-header').classList.remove('z-[60]');
+            document.getElementById('main-header').classList.add('z-[100]');
+            
+            const tm = document.getElementById('timelineModal');
+            tm.classList.replace('p-4', 'pt-[90px]');
+            tm.classList.replace('items-center', 'items-start');
+            
+            const tmContent = tm.querySelector('.modal-content');
+            tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+            tmContent.classList.replace('w-[96vw]', 'w-full');
+            tmContent.classList.add('mx-4');
+            
             openModal('timelineModal');
         } else {
-            document.getElementById('appContainer').style.display = 'flex';
+            document.getElementById('main-content').style.display = 'block';
+            document.getElementById('headerActionButtons').style.display = 'flex';
         }
 
         if (window.api) window.api.maximizeWindow();
@@ -376,7 +408,6 @@ function changeDbPathFromSettings() {
     document.getElementById('dbPathModal').style.display = 'flex';
 }
 
-// MANUEL TETİKLEYİCİ YENİLEME SİSTEMİ (Polling Kaldırıldı)
 async function manualRefresh(silent = false) {
     if (typeof window.api === 'undefined') return;
     if (!silent) showSpinner("Veriler Güncelleniyor...");
@@ -393,7 +424,6 @@ async function manualRefresh(silent = false) {
 
         const newData = await window.api.getData();
         
-        // ZORUNLU GÜNCELLEME KALKANI
         if (newData && newData.settings && newData.settings.version) {
             if (compareVersions(APP_VERSION, newData.settings.version) === -1) {
                 if (!silent) hideSpinner();
@@ -491,18 +521,33 @@ function fetchDataFromLocalDB() {
 
         setTimeout(() => {
             document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('appContainer').style.display = 'flex';
             
             if (currentUserRole === 'izin') {
-                document.getElementById('appContainer').style.display = 'none';
+                document.getElementById('main-content').style.display = 'none';
+                document.getElementById('headerActionButtons').style.display = 'none';
+                document.getElementById('main-header').classList.remove('z-[60]');
+                document.getElementById('main-header').classList.add('z-[100]');
+                
+                const tm = document.getElementById('timelineModal');
+                tm.classList.replace('p-4', 'pt-[90px]');
+                tm.classList.replace('items-center', 'items-start');
+                
+                const tmContent = tm.querySelector('.modal-content');
+                tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+                tmContent.classList.replace('w-[96vw]', 'w-full');
+                tmContent.classList.add('mx-4');
+                
                 openModal('timelineModal');
             } else {
-                document.getElementById('appContainer').style.display = 'flex';
+                document.getElementById('main-content').style.display = 'block';
+                document.getElementById('headerActionButtons').style.display = 'flex';
             }
 
             if (window.api) window.api.maximizeWindow(); 
             
             initSystem();
-            updateRefreshTime(); // Polling yerine başlangıçta bir kez çekilir
+            updateRefreshTime(); 
         }, 800);
 
     }).catch(e => {
@@ -514,7 +559,6 @@ function fetchDataFromLocalDB() {
     });
 }
 
-// Her kayıt işleminden sonra arayüzün saatini günceller ve veritabanına yazar
 function saveToDatabase() { 
     if(typeof window.api !== 'undefined') {
         window.api.savePersonnel(personnelData).then(() => {
@@ -604,7 +648,6 @@ function renderStatsCards() {
     container.innerHTML = "";
     
     const baseData = getVisiblePersonnel();
-    // ARINDIRILMIŞ LİSTELER: Tüm kartlar sadece aktif personelleri sayar
     const activeData = baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
     const passiveData = baseData.filter(p => p.durum !== "Aktif" && p.durum !== "AKTİF");
 
@@ -612,10 +655,10 @@ function renderStatsCards() {
         let count = 0;
         
         if (card.id === "total") {
-            count = activeData.length; // Toplam Personel = Sadece Aktifler
+            count = activeData.length; 
         } 
         else if (card.id === "passive") {
-            count = passiveData.length; // Pasif Kartı = Sadece Pasifler
+            count = passiveData.length; 
         }
         else if (card.type === "custom" && card.func === "izinli") {
             count = activeData.filter(p => {
@@ -728,7 +771,6 @@ function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
     const baseData = getVisiblePersonnel();
 
-    // HEDEF LİSTE: Pasif kartı tıklandıysa SADECE pasifler, diğer tüm kartlarda SADECE aktifler
     let targetData = activeCardId === 'passive' 
         ? baseData.filter(p => p.durum !== "Aktif" && p.durum !== "AKTİF")
         : baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
@@ -846,7 +888,6 @@ function openProfileModal(id) {
     renderZimmetTable();
     renderIzinTable();
     
-    // İZİNCİ İZOLASYON SİSTEMİ (Profil Sansürü)
     if (currentUserRole === 'izin') {
         document.getElementById('btnProfileEdit').style.display = 'none';
         document.getElementById('btnProfileDelete').style.display = 'none';
@@ -1208,7 +1249,8 @@ function generateTimeline() {
     }
 
     activeData.forEach(p => {
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Tıkla ve İzin İşle)" onclick="openIzinFromTimeline(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
+        // TIKLAMA MANTIĞI: openIzinFromTimeline yerine openProfileModal yapıldı
+        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle / İzin İşle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-plus-circle opacity-50 text-[10px]"></i></div>`;
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
