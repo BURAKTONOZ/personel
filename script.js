@@ -1,8 +1,7 @@
-const APP_VERSION = "7.2.0"; 
+const APP_VERSION = "7.3.0"; 
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
 let currentUserRole = 'admin'; 
-let pollingTimer = null; // Kalkan için eklendi
 
 function showSpinner(text="İşleniyor...") { 
     document.getElementById("spinnerText").innerText = text;
@@ -165,6 +164,11 @@ function getVisiblePersonnel() {
     return personnelData;
 }
 
+function updateRefreshTime() {
+    const now = new Date();
+    document.getElementById('db-last-update').innerText = `Son Yenileme: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+}
+
 function exportToExcel() {
     if(currentFilteredData.length === 0) {
         showToast("Dışa aktarılacak personel kaydı bulunamadı!", "error");
@@ -234,9 +238,12 @@ function updateHeaderBadge() {
     if(currentUserRole === 'admin') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-blue-50 text-blue-700 border-blue-200 shadow-sm';
         badge.innerHTML = '👑 ANA KULLANICI';
-    } else {
+    } else if(currentUserRole === '1011') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-violet-50 text-violet-700 border-violet-200 shadow-sm';
         badge.innerHTML = '📍 1011 YÖNETİCİSİ';
+    } else if(currentUserRole === 'izin') {
+        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-orange-50 text-orange-700 border-orange-200 shadow-sm';
+        badge.innerHTML = '🗓️ İZİN YÖNETİCİSİ';
     }
 }
 
@@ -261,6 +268,7 @@ async function checkLogin() {
         let isSystemOpen = fbData && fbData.sistemAcikMi !== undefined ? fbData.sistemAcikMi : true;
         let remotePassword = fbData && fbData.sifre ? fbData.sifre : "numarataj26";
         let remote1011Password = fbData && fbData.sifre1011 ? fbData.sifre1011 : "bin11";
+        let remoteIzinPassword = fbData && fbData.sifreIzin ? fbData.sifreIzin : "izin26";
         let lockMsg = fbData && fbData.kilitMesaji ? fbData.kilitMesaji : "Sistem lisansınız sona ermiştir. Lütfen sistem yöneticisi ile görüşün.";
 
         if (isSystemOpen === false || isSystemOpen === "false") {
@@ -277,6 +285,9 @@ async function checkLogin() {
             loginSuccess = true;
         } else if (pass === remote1011Password) {
             currentUserRole = '1011';
+            loginSuccess = true;
+        } else if (pass === remoteIzinPassword) {
+            currentUserRole = 'izin';
             loginSuccess = true;
         }
 
@@ -301,9 +312,15 @@ async function checkLogin() {
                 statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Tarayıcı Modu Başarılı!';
                 setTimeout(() => {
                     document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('appContainer').style.display = 'flex';
+                    if (currentUserRole === 'izin') {
+                        document.getElementById('appContainer').style.display = 'none';
+                        openModal('timelineModal');
+                    } else {
+                        document.getElementById('appContainer').style.display = 'flex';
+                    }
                     showToast("Tarayıcı modundasınız, veritabanına bağlanılamaz.", "error");
                     initSystem();
+                    updateRefreshTime();
                 }, 800);
             }
         } else {
@@ -337,11 +354,17 @@ async function saveNewDbPath() {
     
     if (result.success) {
         document.getElementById('dbPathModal').style.display = 'none';
-        document.getElementById('appContainer').style.display = 'flex';
+        
+        if (currentUserRole === 'izin') {
+            document.getElementById('appContainer').style.display = 'none';
+            openModal('timelineModal');
+        } else {
+            document.getElementById('appContainer').style.display = 'flex';
+        }
+
         if (window.api) window.api.maximizeWindow();
         showToast("Veritabanı yolu kaydedildi.", "success");
         fetchDataFromLocalDB();
-        startPolling();
     } else {
         showToast("Bu klasöre bağlanılamadı, yazma yetkiniz olmayabilir.", "error");
     }
@@ -353,51 +376,59 @@ function changeDbPathFromSettings() {
     document.getElementById('dbPathModal').style.display = 'flex';
 }
 
-// 3. GÜNCELLEME: SESSİZ VERSİYON KALKANI BURAYA EKLENDİ
-function startPolling() {
+// MANUEL TETİKLEYİCİ YENİLEME SİSTEMİ (Polling Kaldırıldı)
+async function manualRefresh(silent = false) {
     if (typeof window.api === 'undefined') return;
+    if (!silent) showSpinner("Veriler Güncelleniyor...");
     
-    if(pollingTimer) clearInterval(pollingTimer);
+    const status = await window.api.getDbStatus();
+    const led = document.getElementById('led-indicator');
+    const statusText = document.getElementById('db-status-text');
     
-    pollingTimer = setInterval(async () => {
-        const status = await window.api.getDbStatus();
-        const led = document.getElementById('led-indicator');
-        const statusText = document.getElementById('db-status-text');
+    if (status.connected) {
+        if(led) led.className = 'led green';
+        if(statusText) statusText.innerText = 'Bağlı';
+        const pathDisplay = document.getElementById('settingsDbPath');
+        if (pathDisplay) pathDisplay.innerText = status.path;
+
+        const newData = await window.api.getData();
         
-        if (status.connected) {
-            led.className = 'led green';
-            statusText.innerText = 'Bağlı';
-            const pathDisplay = document.getElementById('settingsDbPath');
-            if (pathDisplay) pathDisplay.innerText = status.path;
-
-            const newData = await window.api.getData();
-            
-            // YENİ ÖZELLİK: Versiyon kontrol Kalkanı
-            if (newData && newData.settings && newData.settings.version) {
-                if (compareVersions(APP_VERSION, newData.settings.version) === -1) {
-                    clearInterval(pollingTimer); // Sistemi zorlamayı kes
-                    document.getElementById('forceUpdateModal').style.display = 'flex'; // Modalı aç
-                    return; // Kodu durdur, alta geçme
-                }
+        // ZORUNLU GÜNCELLEME KALKANI
+        if (newData && newData.settings && newData.settings.version) {
+            if (compareVersions(APP_VERSION, newData.settings.version) === -1) {
+                if (!silent) hideSpinner();
+                document.getElementById('forceUpdateModal').style.display = 'flex';
+                return;
             }
-
-            if (newData && newData.personnel) {
-                let parsedData = Array.isArray(newData.personnel) ? newData.personnel : Object.values(newData.personnel);
-                personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
-                personnelData.forEach(p => {
-                    if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
-                    if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
-                });
-                applyFilters(); 
-                
-                const now = new Date();
-                document.getElementById('db-last-update').innerText = `Son Yenileme: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-            }
-        } else {
-            led.className = 'led red';
-            statusText.innerText = 'Bağlantı Koptu!';
         }
-    }, 5000);
+
+        if (newData && newData.personnel) {
+            let parsedData = Array.isArray(newData.personnel) ? newData.personnel : Object.values(newData.personnel);
+            personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
+            personnelData.forEach(p => {
+                if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
+                if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
+            });
+            
+            if (document.getElementById('appContainer').style.display !== 'none' || currentUserRole === 'izin') {
+                applyFilters(); 
+            }
+            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
+            if(document.getElementById("profileModal").classList.contains("show")) {
+                renderIzinTable();
+                renderZimmetTable();
+            }
+            updateRefreshTime();
+        }
+    } else {
+        if(led) led.className = 'led red';
+        if(statusText) statusText.innerText = 'Bağlantı Koptu!';
+    }
+    
+    if (!silent) {
+        hideSpinner();
+        showToast("Veriler güncellendi.", "success");
+    }
 }
 
 function logOut() {
@@ -417,7 +448,6 @@ function fetchDataFromLocalDB() {
     }
     
     window.api.getData().then((data) => {
-        
         let dbVersion = "1.0.0";
         if(data && data.settings && data.settings.version) { dbVersion = data.settings.version; }
 
@@ -461,11 +491,18 @@ function fetchDataFromLocalDB() {
 
         setTimeout(() => {
             document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('appContainer').style.display = 'flex';
+            
+            if (currentUserRole === 'izin') {
+                document.getElementById('appContainer').style.display = 'none';
+                openModal('timelineModal');
+            } else {
+                document.getElementById('appContainer').style.display = 'flex';
+            }
+
             if (window.api) window.api.maximizeWindow(); 
             
             initSystem();
-            startPolling();
+            updateRefreshTime(); // Polling yerine başlangıçta bir kez çekilir
         }, 800);
 
     }).catch(e => {
@@ -477,9 +514,12 @@ function fetchDataFromLocalDB() {
     });
 }
 
+// Her kayıt işleminden sonra arayüzün saatini günceller ve veritabanına yazar
 function saveToDatabase() { 
     if(typeof window.api !== 'undefined') {
-        window.api.savePersonnel(personnelData).catch(e => { showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error"); });
+        window.api.savePersonnel(personnelData).then(() => {
+            updateRefreshTime();
+        }).catch(e => { showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error"); });
     }
     return true; 
 }
@@ -503,7 +543,8 @@ function openModal(id) {
     if(id === 'timelineModal') {
         document.getElementById("timelineMonth").value = `${tlCurrentDate.getFullYear()}-${String(tlCurrentDate.getMonth()+1).padStart(2,'0')}`;
         document.getElementById("timelineSearchInput").value = ""; 
-        document.getElementById("btnTopluIzin").style.display = (currentUserRole === '1011') ? 'none' : 'flex';
+        document.getElementById("btnTopluIzin").style.display = (currentUserRole === '1011' || currentUserRole === 'izin') ? 'none' : 'flex';
+        document.getElementById("btnTimelineClose").style.display = (currentUserRole === 'izin') ? 'none' : 'flex';
         generateTimeline();
     }
 }
@@ -563,16 +604,21 @@ function renderStatsCards() {
     container.innerHTML = "";
     
     const baseData = getVisiblePersonnel();
+    // ARINDIRILMIŞ LİSTELER: Tüm kartlar sadece aktif personelleri sayar
+    const activeData = baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
+    const passiveData = baseData.filter(p => p.durum !== "Aktif" && p.durum !== "AKTİF");
 
     systemSettings.cards.filter(c => c.active).forEach(card => {
         let count = 0;
         
-        if (card.type === "all") {
-            count = baseData.length; 
+        if (card.id === "total") {
+            count = activeData.length; // Toplam Personel = Sadece Aktifler
         } 
+        else if (card.id === "passive") {
+            count = passiveData.length; // Pasif Kartı = Sadece Pasifler
+        }
         else if (card.type === "custom" && card.func === "izinli") {
-            count = baseData.filter(p => {
-                if (p.durum !== "Aktif" && p.durum !== "AKTİF") return false;
+            count = activeData.filter(p => {
                 if (!p.izinler) return false;
                 return p.izinler.some(iz => {
                     let b = new Date(iz.baslangic); b.setHours(0,0,0,0);
@@ -581,9 +627,9 @@ function renderStatsCards() {
                 });
             }).length;
         } else if (card.type === "custom" && card.func === "zimmetli") {
-            count = baseData.filter(p => (p.durum === "Aktif" || p.durum === "AKTİF") && p.zimmetler && p.zimmetler.length > 0).length;
+            count = activeData.filter(p => p.zimmetler && p.zimmetler.length > 0).length;
         } else {
-            count = baseData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
+            count = activeData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
         }
         
         const styling = statColorsAndIcons[card.title] || { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-info-circle", ring: "ring-slate-400" };
@@ -682,7 +728,12 @@ function applyFilters() {
     const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
     const baseData = getVisiblePersonnel();
 
-    currentFilteredData = baseData.filter(p => {
+    // HEDEF LİSTE: Pasif kartı tıklandıysa SADECE pasifler, diğer tüm kartlarda SADECE aktifler
+    let targetData = activeCardId === 'passive' 
+        ? baseData.filter(p => p.durum !== "Aktif" && p.durum !== "AKTİF")
+        : baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
+
+    currentFilteredData = targetData.filter(p => {
         let pAd = p.adSoyad ? p.adSoyad.toLocaleUpperCase('tr-TR') : "";
         let pSicil = p.sicil ? p.sicil.toLocaleUpperCase('tr-TR') : "";
         let pTel = p.tel || "";
@@ -704,29 +755,33 @@ function applyFilters() {
         let mSeflik = !valSeflik || pSeflik === valSeflik || pSeflik.includes(valSeflik);
         
         let matchCard = true;
-        if (activeCardId !== 'total') {
+        if (activeCardId !== 'total' && activeCardId !== 'passive') {
             let c = systemSettings.cards.find(x => x.id === activeCardId);
             if (c) {
                 if (c.type === 'custom') {
                     if (c.func === 'izinli') {
                         let izinde = false;
-                        if(p.durum === "Aktif" || p.durum === "AKTİF") {
-                            if(p.izinler) {
-                                izinde = p.izinler.some(iz => {
-                                    let b = new Date(iz.baslangic); b.setHours(0,0,0,0);
-                                    let bit = new Date(iz.bitis); bit.setHours(23,59,59,999);
-                                    return SYSTEM_TODAY >= b && SYSTEM_TODAY <= bit;
-                                });
-                            }
+                        if(p.izinler) {
+                            izinde = p.izinler.some(iz => {
+                                let b = new Date(iz.baslangic); b.setHours(0,0,0,0);
+                                let bit = new Date(iz.bitis); bit.setHours(23,59,59,999);
+                                return SYSTEM_TODAY >= b && SYSTEM_TODAY <= bit;
+                            });
                         }
                         matchCard = izinde;
                     } else if (c.func === 'zimmetli') {
-                        matchCard = (p.durum === "Aktif" || p.durum === "AKTİF") && p.zimmetler && p.zimmetler.length > 0;
+                        matchCard = p.zimmetler && p.zimmetler.length > 0;
                     }
                 } else if (c.type === 'cinsiyet') {
                     matchCard = (p.cinsiyet || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
                 } else if (c.type === 'unvan') {
                     matchCard = (p.unvan || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
+                } else if (c.type === 'bina') {
+                    matchCard = (p.bina || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
+                } else if (c.type === 'seflik') {
+                    matchCard = (p.seflik || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
+                } else if (c.type === 'kadroSirket') {
+                    matchCard = (p.kadroSirket || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
                 }
             }
         }
@@ -790,8 +845,34 @@ function openProfileModal(id) {
 
     renderZimmetTable();
     renderIzinTable();
+    
+    // İZİNCİ İZOLASYON SİSTEMİ (Profil Sansürü)
+    if (currentUserRole === 'izin') {
+        document.getElementById('btnProfileEdit').style.display = 'none';
+        document.getElementById('btnProfileDelete').style.display = 'none';
+        
+        document.getElementById('tabBtn_genel').style.display = 'none';
+        document.getElementById('tabBtn_kurum').style.display = 'none';
+        document.getElementById('tabBtn_acil').style.display = 'none';
+        document.getElementById('tabBtn_zimmet').style.display = 'none';
+        document.getElementById('tabBtn_notlar').style.display = 'none';
+        
+        document.getElementById('tabBtn_izin').style.display = 'flex';
+        switchTab('izin');
+    } else {
+        document.getElementById('btnProfileEdit').style.display = 'flex';
+        document.getElementById('btnProfileDelete').style.display = 'flex';
+        
+        document.getElementById('tabBtn_genel').style.display = 'flex';
+        document.getElementById('tabBtn_kurum').style.display = 'flex';
+        document.getElementById('tabBtn_acil').style.display = 'flex';
+        document.getElementById('tabBtn_zimmet').style.display = 'flex';
+        document.getElementById('tabBtn_notlar').style.display = 'flex';
+        
+        switchTab('genel');
+    }
+
     openModal('profileModal');
-    switchTab('genel');
 }
 
 function savePersonelNot() {
