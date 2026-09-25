@@ -72,7 +72,6 @@ window.tooltipTimeout = null;
 
 let activeCardId = 'total'; 
 
-// === YENİ: SÜRÜKLE BIRAK DEĞİŞKENLERİ ===
 let isTlDragging = false;
 let tlDragStart = null;
 
@@ -117,7 +116,7 @@ let systemSettings = {
         medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli"] },
         tahsil: { label: "Tahsil", values: ["İlköğretim", "Lise", "Önlisans", "Lisans", "Yüksek Lisans"] },
         kadroSirket: { label: "Kadro / Şirket", values: ["MEMUR", "BELTAŞ", "BELKA"] },
-        unvan: { label: "Ünvanı", values: ["GIDA MÜHENDİSİ", "TEKNİKER", "TEKNİSYEN", "BİLGİSAYAR İŞLETMENİ", "BEKÇİ", "MUTEMET", "VERİ HAZIRLAMA", "HARİTA MÜHENDİSİ", "HARİTA TEKNİKERİ", "VASIFSIZ ELEMAN", "OFİS TEKNİKERİ", "ENGELLİ İŞÇİ", "ŞANTİYE TEKNİKERİ", "ŞANTİYE SÜRVEYANI", "ÇAĞRI MERKEZİ OPERATÖRÜ", "MAKAM PERSONELİ", "BÜRO PERSONELİ", "YARDIMCI PERSONEL", "HALKLA İLİŞKİLER", "OPERATÖR", "USTA", "AĞIR VASITA ŞOFÖRÜ", "KISIM ŞEFİ", "KANTAR İŞÇİSİ", "BİYOLOG"] },
+        unvan: { label: "Ünvanı", values: ["GIDA MÜHENDİSİ", "TEKNİKER", "TEKNİSYEN", "BİLGİSAYAR İŞLETMENİ", "BEKÇİ", "MUTEMET", "VERİ HAZIRLAMA", "HARİTA MÜHENDİSİ", "HARİTA TEKNİKERİ", "VASIFSIZ ELEMAN", "OFİS TEKNİKERİ", "ENGELLİ İŞÇİ", "ŞANTİYE TEKNİKERİ", "ŞANTİYE SÜRVEYANI", "ÇAĞRI MERKEZİ OPERATÖRÜ", "MAKAM PERSONELİ", "BÜRO PERSONELİ", "YARDIMCI PERSONEL", "HALKLA İLİŞKİLER", "OPERATÖR", "USTA", "AĞIR VASITA ŞOFÖRÜ", "KISIM ŞEFİ", "KANTAR İŞÇİSİ", "BİYOLOG", "İŞÇİ"] },
         seflik: { label: "Çalıştığı Şeflik", values: ["MÜDÜR", "NUMARATAJ ŞEFLİĞİ", "BÜRO ŞEFLİĞİ", "ADRES YÖNETİM VE UYGULAMA ŞEFLİĞİ"] },
         bina: { label: "Çalıştığı Bina", values: ["ANA BİNA", "1011 YERLEŞKESİ"] },
         kanGrubu: { label: "Kan Grubu", values: ["Belirtilmemiş", "A Rh+", "A Rh-", "B Rh+", "B Rh-", "AB Rh+", "AB Rh-", "0 Rh+", "0 Rh-"] },
@@ -434,6 +433,30 @@ async function manualRefresh(silent = false) {
                 document.getElementById('forceUpdateModal').style.display = 'flex';
                 return;
             }
+        }
+
+        // YENİ: Ayarları (Açılır Listeleri ve Kartları) senkronize et
+        if (newData && newData.settings) {
+            if (newData.settings.dropdowns) systemSettings.dropdowns = newData.settings.dropdowns;
+            if (newData.settings.cards) {
+                systemSettings.cards = systemSettings.cards.map(defCard => {
+                    let found = newData.settings.cards.find(c => c.id === defCard.id);
+                    if(found) return { ...defCard, active: found.active };
+                    return defCard;
+                });
+            }
+            
+            const fd = document.getElementById("filter-durum") ? document.getElementById("filter-durum").value : "";
+            const fk = document.getElementById("filter-kadroSirket") ? document.getElementById("filter-kadroSirket").value : "";
+            const fb = document.getElementById("filter-bina") ? document.getElementById("filter-bina").value : "";
+            const fs = document.getElementById("filter-seflik") ? document.getElementById("filter-seflik").value : "";
+            
+            populateSelectOptions();
+            
+            if(document.getElementById("filter-durum")) document.getElementById("filter-durum").value = fd;
+            if(document.getElementById("filter-kadroSirket")) document.getElementById("filter-kadroSirket").value = fk;
+            if(document.getElementById("filter-bina")) document.getElementById("filter-bina").value = fb;
+            if(document.getElementById("filter-seflik")) document.getElementById("filter-seflik").value = fs;
         }
 
         if (newData && newData.personnel) {
@@ -1000,7 +1023,6 @@ function openIzinForm() {
     openModal('addIzinModal');
 }
 
-// === YENİ: SÜRÜKLE BIRAK FORMU AÇICI ===
 function openIzinFormWithDates(pid, date1, date2) {
     selectedUserId = pid;
     document.getElementById('i_tur').selectedIndex = 0;
@@ -1234,9 +1256,8 @@ window.hideTooltip = function() {
     }
 }
 
-// === YENİ: SÜRÜKLE BIRAK OLAY İZLEYİCİLERİ ===
 window.tlMouseDown = function(e, pid, y, m, d) {
-    if(e.button !== 0) return; // Sadece sol tık
+    if(e.button !== 0) return; 
     isTlDragging = true;
     tlDragStart = { pid, y, m, d };
     clearTlSelection();
@@ -1245,7 +1266,7 @@ window.tlMouseDown = function(e, pid, y, m, d) {
 
 window.tlMouseEnter = function(e, pid, y, m, d) {
     if(!isTlDragging) return;
-    if(pid !== tlDragStart.pid) return; // Satır değişirse iptal
+    if(pid !== tlDragStart.pid) return; 
     highlightTlCells(pid, tlDragStart.d, d);
 }
 
@@ -1269,7 +1290,6 @@ window.tlMouseUp = function(e, pid, y, m, d) {
     openIzinFormWithDates(pid, d1, d2);
 }
 
-// Eğer fare basılıyken hücrelerin dışına çıkılırsa seçimi iptal et
 document.addEventListener('mouseup', () => {
     if(isTlDragging) {
         isTlDragging = false;
@@ -1355,7 +1375,6 @@ function generateTimeline() {
                 }
             }
             
-            // Sensörler gün kutucuklarına eklendi (Sürükle bırak mantığı)
             html += `<div id="tl-cell-${p.id}-${d}" class="tl-cell flex items-center justify-center font-bold text-[10px] cursor-pointer transition-colors duration-75 ${cellClass}" ${tooltipEvents} onmousedown="tlMouseDown(event, ${p.id}, ${y}, ${m}, ${d})" onmouseenter="tlMouseEnter(event, ${p.id}, ${y}, ${m}, ${d})" onmouseup="tlMouseUp(event, ${p.id}, ${y}, ${m}, ${d})">${content}</div>`;
         }
         html += `</div>`;
@@ -1502,8 +1521,16 @@ function editPersonnelFromProfile() {
                 let val = fieldsMap[f] || "";
                 if(el.tagName === 'SELECT' && val) {
                     let option = Array.from(el.options).find(o => o.value.toLocaleUpperCase('tr-TR') === val.toLocaleUpperCase('tr-TR'));
-                    if (option) el.value = option.value;
-                    else el.value = ""; 
+                    if (option) {
+                        el.value = option.value;
+                    } else {
+                        // KORUMA KALKANI: Seçenek listede yoksa, veriyi ezmemek için geçici olarak listeye ekle
+                        let newOpt = document.createElement("option");
+                        newOpt.value = val.toLocaleUpperCase('tr-TR');
+                        newOpt.innerHTML = val.toLocaleUpperCase('tr-TR');
+                        el.appendChild(newOpt);
+                        el.value = val.toLocaleUpperCase('tr-TR');
+                    }
                 } else { el.value = val; }
             }
         });
