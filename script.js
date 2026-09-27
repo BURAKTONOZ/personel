@@ -140,7 +140,7 @@ let systemSettings = {
         { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
         { id: "izinli", title: "Şu An İzinde", type: "custom", func: "izinli", active: true }
     ],
-    vehicles: [] // Araç verileri
+    vehicles: [] // Araç verileri burada barınacak (Truva Atı Modeli)
 };
 
 const statColorsAndIcons = {
@@ -265,29 +265,12 @@ function updateHeaderBadge() {
     }
 }
 
-// HIZLI KULLANICI DEĞİŞTİRME / OTURUM KAPATMA
+// HIZLI KULLANICI DEĞİŞTİRME / OTURUM KAPATMA (ÇÖZÜM 1)
 function switchUserRole() {
     if(confirm("Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?")) {
-        // Tüm modalları kapat
-        document.querySelectorAll('.modal-overlay').forEach(m => {
-            m.classList.remove('show');
-            let content = m.querySelector('.modal-content');
-            if(content) content.classList.remove('show');
-            m.style.display = 'none';
-        });
-
-        // Ana ekranı gizle ve login ekranını göster
-        document.getElementById('appContainer').style.display = 'none';
-        document.getElementById('loginScreen').style.display = 'flex';
-        
-        // Form alanlarını sıfırla
-        document.getElementById('loginInputArea').style.display = 'block';
-        document.getElementById('loginStatusText').style.display = 'none';
-        document.getElementById('loginPass').value = '';
-        
-        // Oturumu boşalt
-        currentUserRole = '';
-        showToast("Oturum kapatıldı.", "success");
+        showSpinner("Oturum Kapatılıyor...");
+        // Tıklama hatalarını önlemek için uygulamayı tamamen yeniliyoruz (reload)
+        setTimeout(() => { location.reload(); }, 500);
     }
 }
 
@@ -617,6 +600,18 @@ function fetchDataFromLocalDB() {
             }
 
             if (window.api) window.api.maximizeWindow(); 
+
+            // BAĞLANTI BEKLENİYOR HATASI ÇÖZÜMÜ (ÇÖZÜM 2): İlk açılışta LED'i Yeşile ve yazıyı Bağlı'ya çeviriyoruz
+            window.api.getDbStatus().then(status => {
+                const led = document.getElementById('led-indicator');
+                const dbStatusText = document.getElementById('db-status-text');
+                if (status.connected) {
+                    if (led) led.className = 'led green';
+                    if (dbStatusText) dbStatusText.innerText = 'Bağlı';
+                    const pathDisplay = document.getElementById('settingsDbPath');
+                    if (pathDisplay && status.path) pathDisplay.innerText = status.path;
+                }
+            });
             
             initSystem();
             updateRefreshTime(); 
@@ -1706,7 +1701,6 @@ function renderAracVitrini() {
                          (v.durum === 'Havuzda' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200');
         let fIcon = v.durum === 'Aktif' ? 'fa-check-circle' : (v.durum === 'Havuzda' ? 'fa-parking' : 'fa-wrench');
 
-        // h-full ve flex-1 KALDIRILDI - KART ARTIK İÇERİĞE GÖRE BOYLANACAK
         html += `
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300 hover:-translate-y-1 flex flex-col" onclick="openAracForm(${v.id})">
             <div class="relative h-28 bg-slate-100 flex-shrink-0 border-b border-slate-100">
