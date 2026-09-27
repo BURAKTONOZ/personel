@@ -1,4 +1,4 @@
-const APP_VERSION = "7.3.0"; 
+const APP_VERSION = "7.4.0"; 
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
 let currentUserRole = 'admin'; 
@@ -62,12 +62,14 @@ function closePhotoModal() {
 }
 
 let personnelData = [];
+let vehicleData = []; // YENİ: Araç veritabanı dizisi
 let currentFilteredData = [];
 const SYSTEM_TODAY = new Date();
 SYSTEM_TODAY.setHours(0,0,0,0);
 let selectedUserId = null;
 let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
+let uploadedBase64VehicleFoto = ""; // Araç fotoğrafı için
 window.tooltipTimeout = null; 
 
 let activeCardId = 'total'; 
@@ -77,6 +79,7 @@ let tlDragStart = null;
 
 const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
+const vehiclePlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cbd5e1'><path d='M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z'/></svg>";
 
 function getAvatarUrl(foto, cinsiyet) {
     if(foto && foto.trim() !== "" && !foto.includes("via.placeholder.com")) return foto;
@@ -222,6 +225,48 @@ function exportToExcel() {
     }, 800);
 }
 
+// YENİ: Araçları Excel'e aktarma fonksiyonu
+function exportVehiclesToExcel() {
+    if(vehicleData.length === 0) {
+        showToast("Dışa aktarılacak araç kaydı bulunamadı!", "error");
+        return;
+    }
+    showSpinner("Araç Listesi Hazırlanıyor...");
+    setTimeout(() => {
+        const exportData = vehicleData.map(v => {
+            let surucuAd = "Havuz (Sürücüsüz)";
+            if(v.surucuId) {
+                const sp = personnelData.find(p => p.id === parseInt(v.surucuId));
+                if(sp) surucuAd = sp.adSoyad;
+            }
+            
+            return {
+                "Plaka": v.plaka || "",
+                "Marka & Model": v.model || "",
+                "Kullanan (Sürücü)": surucuAd,
+                "Araç Durumu": v.durum || "",
+                "Bağlı Olduğu Şeflik": v.seflik || "",
+                "Bulunduğu Bina": v.bina || "",
+                "Son KM": v.km || "",
+                "Muayene Bitiş": v.muayene ? formatDateTR(v.muayene) : "",
+                "Araç Notları / Donanım": v.notlar || ""
+            };
+        });
+
+        try {
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Arac_Filosu");
+            XLSX.writeFile(workbook, "Arac_Raporu.xlsx");
+            hideSpinner();
+            showToast("Araç listesi başarıyla indirildi.", "success");
+        } catch (error) {
+            hideSpinner();
+            showToast("Excel oluşturulurken bir hata meydana geldi.", "error");
+        }
+    }, 800);
+}
+
 async function backupDatabase() {
     if(typeof window.api === 'undefined') {
         showToast("Tarayıcı modunda yedekleme yapılamaz.", "error");
@@ -237,16 +282,20 @@ async function backupDatabase() {
 function updateHeaderBadge() {
     const badge = document.getElementById('userBadge');
     badge.style.display = 'inline-block';
+    const vehicleBtn = document.getElementById('btnVehicleManagement');
     
     if(currentUserRole === 'admin') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-blue-50 text-blue-700 border-blue-200 shadow-sm';
         badge.innerHTML = '👑 ANA KULLANICI';
+        if(vehicleBtn) vehicleBtn.style.display = 'flex'; // Araç butonu sadece admine
     } else if(currentUserRole === '1011') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-violet-50 text-violet-700 border-violet-200 shadow-sm';
         badge.innerHTML = '📍 1011 YÖNETİCİSİ';
+        if(vehicleBtn) vehicleBtn.style.display = 'none';
     } else if(currentUserRole === 'izin') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-orange-50 text-orange-700 border-orange-200 shadow-sm';
         badge.innerHTML = '🗓️ İZİN YÖNETİCİSİ';
+        if(vehicleBtn) vehicleBtn.style.display = 'none';
     }
 }
 
@@ -435,7 +484,6 @@ async function manualRefresh(silent = false) {
             }
         }
 
-        // YENİ: Ayarları (Açılır Listeleri ve Kartları) senkronize et
         if (newData && newData.settings) {
             if (newData.settings.dropdowns) systemSettings.dropdowns = newData.settings.dropdowns;
             if (newData.settings.cards) {
@@ -459,6 +507,7 @@ async function manualRefresh(silent = false) {
             if(document.getElementById("filter-seflik")) document.getElementById("filter-seflik").value = fs;
         }
 
+        // Personel verisi çekiliyor
         if (newData && newData.personnel) {
             let parsedData = Array.isArray(newData.personnel) ? newData.personnel : Object.values(newData.personnel);
             personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
@@ -475,8 +524,19 @@ async function manualRefresh(silent = false) {
                 renderIzinTable();
                 renderZimmetTable();
             }
-            updateRefreshTime();
         }
+        
+        // Araç verisi çekiliyor
+        if (newData && newData.vehicles) {
+            let parsedVehicles = Array.isArray(newData.vehicles) ? newData.vehicles : Object.values(newData.vehicles);
+            vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
+            if(document.getElementById("vehicleModal").classList.contains("show")) renderVehicleGrid();
+        } else {
+            vehicleData = [];
+        }
+
+        updateRefreshTime();
+
     } else {
         if(led) led.className = 'led red';
         if(statusText) statusText.innerText = 'Bağlantı Koptu!';
@@ -530,6 +590,12 @@ function fetchDataFromLocalDB() {
                 if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
             });
         } else { personnelData = []; }
+
+        // Araçlar DB'den çekiliyor
+        if(data && data.vehicles) {
+            let parsedVehicles = Array.isArray(data.vehicles) ? data.vehicles : Object.values(data.vehicles);
+            vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
+        } else { vehicleData = []; }
         
         if(data && data.settings) {
             let dbSettings = data.settings;
@@ -595,6 +661,16 @@ function saveToDatabase() {
     return true; 
 }
 
+// Araçları veritabanına kaydetme motoru
+function saveVehiclesToDatabase() { 
+    if(typeof window.api !== 'undefined') {
+        window.api.saveVehicles(vehicleData).then(() => {
+            updateRefreshTime();
+        }).catch(e => { showToast("Araç kaydedilemedi.", "error"); });
+    }
+    return true; 
+}
+
 function saveSettingsToDatabase() { 
     if(typeof window.api !== 'undefined') {
         window.api.saveSettings(systemSettings).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
@@ -618,6 +694,10 @@ function openModal(id) {
         document.getElementById("btnTimelineClose").style.display = (currentUserRole === 'izin') ? 'none' : 'flex';
         generateTimeline();
     }
+    if(id === 'vehicleModal') {
+        document.getElementById("vehicleSearchInput").value = ""; 
+        renderVehicleGrid();
+    }
 }
 
 function closeModal(id) {
@@ -635,12 +715,16 @@ function initSystem() {
 
 function populateSelectOptions() {
     Object.keys(systemSettings.dropdowns).forEach(key => {
-        const els = document.querySelectorAll("#f_" + key + ", #filter-" + key);
+        const els = document.querySelectorAll("#f_" + key + ", #filter-" + key + ", #v_" + key);
         els.forEach(el => {
             if (el) {
                 let html = el.id.startsWith("filter-") ? `<option value="">TÜMÜ (${systemSettings.dropdowns[key].label.toLocaleUpperCase('tr-TR')})</option>` : "";
                 html += systemSettings.dropdowns[key].values.map(v => `<option value="${v}">${v.toLocaleUpperCase('tr-TR')}</option>`).join('');
+                
+                // Seçilen value kaybolmasın diye koruma
+                let oldVal = el.value;
                 el.innerHTML = html;
+                if(oldVal && !el.id.startsWith("filter-")) el.value = oldVal;
             }
         });
     });
@@ -1448,6 +1532,34 @@ function handleFileUpload(event) {
     reader.readAsDataURL(file);
 }
 
+// YENİ: Araç fotoğrafı yükleme işlemi
+function handleVehicleFileUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!file.type.match('image.*')) { showToast("Sadece resim dosyası yükleyebilirsiniz.", "error"); return; }
+    
+    showSpinner("Fotoğraf İşleniyor...");
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 600; const MAX_HEIGHT = 400;
+            let width = img.width; let height = img.height;
+            if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
+            else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            uploadedBase64VehicleFoto = canvas.toDataURL('image/jpeg', 0.80); 
+            document.getElementById("v_previewFoto").src = uploadedBase64VehicleFoto;
+            hideSpinner();
+        }
+        img.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+}
+
 function checkDurumStatus() {
     const bas = document.getElementById("f_gelisTarihi").value;
     const ayr = document.getElementById("f_ayrilisTarihi").value;
@@ -1484,6 +1596,199 @@ function openPersonnelForm() {
     switchFormTab('kisisel'); 
     openModal('personnelModal'); 
     setTimeout(() => { updateFormSilhouette(); }, 50); 
+}
+
+// YENİ: Araç Ekleme/Düzenleme Formunu Açma
+function openVehicleForm(vId = null) {
+    document.getElementById("vehicleForm").reset();
+    document.getElementById("v_id").value = "";
+    uploadedBase64VehicleFoto = "";
+    document.getElementById("v_previewFoto").src = vehiclePlaceholder;
+    
+    // Sürücü (Personel) listesini doldur
+    const surucuSelect = document.getElementById("v_surucu");
+    let surucuHtml = '<option value="">-- Havuz (Sürücüsüz) --</option>';
+    personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
+        surucuHtml += `<option value="${p.id}">${p.adSoyad}</option>`;
+    });
+    surucuSelect.innerHTML = surucuHtml;
+
+    if(vId) {
+        const v = vehicleData.find(x => x.id === vId);
+        if(v) {
+            document.getElementById("v_id").value = v.id;
+            document.getElementById("v_plaka").value = v.plaka || "";
+            document.getElementById("v_model").value = v.model || "";
+            document.getElementById("v_surucu").value = v.surucuId || "";
+            document.getElementById("v_durum").value = v.durum || "Aktif (Sahada)";
+            document.getElementById("v_seflik").value = v.seflik || "";
+            document.getElementById("v_bina").value = v.bina || "";
+            document.getElementById("v_km").value = v.km || "";
+            document.getElementById("v_muayene").value = v.muayene || "";
+            document.getElementById("v_notlar").value = v.notlar || "";
+            
+            if(v.fotoUrl && !v.fotoUrl.includes('data:image/svg')) {
+                uploadedBase64VehicleFoto = v.fotoUrl;
+                document.getElementById("v_previewFoto").src = v.fotoUrl;
+            }
+            document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck-monster text-sky-500"></i> Aracı Düzenle';
+        }
+    } else {
+        document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck text-sky-500"></i> Yeni Araç Kaydı';
+    }
+    
+    openModal('addVehicleModal');
+}
+
+// YENİ: Aracı Kaydetme Motoru
+function saveVehicle() {
+    const plaka = document.getElementById("v_plaka").value.trim();
+    const model = document.getElementById("v_model").value.trim();
+    
+    if(!plaka || !model) { showToast("Plaka ve Marka/Model zorunludur!", "error"); return; }
+    
+    const idVal = document.getElementById("v_id").value;
+    
+    const vData = {
+        id: idVal ? parseInt(idVal) : Date.now(),
+        plaka: plaka,
+        model: model,
+        surucuId: document.getElementById("v_surucu").value,
+        durum: document.getElementById("v_durum").value,
+        seflik: document.getElementById("v_seflik").value,
+        bina: document.getElementById("v_bina").value,
+        km: document.getElementById("v_km").value,
+        muayene: document.getElementById("v_muayene").value,
+        notlar: document.getElementById("v_notlar").value.trim(),
+        fotoUrl: uploadedBase64VehicleFoto || ""
+    };
+    
+    if(idVal) {
+        const idx = vehicleData.findIndex(x => x.id === vData.id);
+        if(!uploadedBase64VehicleFoto) vData.fotoUrl = vehicleData[idx].fotoUrl || "";
+        vehicleData[idx] = vData;
+    } else {
+        vehicleData.unshift(vData);
+    }
+    
+    if(saveVehiclesToDatabase()) {
+        closeModal('addVehicleModal');
+        renderVehicleGrid();
+        showToast(idVal ? "Araç bilgileri güncellendi." : "Yeni araç filoya eklendi.", "success");
+    }
+}
+
+// YENİ: Aracı Silme Motoru
+function deleteVehicle(id) {
+    if(confirm("Bu aracı filodan kalıcı olarak silmek istediğinize emin misiniz?")) {
+        vehicleData = vehicleData.filter(v => v.id !== id);
+        if(saveVehiclesToDatabase()) {
+            renderVehicleGrid();
+            showToast("Araç sistemden silindi.", "success");
+        }
+    }
+}
+
+// YENİ: Araç Vitrini (Grid) Çizim Motoru
+window.renderVehicleGrid = function() {
+    const container = document.getElementById("vehicleGridContainer");
+    if(!container) return;
+    
+    const searchVal = document.getElementById("vehicleSearchInput").value.toLocaleUpperCase('tr-TR');
+    
+    let filteredVehicles = vehicleData;
+    if(searchVal) {
+        filteredVehicles = vehicleData.filter(v => {
+            const surucuAd = v.surucuId ? (personnelData.find(p => p.id === parseInt(v.surucuId))?.adSoyad || "") : "HAVUZ";
+            return (v.plaka || "").includes(searchVal) || 
+                   (v.model || "").includes(searchVal) || 
+                   surucuAd.includes(searchVal);
+        });
+    }
+    
+    let aktif = 0, havuz = 0, ariza = 0;
+    vehicleData.forEach(v => {
+        if(v.durum.includes('Aktif')) aktif++;
+        else if(v.durum.includes('Havuzda')) havuz++;
+        else if(v.durum.includes('Sanayi')) ariza++;
+    });
+    
+    document.getElementById("vs_total").innerText = vehicleData.length;
+    document.getElementById("vs_aktif").innerText = aktif;
+    document.getElementById("vs_havuz").innerText = havuz;
+    document.getElementById("vs_arizali").innerText = ariza;
+
+    if(filteredVehicles.length === 0) {
+        container.innerHTML = `<div class="col-span-full py-16 text-center text-slate-500 font-bold bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-search-minus text-4xl mb-3 text-slate-300 block"></i>Kayıtlı veya aranan kriterde araç bulunmuyor.</div>`;
+        return;
+    }
+    
+    let html = '';
+    filteredVehicles.forEach(v => {
+        let badgeColor = "bg-emerald-50 text-emerald-600 border-emerald-200";
+        if(v.durum.includes('Havuzda')) badgeColor = "bg-amber-50 text-amber-600 border-amber-200";
+        if(v.durum.includes('Sanayi')) badgeColor = "bg-rose-50 text-rose-600 border-rose-200";
+        
+        let surucu = "HAVUZ (SÜRÜCÜSÜZ)";
+        let surucuFoto = avatarMale;
+        if(v.surucuId) {
+            const sp = personnelData.find(p => p.id === parseInt(v.surucuId));
+            if(sp) {
+                surucu = sp.adSoyad;
+                surucuFoto = getAvatarUrl(sp.fotoUrl, sp.cinsiyet);
+            }
+        }
+        
+        const vFoto = (v.fotoUrl && !v.fotoUrl.includes('data:image/svg')) ? v.fotoUrl : vehiclePlaceholder;
+        
+        let uyariHtml = '';
+        if(v.muayene) {
+            const msFark = new Date(v.muayene) - SYSTEM_TODAY;
+            const gunFark = Math.ceil(msFark / (1000 * 60 * 60 * 24));
+            if(gunFark < 0) uyariHtml = `<div class="absolute top-2 right-2 bg-rose-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md animate-pulse"><i class="fas fa-exclamation-triangle"></i> Muayene Geçti!</div>`;
+            else if(gunFark <= 30) uyariHtml = `<div class="absolute top-2 right-2 bg-amber-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md"><i class="fas fa-clock"></i> Muayene Yaklaştı (${gunFark} Gün)</div>`;
+        }
+
+        html += `
+            <div class="vehicle-card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative">
+                ${uyariHtml}
+                <div class="h-40 w-full bg-slate-100 border-b border-slate-200 overflow-hidden relative">
+                    <img src="${vFoto}" class="w-full h-full object-cover">
+                    <div class="v-actions absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center gap-3">
+                        <button onclick="openVehicleForm(${v.id})" class="w-10 h-10 rounded-full bg-white text-blue-600 hover:scale-110 transition-transform shadow-lg flex items-center justify-center"><i class="fas fa-edit"></i></button>
+                        <button onclick="deleteVehicle(${v.id})" class="w-10 h-10 rounded-full bg-rose-500 text-white hover:bg-rose-600 hover:scale-110 transition-transform shadow-lg flex items-center justify-center"><i class="fas fa-trash-alt"></i></button>
+                    </div>
+                </div>
+                
+                <div class="p-4 flex-1 flex flex-col">
+                    <div class="text-center mb-3">
+                        <div class="inline-block border-2 border-slate-800 rounded px-3 py-1 font-black text-lg tracking-widest text-slate-800 bg-slate-50 shadow-sm">${v.plaka}</div>
+                        <div class="text-xs font-bold text-slate-500 mt-2 uppercase truncate" title="${v.model}">${v.model}</div>
+                    </div>
+                    
+                    <div class="flex-1 bg-slate-50 rounded-xl p-3 border border-slate-100 flex flex-col gap-2 justify-center">
+                        <div class="flex items-center gap-2">
+                            <img src="${surucuFoto}" class="w-6 h-6 rounded-full object-cover border border-slate-200 bg-white">
+                            <span class="text-[10px] font-bold text-slate-700 truncate uppercase force-upper" title="${surucu}">${surucu}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
+                            <i class="fas fa-sitemap w-4 text-center text-slate-400"></i> <span class="truncate">${v.seflik || '-'}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
+                            <i class="fas fa-building w-4 text-center text-slate-400"></i> <span class="truncate">${v.bina || '-'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="border-t border-slate-100 bg-slate-50 p-3 flex justify-between items-center shrink-0">
+                    <span class="px-2.5 py-1 text-[9px] font-bold rounded-md uppercase border ${badgeColor}">${v.durum}</span>
+                    <span class="text-[10px] font-mono font-bold text-slate-400">${v.km ? v.km + ' KM' : '-'}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
 }
 
 function editPersonnelFromProfile() { 
@@ -1524,7 +1829,6 @@ function editPersonnelFromProfile() {
                     if (option) {
                         el.value = option.value;
                     } else {
-                        // KORUMA KALKANI: Seçenek listede yoksa, veriyi ezmemek için geçici olarak listeye ekle
                         let newOpt = document.createElement("option");
                         newOpt.value = val.toLocaleUpperCase('tr-TR');
                         newOpt.innerHTML = val.toLocaleUpperCase('tr-TR');
