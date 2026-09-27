@@ -66,7 +66,10 @@ function createWindow() {
 
   ipcMain.on('window-minimize', () => win.minimize());
   ipcMain.on('window-close', () => app.quit());
-  
+  ipcMain.on('relaunch-app', () => {
+    app.relaunch();
+    app.exit(0);
+  });
   ipcMain.on('window-maximize-toggle', () => {
     if(win.isMaximized()) {
         win.unmaximize();
