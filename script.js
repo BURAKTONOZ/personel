@@ -1,4 +1,4 @@
-const APP_VERSION = "7.4.0"; 
+const APP_VERSION = "7.5.0"; 
 const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
 
 let currentUserRole = 'admin'; 
@@ -73,6 +73,7 @@ let uploadedBase64VehicleFoto = "";
 window.tooltipTimeout = null; 
 
 let activeCardId = 'total'; 
+
 let isTlDragging = false;
 let tlDragStart = null;
 
@@ -654,7 +655,7 @@ function fetchDataFromLocalDB() {
 function saveToDatabase() { 
     if(typeof window.api !== 'undefined') {
         window.api.savePersonnel(personnelData).then(() => {
-            manualRefresh(true);
+            updateRefreshTime();
         }).catch(e => { showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error"); });
     }
     return true; 
@@ -662,9 +663,7 @@ function saveToDatabase() {
 
 function saveSettingsToDatabase() { 
     if(typeof window.api !== 'undefined') {
-        window.api.saveSettings(systemSettings).then(() => {
-            manualRefresh(true);
-        }).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
+        window.api.saveSettings(systemSettings).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
     }
     return true; 
 }
@@ -1148,7 +1147,8 @@ function saveZimmet() {
         p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
         
         if(saveToDatabase()) {
-            closeModal('addZimmetModal');
+            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
+            applyFilters(); closeModal('addZimmetModal');
             showToast("Demirbaş başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("Demirbaş eklenirken hata oluştu.", "error"); }
@@ -1160,6 +1160,8 @@ function deleteZimmet(id) {
             const p = personnelData.find(x => x.id == selectedUserId);
             p.zimmetler = p.zimmetler.filter(z => z.id !== id); 
             if(saveToDatabase()) {
+                if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable();
+                applyFilters();
                 showToast("Demirbaş silindi.", "success");
             }
         }
@@ -1233,7 +1235,9 @@ function saveIzin() {
         p.izinler.push({ id: Date.now(), tur: document.getElementById("i_tur").value, baslangic: bas, bitis: bit, aciklama: acik });
         
         if(saveToDatabase()) {
-            closeModal('addIzinModal'); 
+            if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
+            applyFilters(); closeModal('addIzinModal'); 
+            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
             showToast("İzin kaydı başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("İzin eklenirken hata oluştu.", "error"); }
@@ -1245,6 +1249,9 @@ function deleteIzin(id) {
             const p = personnelData.find(x => x.id == selectedUserId);
             p.izinler = p.izinler.filter(i => i.id !== id); 
             if(saveToDatabase()) {
+                if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
+                applyFilters(); 
+                if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
                 showToast("İzin silindi.", "success");
             }
         }
@@ -1278,7 +1285,9 @@ function saveBulkIzin() {
         });
 
         if(saveToDatabase()) {
+            applyFilters();
             closeModal('addBulkIzinModal');
+            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
             hideSpinner();
             showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
         } else { hideSpinner(); }
@@ -1490,6 +1499,7 @@ function saveSettings() {
     });
     systemSettings.cards.forEach((c, i) => c.active = document.getElementById("ct_" + i).checked);
     if(saveSettingsToDatabase()) {
+        populateSelectOptions(); applyFilters(); renderStatsCards(); closeModal('settingsModal');
         showToast("Ayarlar başarıyla güncellendi.", "success");
     }
 }
@@ -1522,6 +1532,7 @@ function handleFileUpload(event) {
     reader.readAsDataURL(file);
 }
 
+// Araç fotoğrafı yükleme işlemi
 function handleVehicleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1587,12 +1598,14 @@ function openPersonnelForm() {
     setTimeout(() => { updateFormSilhouette(); }, 50); 
 }
 
+// Araç Ekleme/Düzenleme Formunu Açma
 function openVehicleForm(vId = null) {
     document.getElementById("vehicleForm").reset();
     document.getElementById("v_id").value = "";
     uploadedBase64VehicleFoto = "";
     document.getElementById("v_previewFoto").src = vehiclePlaceholder;
     
+    // Sürücü (Personel) listesini doldur
     const surucuSelect = document.getElementById("v_surucu");
     let surucuHtml = '<option value="">-- Havuz (Sürücüsüz) --</option>';
     personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
@@ -1629,6 +1642,7 @@ function openVehicleForm(vId = null) {
     openModal('addVehicleModal');
 }
 
+// Aracı Kaydetme Motoru
 function saveVehicle() {
     const plaka = document.getElementById("v_plaka").value.trim();
     const model = document.getElementById("v_model").value.trim();
@@ -1659,14 +1673,17 @@ function saveVehicle() {
         vehicleData.unshift(vData);
     }
     
+    // TRUVA ATI: Araçları ayarlar çekmecesine koy
     systemSettings.vehicles = vehicleData;
     
     if(saveSettingsToDatabase()) {
         closeModal('addVehicleModal');
+        if(document.getElementById("vehicleModal").classList.contains("show")) renderVehicleGrid();
         showToast(idVal ? "Araç bilgileri güncellendi." : "Yeni araç filoya eklendi.", "success");
     }
 }
 
+// Aracı Silme Motoru
 function deleteVehicle() {
     const idVal = document.getElementById("v_id").value;
     if(!idVal) return;
@@ -1677,109 +1694,10 @@ function deleteVehicle() {
         
         if(saveSettingsToDatabase()) {
             closeModal('addVehicleModal');
+            if(document.getElementById("vehicleModal").classList.contains("show")) renderVehicleGrid();
             showToast("Araç sistemden silindi.", "success");
         }
     }
-}
-
-window.renderVehicleGrid = function() {
-    const container = document.getElementById("vehicleGridContainer");
-    if(!container) return;
-    
-    const searchVal = document.getElementById("vehicleSearchInput").value.toLocaleUpperCase('tr-TR');
-    
-    let filteredVehicles = vehicleData;
-    if(searchVal) {
-        filteredVehicles = vehicleData.filter(v => {
-            const surucuAd = v.surucuId ? (personnelData.find(p => p.id == v.surucuId)?.adSoyad || "") : "HAVUZ";
-            return (v.plaka || "").includes(searchVal) || 
-                   (v.model || "").includes(searchVal) || 
-                   surucuAd.includes(searchVal);
-        });
-    }
-    
-    let aktif = 0, havuz = 0, ariza = 0;
-    vehicleData.forEach(v => {
-        if(v.durum.includes('Aktif')) aktif++;
-        else if(v.durum.includes('Havuzda')) havuz++;
-        else if(v.durum.includes('Sanayi')) ariza++;
-    });
-    
-    document.getElementById("vs_total").innerText = vehicleData.length;
-    document.getElementById("vs_aktif").innerText = aktif;
-    document.getElementById("vs_havuz").innerText = havuz;
-    document.getElementById("vs_arizali").innerText = ariza;
-
-    if(filteredVehicles.length === 0) {
-        container.innerHTML = `<div class="col-span-full py-16 text-center text-slate-500 font-bold bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-search-minus text-4xl mb-3 text-slate-300 block"></i>Kayıtlı veya aranan kriterde araç bulunmuyor.</div>`;
-        return;
-    }
-    
-    let html = '';
-    filteredVehicles.forEach(v => {
-        let badgeColor = "bg-emerald-50 text-emerald-600 border-emerald-200";
-        if(v.durum.includes('Havuzda')) badgeColor = "bg-amber-50 text-amber-600 border-amber-200";
-        if(v.durum.includes('Sanayi')) badgeColor = "bg-rose-50 text-rose-600 border-rose-200";
-        
-        let surucu = "HAVUZ (SÜRÜCÜSÜZ)";
-        let surucuFoto = avatarMale;
-        if(v.surucuId) {
-            const sp = personnelData.find(p => p.id == v.surucuId);
-            if(sp) {
-                surucu = sp.adSoyad;
-                surucuFoto = getAvatarUrl(sp.fotoUrl, sp.cinsiyet);
-            }
-        }
-        
-        const vFoto = (v.fotoUrl && !v.fotoUrl.includes('data:image/svg')) ? v.fotoUrl : vehiclePlaceholder;
-        
-        let uyariHtml = '';
-        if(v.muayene) {
-            const msFark = new Date(v.muayene) - SYSTEM_TODAY;
-            const gunFark = Math.ceil(msFark / (1000 * 60 * 60 * 24));
-            if(gunFark < 0) uyariHtml = `<div class="absolute top-2 right-2 bg-rose-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md animate-pulse z-10"><i class="fas fa-exclamation-triangle"></i> Muayene Geçti!</div>`;
-            else if(gunFark <= 30) uyariHtml = `<div class="absolute top-2 right-2 bg-amber-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md z-10"><i class="fas fa-clock"></i> Muayene Yaklaştı (${gunFark} Gün)</div>`;
-        }
-
-        html += `
-            <div class="vehicle-card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative" onclick="openVehicleForm(${v.id})">
-                ${uyariHtml}
-                <div class="h-32 w-full bg-slate-100 border-b border-slate-200 overflow-hidden relative">
-                    <img src="${vFoto}" class="w-full h-full object-cover">
-                </div>
-                
-                <div class="p-4 flex-1 flex flex-col">
-                    <div class="text-center mb-3">
-                        <div class="inline-block border-2 border-slate-800 rounded px-3 py-1 font-black text-lg tracking-widest text-slate-800 bg-slate-50 shadow-sm">${v.plaka}</div>
-                        <div class="text-xs font-bold text-slate-500 mt-2 uppercase truncate" title="${v.model}">${v.model}</div>
-                    </div>
-                    
-                    <div class="flex-1 bg-slate-50 rounded-xl p-3 border border-slate-100 flex flex-col gap-2 justify-center">
-                        <div class="flex items-center gap-2">
-                            <img src="${surucuFoto}" class="w-6 h-6 rounded-full object-cover border border-slate-200 bg-white">
-                            <span class="text-[10px] font-bold text-slate-700 truncate uppercase force-upper" title="${surucu}">${surucu}</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
-                            <i class="fas fa-sitemap w-4 text-center text-slate-400"></i> <span class="truncate">${v.seflik || '-'}</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
-                            <i class="fas fa-calendar-check w-4 text-center text-slate-400"></i> <span class="truncate text-rose-600">${v.muayene ? 'Muayene: ' + formatDateTR(v.muayene) : 'Muayene Yok'}</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
-                            <i class="fas fa-sticky-note w-4 text-center text-slate-400"></i> <span class="truncate w-full normal-case text-slate-400" title="${v.notlar || 'Not Yok'}">${v.notlar || 'Not Yok'}</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="border-t border-slate-100 bg-slate-50 p-3 flex justify-between items-center shrink-0">
-                    <span class="px-2.5 py-1 text-[9px] font-bold rounded-md uppercase border ${badgeColor}">${v.durum}</span>
-                    <span class="text-[10px] font-mono font-bold text-slate-400">${v.km ? v.km + ' KM' : '-'}</span>
-                </div>
-            </div>
-        `;
-    });
-    
-    container.innerHTML = html;
 }
 
 function editPersonnelFromProfile() { 
@@ -1820,6 +1738,7 @@ function editPersonnelFromProfile() {
                     if (option) {
                         el.value = option.value;
                     } else {
+                        // KORUMA KALKANI: Seçenek listede yoksa, veriyi ezmemek için geçici olarak listeye ekle
                         let newOpt = document.createElement("option");
                         newOpt.value = val.toLocaleUpperCase('tr-TR');
                         newOpt.innerHTML = val.toLocaleUpperCase('tr-TR');
@@ -1881,7 +1800,7 @@ function savePersonnel() {
         } else { personnelData.unshift(pData); }
         
         if(saveToDatabase()) {
-            closeModal('personnelModal');
+            applyFilters(); closeModal('personnelModal');
             showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
         }
     } catch (error) { showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error"); }
@@ -1891,7 +1810,7 @@ function deletePersonnelFromProfile() {
     if(confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?")) { 
         personnelData = personnelData.filter(x=>x.id!=selectedUserId); 
         if(saveToDatabase()) {
-            closeModal('profileModal'); 
+            closeModal('profileModal'); setTimeout(applyFilters, 350); 
             showToast("Personel kaydı silindi.", "success");
         }
     } 
