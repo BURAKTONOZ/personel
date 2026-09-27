@@ -62,14 +62,12 @@ function closePhotoModal() {
 }
 
 let personnelData = [];
-let vehicleData = []; 
 let currentFilteredData = [];
 const SYSTEM_TODAY = new Date();
 SYSTEM_TODAY.setHours(0,0,0,0);
 let selectedUserId = null;
 let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
-let uploadedBase64VehicleFoto = ""; 
 window.tooltipTimeout = null; 
 
 let activeCardId = 'total'; 
@@ -79,7 +77,6 @@ let tlDragStart = null;
 
 const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
 const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
-const vehiclePlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cbd5e1'><path d='M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z'/></svg>";
 
 function getAvatarUrl(foto, cinsiyet) {
     if(foto && foto.trim() !== "" && !foto.includes("via.placeholder.com")) return foto;
@@ -114,7 +111,6 @@ function compareVersions(v1, v2) {
 
 let systemSettings = {
     version: APP_VERSION,
-    vehicles: [], 
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
         medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli"] },
@@ -143,7 +139,8 @@ let systemSettings = {
         { id: "erkek", title: "Erkek Personel", type: "cinsiyet", value: "Erkek", active: false },
         { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
         { id: "izinli", title: "Şu An İzinde", type: "custom", func: "izinli", active: true }
-    ]
+    ],
+    vehicles: [] // Truva atı: Araçlar veritabanına bu dizi içinde gidecek
 };
 
 const statColorsAndIcons = {
@@ -226,47 +223,6 @@ function exportToExcel() {
     }, 800);
 }
 
-function exportVehiclesToExcel() {
-    if(vehicleData.length === 0) {
-        showToast("Dışa aktarılacak araç kaydı bulunamadı!", "error");
-        return;
-    }
-    showSpinner("Araç Listesi Hazırlanıyor...");
-    setTimeout(() => {
-        const exportData = vehicleData.map(v => {
-            let surucuAd = "Havuz (Sürücüsüz)";
-            if(v.surucuId) {
-                const sp = personnelData.find(p => p.id == v.surucuId);
-                if(sp) surucuAd = sp.adSoyad;
-            }
-            
-            return {
-                "Plaka": v.plaka || "",
-                "Marka & Model": v.model || "",
-                "Kullanan (Sürücü)": surucuAd,
-                "Araç Durumu": v.durum || "",
-                "Bağlı Olduğu Şeflik": v.seflik || "",
-                "Bulunduğu Bina": v.bina || "",
-                "Son KM": v.km || "",
-                "Muayene Bitiş": v.muayene ? formatDateTR(v.muayene) : "",
-                "Araç Notları / Donanım": v.notlar || ""
-            };
-        });
-
-        try {
-            const worksheet = XLSX.utils.json_to_sheet(exportData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Arac_Filosu");
-            XLSX.writeFile(workbook, "Arac_Raporu.xlsx");
-            hideSpinner();
-            showToast("Araç listesi başarıyla indirildi.", "success");
-        } catch (error) {
-            hideSpinner();
-            showToast("Excel oluşturulurken bir hata meydana geldi.", "error");
-        }
-    }, 800);
-}
-
 async function backupDatabase() {
     if(typeof window.api === 'undefined') {
         showToast("Tarayıcı modunda yedekleme yapılamaz.", "error");
@@ -282,20 +238,28 @@ async function backupDatabase() {
 function updateHeaderBadge() {
     const badge = document.getElementById('userBadge');
     badge.style.display = 'inline-block';
-    const vehicleBtn = document.getElementById('btnVehicleManagement');
     
     if(currentUserRole === 'admin') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-blue-50 text-blue-700 border-blue-200 shadow-sm';
         badge.innerHTML = '👑 ANA KULLANICI';
-        if(vehicleBtn) vehicleBtn.style.display = 'flex'; 
     } else if(currentUserRole === '1011') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-violet-50 text-violet-700 border-violet-200 shadow-sm';
         badge.innerHTML = '📍 1011 YÖNETİCİSİ';
-        if(vehicleBtn) vehicleBtn.style.display = 'none';
     } else if(currentUserRole === 'izin') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-orange-50 text-orange-700 border-orange-200 shadow-sm';
         badge.innerHTML = '🗓️ İZİN YÖNETİCİSİ';
-        if(vehicleBtn) vehicleBtn.style.display = 'none';
+    }
+
+    // ARAÇ VİTRİNİ BUTON KONTROLÜ
+    const btnArac = document.getElementById('btnAracVitrini');
+    if (btnArac) {
+        if (currentUserRole === 'admin') {
+            btnArac.classList.remove('hidden');
+            btnArac.classList.add('flex');
+        } else {
+            btnArac.classList.add('hidden');
+            btnArac.classList.remove('flex');
+        }
     }
 }
 
@@ -373,16 +337,13 @@ async function checkLogin() {
                         document.getElementById('main-header').classList.add('z-[100]');
                         
                         const tm = document.getElementById('timelineModal');
-                        if(tm) {
-                            tm.classList.replace('p-4', 'pt-[90px]');
-                            tm.classList.replace('items-center', 'items-start');
-                            const tmContent = tm.querySelector('.modal-content');
-                            if(tmContent) {
-                                tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-                                tmContent.classList.replace('w-[96vw]', 'w-full');
-                                tmContent.classList.add('mx-4');
-                            }
-                        }
+                        tm.classList.replace('p-4', 'pt-[90px]');
+                        tm.classList.replace('items-center', 'items-start');
+                        
+                        const tmContent = tm.querySelector('.modal-content');
+                        tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+                        tmContent.classList.replace('w-[96vw]', 'w-full');
+                        tmContent.classList.add('mx-4');
                         
                         openModal('timelineModal');
                     } else {
@@ -435,16 +396,13 @@ async function saveNewDbPath() {
             document.getElementById('main-header').classList.add('z-[100]');
             
             const tm = document.getElementById('timelineModal');
-            if(tm) {
-                tm.classList.replace('p-4', 'pt-[90px]');
-                tm.classList.replace('items-center', 'items-start');
-                const tmContent = tm.querySelector('.modal-content');
-                if(tmContent) {
-                    tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-                    tmContent.classList.replace('w-[96vw]', 'w-full');
-                    tmContent.classList.add('mx-4');
-                }
-            }
+            tm.classList.replace('p-4', 'pt-[90px]');
+            tm.classList.replace('items-center', 'items-start');
+            
+            const tmContent = tm.querySelector('.modal-content');
+            tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+            tmContent.classList.replace('w-[96vw]', 'w-full');
+            tmContent.classList.add('mx-4');
             
             openModal('timelineModal');
         } else {
@@ -466,7 +424,6 @@ function changeDbPathFromSettings() {
     document.getElementById('dbPathModal').style.display = 'flex';
 }
 
-// ZEKİCE ÇÖZÜM: Kalkanlı Manuel Refresh (Artık Sınıf Bulamayınca Çökmez)
 async function manualRefresh(silent = false) {
     if (typeof window.api === 'undefined') return;
     if (!silent) showSpinner("Veriler Güncelleniyor...");
@@ -493,20 +450,13 @@ async function manualRefresh(silent = false) {
 
         if (newData && newData.settings) {
             if (newData.settings.dropdowns) systemSettings.dropdowns = newData.settings.dropdowns;
+            if (newData.settings.vehicles) systemSettings.vehicles = newData.settings.vehicles; // Araçları güncelle
             if (newData.settings.cards) {
                 systemSettings.cards = systemSettings.cards.map(defCard => {
                     let found = newData.settings.cards.find(c => c.id === defCard.id);
                     if(found) return { ...defCard, active: found.active };
                     return defCard;
                 });
-            }
-            if (newData.settings.vehicles) {
-                let parsedVehicles = Array.isArray(newData.settings.vehicles) ? newData.settings.vehicles : Object.values(newData.settings.vehicles);
-                vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
-                systemSettings.vehicles = vehicleData;
-            } else { 
-                vehicleData = []; 
-                systemSettings.vehicles = [];
             }
             
             const fd = document.getElementById("filter-durum") ? document.getElementById("filter-durum").value : "";
@@ -533,20 +483,14 @@ async function manualRefresh(silent = false) {
             if (document.getElementById('appContainer').style.display !== 'none' || currentUserRole === 'izin') {
                 applyFilters(); 
             }
-            
-            // KALKAN: Elementler varsa ve açıksa yenile, yoksa atla (Çökmeyi Engeller)
-            const tm = document.getElementById("timelineModal");
-            if(tm && tm.classList.contains("show")) generateTimeline();
-            
-            const pm = document.getElementById("profileModal");
-            if(pm && pm.classList.contains("show")) {
+            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
+            if(document.getElementById("profileModal").classList.contains("show")) {
                 renderIzinTable();
                 renderZimmetTable();
             }
-            
-            const vm = document.getElementById("vehicleModal");
-            if(vm && vm.classList.contains("show")) renderVehicleGrid();
-            
+            if(document.getElementById("aracVitriniModal") && document.getElementById("aracVitriniModal").classList.contains("show")) {
+                renderAracVitrini();
+            }
             updateRefreshTime();
         }
     } else {
@@ -602,24 +546,17 @@ function fetchDataFromLocalDB() {
                 if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
             });
         } else { personnelData = []; }
-
+        
         if(data && data.settings) {
             let dbSettings = data.settings;
             if (dbSettings.dropdowns) systemSettings.dropdowns = dbSettings.dropdowns;
+            if (dbSettings.vehicles) systemSettings.vehicles = dbSettings.vehicles; // Araçları yükle
             if (dbSettings.cards) {
                 systemSettings.cards = systemSettings.cards.map(defCard => {
                     let found = dbSettings.cards.find(c => c.id === defCard.id);
                     if(found) return { ...defCard, active: found.active };
                     return defCard; 
                 });
-            }
-            if (dbSettings.vehicles) {
-                let parsedVehicles = Array.isArray(dbSettings.vehicles) ? dbSettings.vehicles : Object.values(dbSettings.vehicles);
-                vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
-                systemSettings.vehicles = vehicleData;
-            } else {
-                vehicleData = [];
-                systemSettings.vehicles = [];
             }
         }
 
@@ -637,16 +574,13 @@ function fetchDataFromLocalDB() {
                 document.getElementById('main-header').classList.add('z-[100]');
                 
                 const tm = document.getElementById('timelineModal');
-                if(tm) {
-                    tm.classList.replace('p-4', 'pt-[90px]');
-                    tm.classList.replace('items-center', 'items-start');
-                    const tmContent = tm.querySelector('.modal-content');
-                    if(tmContent) {
-                        tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-                        tmContent.classList.replace('w-[96vw]', 'w-full');
-                        tmContent.classList.add('mx-4');
-                    }
-                }
+                tm.classList.replace('p-4', 'pt-[90px]');
+                tm.classList.replace('items-center', 'items-start');
+                
+                const tmContent = tm.querySelector('.modal-content');
+                tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+                tmContent.classList.replace('w-[96vw]', 'w-full');
+                tmContent.classList.add('mx-4');
                 
                 openModal('timelineModal');
             } else {
@@ -669,11 +603,10 @@ function fetchDataFromLocalDB() {
     });
 }
 
-// ZEKİCE ÇÖZÜM: Kaydetme komutları sessiz yenileme kalkanı ile arayüzü anında tazeler
 function saveToDatabase() { 
     if(typeof window.api !== 'undefined') {
         window.api.savePersonnel(personnelData).then(() => {
-            manualRefresh(true);
+            updateRefreshTime();
         }).catch(e => { showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error"); });
     }
     return true; 
@@ -681,17 +614,12 @@ function saveToDatabase() {
 
 function saveSettingsToDatabase() { 
     if(typeof window.api !== 'undefined') {
-        window.api.saveSettings(systemSettings).then(() => {
-            manualRefresh(true);
-        }).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
+        window.api.saveSettings(systemSettings).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
     }
-    return true; 
 }
 
 function openModal(id) {
     const m = document.getElementById(id);
-    if(!m) return;
-    
     m.style.display = "flex";
     setTimeout(() => { m.classList.add('show'); m.querySelector('.modal-content').classList.add('show'); }, 10);
     
@@ -707,16 +635,10 @@ function openModal(id) {
         document.getElementById("btnTimelineClose").style.display = (currentUserRole === 'izin') ? 'none' : 'flex';
         generateTimeline();
     }
-    if(id === 'vehicleModal') {
-        document.getElementById("vehicleSearchInput").value = ""; 
-        renderVehicleGrid();
-    }
 }
 
 function closeModal(id) {
     const m = document.getElementById(id);
-    if(!m) return;
-    
     m.classList.remove('show');
     m.querySelector('.modal-content').classList.remove('show');
     setTimeout(() => { m.style.display = "none"; }, 300);
@@ -730,15 +652,12 @@ function initSystem() {
 
 function populateSelectOptions() {
     Object.keys(systemSettings.dropdowns).forEach(key => {
-        const els = document.querySelectorAll("#f_" + key + ", #filter-" + key + ", #v_" + key);
+        const els = document.querySelectorAll("#f_" + key + ", #filter-" + key);
         els.forEach(el => {
             if (el) {
                 let html = el.id.startsWith("filter-") ? `<option value="">TÜMÜ (${systemSettings.dropdowns[key].label.toLocaleUpperCase('tr-TR')})</option>` : "";
                 html += systemSettings.dropdowns[key].values.map(v => `<option value="${v}">${v.toLocaleUpperCase('tr-TR')}</option>`).join('');
-                
-                let oldVal = el.value;
                 el.innerHTML = html;
-                if(oldVal && !el.id.startsWith("filter-")) el.value = oldVal;
             }
         });
     });
@@ -800,7 +719,7 @@ function renderStatsCards() {
             count = activeData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
         }
         
-        const styling = statColorsAndIcons[card.title] || { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-info-circle", ring: "ring-slate-400" };
+        const styling = statColorsAndIcons[card.title] || { bg: "white", text: "text-slate-600", border: "border-slate-200", icon: "fa-info-circle", ring: "ring-slate-400" };
         
         const isActive = (activeCardId === card.id);
         const activeClass = isActive ? `ring-2 ${styling.ring} ring-offset-2 scale-105 shadow-md z-10 opacity-100` : `hover:-translate-y-1 hover:shadow-md opacity-90 hover:opacity-100`;
@@ -966,7 +885,7 @@ function applyFilters() {
 });
 
 function openProfileModal(id) {
-    const p = personnelData.find(x => x.id == id);
+    const p = personnelData.find(x => x.id === id);
     if(!p) return;
     selectedUserId = id;
 
@@ -1043,7 +962,7 @@ function openProfileModal(id) {
 
 function savePersonelNot() {
     const val = document.getElementById("pv_notlar_input").value;
-    const p = personnelData.find(x => x.id == selectedUserId);
+    const p = personnelData.find(x => x.id === selectedUserId);
     if(p) {
         p.notlar = val;
         if(saveToDatabase()) {
@@ -1112,14 +1031,10 @@ function openIzinForm() {
     document.getElementById('i_bit').value = '';
     document.getElementById('i_aciklama').value = '';
     
-    const p = personnelData.find(x => x.id == selectedUserId);
+    const p = personnelData.find(x => x.id === selectedUserId);
     const titleEl = document.getElementById("addIzinModalTitle");
-    if(titleEl) {
-        if(p && p.adSoyad) {
-            titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
-        } else {
-            titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle`;
-        }
+    if(titleEl && p) {
+        titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
     }
     
     openModal('addIzinModal');
@@ -1133,14 +1048,10 @@ function openIzinFormWithDates(pid, date1, date2) {
     document.getElementById('i_bit').value = date2.getFullYear() + '-' + String(date2.getMonth()+1).padStart(2,'0') + '-' + String(date2.getDate()).padStart(2,'0');
     document.getElementById('i_aciklama').value = '';
     
-    const p = personnelData.find(x => x.id == pid);
+    const p = personnelData.find(x => x.id === pid);
     const titleEl = document.getElementById("addIzinModalTitle");
-    if(titleEl) {
-        if(p && p.adSoyad) {
-            titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
-        } else {
-            titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle`;
-        }
+    if(titleEl && p) {
+        titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
     }
     
     openModal('addIzinModal');
@@ -1156,8 +1067,8 @@ function openBulkIzinForm() {
 
 function renderZimmetTable() {
     const tb = document.getElementById("zimmetTableBody"); if(!tb) return; tb.innerHTML = "";
-    const p = personnelData.find(x => x.id == selectedUserId);
-    if(!p || !p.zimmetler || p.zimmetler.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500 font-semibold">Kayıtlı demirbaş bulunmuyor.</td></tr>'; return; }
+    const p = personnelData.find(x => x.id === selectedUserId);
+    if(!p.zimmetler || p.zimmetler.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500 font-semibold">Kayıtlı demirbaş bulunmuyor.</td></tr>'; return; }
     p.zimmetler.forEach(z => tb.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-4 font-bold text-slate-700 uppercase">${z.urun}</td><td class="p-4 text-slate-600 uppercase">${z.seri}</td><td class="p-4 text-slate-600 font-semibold">${formatDateTR(z.tarih)}</td><td class="p-4 text-center"><button onclick="deleteZimmet(${z.id})" class="text-rose-500 hover:text-rose-700 bg-white border border-slate-200 hover:bg-rose-50 w-8 h-8 rounded-md transition"><i class="fas fa-trash-alt"></i></button></td></tr>`);
 }
 
@@ -1166,12 +1077,13 @@ function saveZimmet() {
         const u = document.getElementById("z_urun").value.trim();
         const t = document.getElementById("z_tarih").value;
         if(!u || !t) { showToast("Demirbaş adı ve tarihi zorunludur!", "error"); return; }
-        const p = personnelData.find(x => x.id == selectedUserId);
+        const p = personnelData.find(x => x.id === selectedUserId);
         p.zimmetler = p.zimmetler || []; 
         p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
         
         if(saveToDatabase()) {
-            closeModal('addZimmetModal');
+            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
+            applyFilters(); closeModal('addZimmetModal');
             showToast("Demirbaş başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("Demirbaş eklenirken hata oluştu.", "error"); }
@@ -1180,24 +1092,23 @@ function saveZimmet() {
 function deleteZimmet(id) { 
     try {
         if(confirm("Silmek istediğinize emin misiniz?")) {
-            const p = personnelData.find(x => x.id == selectedUserId);
-            p.zimmetler = p.zimmetler.filter(z => z.id !== id); 
-            if(saveToDatabase()) {
-                showToast("Demirbaş silindi.", "success");
-            }
+            personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
+            saveToDatabase(); 
+            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
+            applyFilters(); 
+            showToast("Demirbaş silindi.", "success");
         }
     } catch (error) { showToast("Demirbaş silinirken hata oluştu.", "error"); }
 }
 
 function renderIzinTable() {
     const tb = document.getElementById("izinTableBody"); if(!tb) return; tb.innerHTML = "";
-    const p = personnelData.find(x => x.id == selectedUserId);
-    if(!p) return;
+    const p = personnelData.find(x => x.id === selectedUserId);
     
     let yillik = 0, rapor = 0, idari = 0, saatlik = 0, ucretsiz = 0;
     const currentYear = SYSTEM_TODAY.getFullYear();
 
-    if(p.izinler) {
+    if(p && p.izinler) {
         p.izinler.forEach(iz => {
             let dBas = new Date(iz.baslangic); dBas.setHours(0,0,0,0);
             let dBit = new Date(iz.bitis); dBit.setHours(23,59,59,999);
@@ -1251,12 +1162,18 @@ function saveIzin() {
         if(!bas || !bit || !acik) { showToast("Tarihler ve açıklama zorunludur!", "error"); return; }
         if(new Date(bas) > new Date(bit)) { showToast("Bitiş tarihi başlangıçtan küçük olamaz!", "error"); return; }
 
-        const p = personnelData.find(x => x.id == selectedUserId);
+        const p = personnelData.find(x => x.id === selectedUserId);
         p.izinler = p.izinler || []; 
         p.izinler.push({ id: Date.now(), tur: document.getElementById("i_tur").value, baslangic: bas, bitis: bit, aciklama: acik });
         
         if(saveToDatabase()) {
-            closeModal('addIzinModal'); 
+            if(document.getElementById("profileModal").classList.contains("show")) {
+                renderIzinTable(); 
+            }
+            applyFilters(); closeModal('addIzinModal'); 
+            if(document.getElementById("timelineModal").classList.contains("show")) {
+                generateTimeline();
+            }
             showToast("İzin kaydı başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("İzin eklenirken hata oluştu.", "error"); }
@@ -1265,11 +1182,12 @@ function saveIzin() {
 function deleteIzin(id) { 
     try {
         if(confirm("İzni silmek istediğinize emin misiniz?")) {
-            const p = personnelData.find(x => x.id == selectedUserId);
-            p.izinler = p.izinler.filter(i => i.id !== id); 
-            if(saveToDatabase()) {
-                showToast("İzin silindi.", "success");
-            }
+            personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
+            saveToDatabase(); 
+            if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
+            applyFilters(); 
+            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
+            showToast("İzin silindi.", "success");
         }
     } catch (error) { showToast("İzin silinirken hata oluştu.", "error"); }
 }
@@ -1301,7 +1219,9 @@ function saveBulkIzin() {
         });
 
         if(saveToDatabase()) {
+            applyFilters();
             closeModal('addBulkIzinModal');
+            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
             hideSpinner();
             showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
         } else { hideSpinner(); }
@@ -1445,7 +1365,7 @@ function generateTimeline() {
     }
 
     activeData.forEach(p => {
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-id-card opacity-50 text-[10px]"></i></div>`;
+        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle / İzin İşle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-id-card opacity-50 text-[10px]"></i></div>`;
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
@@ -1512,9 +1432,9 @@ function saveSettings() {
         }
     });
     systemSettings.cards.forEach((c, i) => c.active = document.getElementById("ct_" + i).checked);
-    if(saveSettingsToDatabase()) {
-        showToast("Ayarlar başarıyla güncellendi.", "success");
-    }
+    saveSettingsToDatabase();
+    populateSelectOptions(); applyFilters(); renderStatsCards(); closeModal('settingsModal');
+    showToast("Ayarlar başarıyla güncellendi.", "success");
 }
 
 function handleFileUpload(event) {
@@ -1539,33 +1459,6 @@ function handleFileUpload(event) {
             document.getElementById("previewFoto").src = uploadedBase64Foto;
             hideSpinner();
             showToast("Fotoğraf optimize edildi.", "success");
-        }
-        img.src = e.target.result;
-    }
-    reader.readAsDataURL(file);
-}
-
-function handleVehicleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (!file.type.match('image.*')) { showToast("Sadece resim dosyası yükleyebilirsiniz.", "error"); return; }
-    
-    showSpinner("Fotoğraf İşleniyor...");
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 600; const MAX_HEIGHT = 400;
-            let width = img.width; let height = img.height;
-            if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
-            else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            uploadedBase64VehicleFoto = canvas.toDataURL('image/jpeg', 0.80); 
-            document.getElementById("v_previewFoto").src = uploadedBase64VehicleFoto;
-            hideSpinner();
         }
         img.src = e.target.result;
     }
@@ -1610,105 +1503,10 @@ function openPersonnelForm() {
     setTimeout(() => { updateFormSilhouette(); }, 50); 
 }
 
-function openVehicleForm(vId = null) {
-    document.getElementById("vehicleForm").reset();
-    document.getElementById("v_id").value = "";
-    uploadedBase64VehicleFoto = "";
-    document.getElementById("v_previewFoto").src = vehiclePlaceholder;
-    
-    const surucuSelect = document.getElementById("v_surucu");
-    let surucuHtml = '<option value="">-- Havuz (Sürücüsüz) --</option>';
-    personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
-        surucuHtml += `<option value="${p.id}">${p.adSoyad}</option>`;
-    });
-    surucuSelect.innerHTML = surucuHtml;
-
-    if(vId) {
-        const v = vehicleData.find(x => x.id == vId);
-        if(v) {
-            document.getElementById("v_id").value = v.id;
-            document.getElementById("v_plaka").value = v.plaka || "";
-            document.getElementById("v_model").value = v.model || "";
-            document.getElementById("v_surucu").value = v.surucuId || "";
-            document.getElementById("v_durum").value = v.durum || "Aktif (Sahada)";
-            document.getElementById("v_seflik").value = v.seflik || "";
-            document.getElementById("v_bina").value = v.bina || "";
-            document.getElementById("v_km").value = v.km || "";
-            document.getElementById("v_muayene").value = v.muayene || "";
-            document.getElementById("v_notlar").value = v.notlar || "";
-            
-            if(v.fotoUrl && !v.fotoUrl.includes('data:image/svg')) {
-                uploadedBase64VehicleFoto = v.fotoUrl;
-                document.getElementById("v_previewFoto").src = v.fotoUrl;
-            }
-            document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck-monster text-sky-500"></i> Aracı Düzenle';
-            document.getElementById("btnDeleteVehicle").classList.remove("hidden");
-        }
-    } else {
-        document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck text-sky-500"></i> Yeni Araç Kaydı';
-        document.getElementById("btnDeleteVehicle").classList.add("hidden");
-    }
-    
-    openModal('addVehicleModal');
-}
-
-function saveVehicle() {
-    const plaka = document.getElementById("v_plaka").value.trim();
-    const model = document.getElementById("v_model").value.trim();
-    
-    if(!plaka || !model) { showToast("Plaka ve Marka/Model zorunludur!", "error"); return; }
-    
-    const idVal = document.getElementById("v_id").value;
-    
-    const vData = {
-        id: idVal ? parseInt(idVal) : Date.now(),
-        plaka: plaka,
-        model: model,
-        surucuId: document.getElementById("v_surucu").value,
-        durum: document.getElementById("v_durum").value,
-        seflik: document.getElementById("v_seflik").value,
-        bina: document.getElementById("v_bina").value,
-        km: document.getElementById("v_km").value,
-        muayene: document.getElementById("v_muayene").value,
-        notlar: document.getElementById("v_notlar").value.trim(),
-        fotoUrl: uploadedBase64VehicleFoto || ""
-    };
-    
-    if(idVal) {
-        const idx = vehicleData.findIndex(x => x.id == vData.id);
-        if(!uploadedBase64VehicleFoto) vData.fotoUrl = vehicleData[idx].fotoUrl || "";
-        vehicleData[idx] = vData;
-    } else {
-        vehicleData.unshift(vData);
-    }
-    
-    systemSettings.vehicles = vehicleData;
-    
-    if(saveSettingsToDatabase()) {
-        closeModal('addVehicleModal');
-        showToast(idVal ? "Araç bilgileri güncellendi." : "Yeni araç filoya eklendi.", "success");
-    }
-}
-
-function deleteVehicle() {
-    const idVal = document.getElementById("v_id").value;
-    if(!idVal) return;
-    
-    if(confirm("Bu aracı filodan kalıcı olarak silmek istediğinize emin misiniz?")) {
-        vehicleData = vehicleData.filter(v => v.id != idVal);
-        systemSettings.vehicles = vehicleData;
-        
-        if(saveSettingsToDatabase()) {
-            closeModal('addVehicleModal');
-            showToast("Araç sistemden silindi.", "success");
-        }
-    }
-}
-
 function editPersonnelFromProfile() { 
     closeModal('profileModal');
     setTimeout(() => {
-        const p = personnelData.find(x => x.id == selectedUserId);
+        const p = personnelData.find(x => x.id === selectedUserId);
         document.getElementById("formId").value = p.id;
         
         uploadedBase64Foto = p.fotoUrl && !p.fotoUrl.includes('data:image/svg') && !p.fotoUrl.includes('placeholder') ? p.fotoUrl : "";
@@ -1743,6 +1541,7 @@ function editPersonnelFromProfile() {
                     if (option) {
                         el.value = option.value;
                     } else {
+                        // KORUMA KALKANI: Seçenek listede yoksa, veriyi ezmemek için geçici olarak listeye ekle
                         let newOpt = document.createElement("option");
                         newOpt.value = val.toLocaleUpperCase('tr-TR');
                         newOpt.innerHTML = val.toLocaleUpperCase('tr-TR');
@@ -1796,15 +1595,15 @@ function savePersonnel() {
         });
 
         if(idVal) {
-            const old = personnelData.find(x=>x.id == pData.id);
+            const old = personnelData.find(x=>x.id === pData.id);
             pData.izinler = old.izinler || []; pData.zimmetler = old.zimmetler || [];
             pData.notlar = old.notlar || "";
             if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl || ""; 
-            personnelData[personnelData.findIndex(x=>x.id==pData.id)] = pData;
+            personnelData[personnelData.findIndex(x=>x.id===pData.id)] = pData;
         } else { personnelData.unshift(pData); }
         
         if(saveToDatabase()) {
-            closeModal('personnelModal');
+            applyFilters(); closeModal('personnelModal');
             showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
         }
     } catch (error) { showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error"); }
@@ -1812,11 +1611,269 @@ function savePersonnel() {
 
 function deletePersonnelFromProfile() { 
     if(confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?")) { 
-        personnelData = personnelData.filter(x=>x.id!=selectedUserId); 
+        personnelData = personnelData.filter(x=>x.id!==selectedUserId); 
         if(saveToDatabase()) {
-            closeModal('profileModal'); 
+            closeModal('profileModal'); setTimeout(applyFilters, 350); 
             showToast("Personel kaydı silindi.", "success");
         }
     } 
 }
-```[cite: 1, 5]
+
+
+/* =========================================
+   ARAÇ VİTRİNİ (FİLO YÖNETİMİ) MODÜLÜ
+   ========================================= */
+
+let uploadedAracFoto = "";
+const defaultCarSvg = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cbd5e1'><path d='M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z'/></svg>";
+
+function openAracVitrini() {
+    if (!systemSettings.vehicles) systemSettings.vehicles = [];
+    document.getElementById("aracSearchInput").value = "";
+    renderAracVitrini();
+    openModal('aracVitriniModal');
+}
+
+function renderAracVitrini() {
+    const grid = document.getElementById("aracGrid");
+    const search = (document.getElementById("aracSearchInput").value || "").toLocaleUpperCase('tr-TR');
+
+    let vList = systemSettings.vehicles || [];
+    if (search) {
+        vList = vList.filter(v => (v.plaka || "").includes(search) || (v.marka || "").toLocaleUpperCase('tr-TR').includes(search));
+    }
+
+    // İstatistikler
+    document.getElementById("vStatTotal").innerText = (systemSettings.vehicles || []).length;
+    document.getElementById("vStatAktif").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Aktif').length;
+    document.getElementById("vStatHavuz").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Havuzda').length;
+    document.getElementById("vStatAriza").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Sanayide').length;
+
+    if (vList.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-10 text-slate-500 font-bold"><i class="fas fa-car-crash text-3xl mb-3 text-slate-300 block"></i>Kayıtlı veya aranan kriterde araç bulunamadı.</div>`;
+        return;
+    }
+
+    let html = "";
+    vList.forEach(v => {
+        let avatar = avatarMale;
+        let surucuAd = "HAVUZ";
+        if (v.surucuId && v.surucuId !== "HAVUZ") {
+            const p = personnelData.find(x => x.id == v.surucuId);
+            if (p) {
+                surucuAd = p.adSoyad;
+                avatar = getAvatarUrl(p.fotoUrl, p.cinsiyet);
+            }
+        }
+
+        // Muayene Hesaplama
+        let alarmHtml = "";
+        if (v.muayeneTarihi) {
+            const diffDays = Math.ceil((new Date(v.muayeneTarihi) - SYSTEM_TODAY) / (1000 * 60 * 60 * 24));
+            if (diffDays < 0) {
+                alarmHtml = `<div class="absolute top-2 right-2 bg-rose-600 text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg animate-pulse border border-rose-800"><i class="fas fa-exclamation-triangle"></i> GEÇTİ</div>`;
+            } else if (diffDays <= 30) {
+                alarmHtml = `<div class="absolute top-2 right-2 bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg border border-orange-700"><i class="fas fa-clock"></i> ${diffDays} GÜN</div>`;
+            }
+        }
+
+        let durumColor = v.durum === 'Aktif' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                         (v.durum === 'Havuzda' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200');
+        let fIcon = v.durum === 'Aktif' ? 'fa-check-circle' : (v.durum === 'Havuzda' ? 'fa-parking' : 'fa-wrench');
+
+        html += `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-xl hover:border-indigo-300 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full" onclick="openAracForm(${v.id})">
+            <div class="relative h-44 bg-slate-100 flex-shrink-0 border-b border-slate-100">
+                <img src="${v.foto || defaultCarSvg}" class="w-full h-full object-cover">
+                ${alarmHtml}
+            </div>
+            <div class="p-4 flex-1 flex flex-col">
+                <h3 class="text-lg font-black text-slate-800 tracking-tight uppercase">${v.plaka}</h3>
+                <p class="text-[11px] font-bold text-slate-400 uppercase">${v.marka || '-'}</p>
+
+                <div class="mt-3 flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
+                    <img src="${avatar}" class="w-8 h-8 rounded-lg object-cover bg-white border border-slate-200">
+                    <div class="truncate">
+                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SÜRÜCÜ</div>
+                        <div class="text-xs font-bold text-slate-700 uppercase truncate">${surucuAd}</div>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-500 uppercase">
+                    <span class="flex items-center gap-1" title="Şeflik"><i class="fas fa-sitemap text-indigo-400"></i> ${v.seflik || '-'}</span>
+                    <span class="flex items-center gap-1" title="Bina"><i class="fas fa-building text-indigo-400"></i> ${v.bina || '-'}</span>
+                </div>
+
+                <div class="mt-3 text-[11px] font-semibold text-slate-600 truncate border-t border-slate-100 pt-2" title="${v.notlar || 'Not Yok'}">
+                    <i class="fas fa-clipboard-list text-slate-400 mr-1"></i> ${v.notlar || 'Not Yok'}
+                </div>
+            </div>
+            <div class="bg-slate-50 border-t border-slate-100 p-3 flex justify-between items-center flex-shrink-0">
+                <span class="px-2.5 py-1 text-[10px] font-bold rounded-md uppercase border flex items-center gap-1.5 ${durumColor}">
+                    <i class="fas ${fIcon}"></i> ${v.durum}
+                </span>
+                <span class="text-[10px] font-black text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded-md shadow-sm">
+                    ${v.km ? v.km + ' KM' : '- KM'}
+                </span>
+            </div>
+        </div>
+        `;
+    });
+    grid.innerHTML = html;
+}
+
+function openAracForm(id = null) {
+    document.getElementById("aracForm").reset();
+    uploadedAracFoto = "";
+    document.getElementById("v_previewFoto").src = defaultCarSvg;
+    document.getElementById("v_formId").value = id || "";
+
+    const surucuSelect = document.getElementById("v_surucu");
+    surucuSelect.innerHTML = `<option value="HAVUZ">HAVUZ (Sürücüsüz)</option>`;
+    personnelData.filter(p => p.durum === 'Aktif' || p.durum === 'AKTİF').forEach(p => {
+        surucuSelect.innerHTML += `<option value="${p.id}">${p.adSoyad.toLocaleUpperCase('tr-TR')}</option>`;
+    });
+
+    document.getElementById("v_seflik").innerHTML = systemSettings.dropdowns.seflik.values.map(v => `<option value="${v}">${v}</option>`).join('');
+    document.getElementById("v_bina").innerHTML = systemSettings.dropdowns.bina.values.map(v => `<option value="${v}">${v}</option>`).join('');
+
+    const btnSil = document.getElementById("btnAracSil");
+    if (id) {
+        const v = systemSettings.vehicles.find(x => x.id === id);
+        if (v) {
+            document.getElementById("v_plaka").value = v.plaka || "";
+            document.getElementById("v_marka").value = v.marka || "";
+            document.getElementById("v_surucu").value = v.surucuId || "HAVUZ";
+            document.getElementById("v_seflik").value = v.seflik || "";
+            document.getElementById("v_bina").value = v.bina || "";
+            document.getElementById("v_durum").value = v.durum || "Aktif";
+            document.getElementById("v_km").value = v.km || "";
+            document.getElementById("v_muayene").value = v.muayeneTarihi || "";
+            document.getElementById("v_notlar").value = v.notlar || "";
+            if (v.foto) {
+                uploadedAracFoto = v.foto;
+                document.getElementById("v_previewFoto").src = v.foto;
+            }
+        }
+        btnSil.style.display = "flex";
+        document.getElementById("aracFormTitle").innerHTML = '<i class="fas fa-car-side text-indigo-600"></i> Araç Düzenle';
+    } else {
+        btnSil.style.display = "none";
+        document.getElementById("aracFormTitle").innerHTML = '<i class="fas fa-car-side text-indigo-600"></i> Yeni Araç Ekle';
+    }
+    openModal('aracFormModal');
+}
+
+function handleAracFotoUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    if (!file.type.match('image.*')) { showToast("Sadece resim dosyası yükleyebilirsiniz.", "error"); return; }
+    
+    showSpinner("Araç Görseli İşleniyor...");
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 600; const MAX_HEIGHT = 450;
+            let width = img.width; let height = img.height;
+            if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
+            else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
+            canvas.width = width; canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+            uploadedAracFoto = canvas.toDataURL('image/jpeg', 0.75); 
+            document.getElementById("v_previewFoto").src = uploadedAracFoto;
+            hideSpinner();
+            showToast("Araç fotoğrafı başarıyla optimize edildi.", "success");
+        }
+        img.src = e.target.result;
+    }
+    reader.readAsDataURL(file);
+}
+
+function saveArac() {
+    const plaka = document.getElementById("v_plaka").value.trim().toLocaleUpperCase('tr-TR');
+    if (!plaka) { showToast("Plaka alanı zorunludur!", "error"); return; }
+
+    if (!systemSettings.vehicles) systemSettings.vehicles = [];
+
+    const idVal = document.getElementById("v_formId").value;
+    const newId = idVal ? parseInt(idVal) : Date.now();
+
+    const vData = {
+        id: newId,
+        plaka: plaka,
+        marka: document.getElementById("v_marka").value.trim().toLocaleUpperCase('tr-TR'),
+        surucuId: document.getElementById("v_surucu").value,
+        seflik: document.getElementById("v_seflik").value,
+        bina: document.getElementById("v_bina").value,
+        durum: document.getElementById("v_durum").value,
+        km: document.getElementById("v_km").value,
+        muayeneTarihi: document.getElementById("v_muayene").value,
+        notlar: document.getElementById("v_notlar").value,
+        foto: uploadedAracFoto
+    };
+
+    if (idVal) {
+        const idx = systemSettings.vehicles.findIndex(x => x.id === newId);
+        if (idx > -1) systemSettings.vehicles[idx] = vData;
+    } else {
+        systemSettings.vehicles.unshift(vData);
+    }
+
+    saveSettingsToDatabase(); // TRUVA ATI: systemSettings.vehicles olarak veritabanına otomatik gider!
+    renderAracVitrini(); // Arayüzü sessizce yenile
+    closeModal('aracFormModal');
+    showToast(idVal ? "Araç bilgileri güncellendi." : "Araç başarıyla eklendi.", "success");
+}
+
+function deleteArac() {
+    const idVal = document.getElementById("v_formId").value;
+    if (!idVal) return;
+    if (confirm("Bu aracı kalıcı olarak silmek istediğinize emin misiniz?")) {
+        systemSettings.vehicles = systemSettings.vehicles.filter(x => x.id !== parseInt(idVal));
+        saveSettingsToDatabase();
+        renderAracVitrini();
+        closeModal('aracFormModal');
+        showToast("Araç başarıyla silindi.", "success");
+    }
+}
+
+function exportAracToExcel() {
+    if (!systemSettings.vehicles || systemSettings.vehicles.length === 0) {
+        showToast("Dışa aktarılacak araç bulunamadı!", "error"); return;
+    }
+    showSpinner("Excel Dosyası Hazırlanıyor...");
+    setTimeout(() => {
+        const exportData = systemSettings.vehicles.map(v => {
+            let surucuAd = "HAVUZ";
+            if (v.surucuId && v.surucuId !== "HAVUZ") {
+                const p = personnelData.find(x => x.id == v.surucuId);
+                if (p) surucuAd = p.adSoyad;
+            }
+            return {
+                "Plaka": v.plaka,
+                "Marka/Model": v.marka || "",
+                "Sürücü / Zimmet": surucuAd,
+                "Şeflik": v.seflik || "",
+                "Bina": v.bina || "",
+                "Durum": v.durum || "",
+                "Son Kilometre": v.km || "",
+                "Muayene Tarihi": v.muayeneTarihi ? formatDateTR(v.muayeneTarihi) : "",
+                "Notlar / Demirbaşlar": v.notlar || ""
+            };
+        });
+        try {
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Arac_Filosu");
+            XLSX.writeFile(workbook, "Arac_Raporu.xlsx");
+            hideSpinner();
+            showToast("Araç Excel dosyası başarıyla indirildi.", "success");
+        } catch (error) {
+            hideSpinner();
+            showToast("Excel oluşturulurken bir hata meydana geldi.", "error");
+        }
+    }, 800);
+}
