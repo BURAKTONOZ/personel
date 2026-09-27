@@ -112,8 +112,10 @@ function compareVersions(v1, v2) {
     return 0; 
 }
 
+// TRUVA ATI: Araçlar veritabanına settings içinden kaydediliyor.
 let systemSettings = {
     version: APP_VERSION,
+    vehicles: [], // Yeni eklenen Araçlar çekmecesi
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
         medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli"] },
@@ -287,7 +289,7 @@ function updateHeaderBadge() {
     if(currentUserRole === 'admin') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-blue-50 text-blue-700 border-blue-200 shadow-sm';
         badge.innerHTML = '👑 ANA KULLANICI';
-        if(vehicleBtn) vehicleBtn.style.display = 'flex'; // Araç butonu sadece admine
+        if(vehicleBtn) vehicleBtn.style.display = 'flex'; 
     } else if(currentUserRole === '1011') {
         badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-violet-50 text-violet-700 border-violet-200 shadow-sm';
         badge.innerHTML = '📍 1011 YÖNETİCİSİ';
@@ -484,6 +486,7 @@ async function manualRefresh(silent = false) {
             }
         }
 
+        // AYARLAR VE ARAÇLAR SENKRONİZASYONU
         if (newData && newData.settings) {
             if (newData.settings.dropdowns) systemSettings.dropdowns = newData.settings.dropdowns;
             if (newData.settings.cards) {
@@ -492,6 +495,15 @@ async function manualRefresh(silent = false) {
                     if(found) return { ...defCard, active: found.active };
                     return defCard;
                 });
+            }
+            // TRUVA ATI: Araçları ayarların içinden çıkart ve belleğe al
+            if (newData.settings.vehicles) {
+                let parsedVehicles = Array.isArray(newData.settings.vehicles) ? newData.settings.vehicles : Object.values(newData.settings.vehicles);
+                vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
+                systemSettings.vehicles = vehicleData;
+            } else { 
+                vehicleData = []; 
+                systemSettings.vehicles = [];
             }
             
             const fd = document.getElementById("filter-durum") ? document.getElementById("filter-durum").value : "";
@@ -507,7 +519,6 @@ async function manualRefresh(silent = false) {
             if(document.getElementById("filter-seflik")) document.getElementById("filter-seflik").value = fs;
         }
 
-        // Personel verisi çekiliyor
         if (newData && newData.personnel) {
             let parsedData = Array.isArray(newData.personnel) ? newData.personnel : Object.values(newData.personnel);
             personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
@@ -524,19 +535,10 @@ async function manualRefresh(silent = false) {
                 renderIzinTable();
                 renderZimmetTable();
             }
-        }
-        
-        // Araç verisi çekiliyor
-        if (newData && newData.vehicles) {
-            let parsedVehicles = Array.isArray(newData.vehicles) ? newData.vehicles : Object.values(newData.vehicles);
-            vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
             if(document.getElementById("vehicleModal").classList.contains("show")) renderVehicleGrid();
-        } else {
-            vehicleData = [];
+            
+            updateRefreshTime();
         }
-
-        updateRefreshTime();
-
     } else {
         if(led) led.className = 'led red';
         if(statusText) statusText.innerText = 'Bağlantı Koptu!';
@@ -591,12 +593,6 @@ function fetchDataFromLocalDB() {
             });
         } else { personnelData = []; }
 
-        // Araçlar DB'den çekiliyor
-        if(data && data.vehicles) {
-            let parsedVehicles = Array.isArray(data.vehicles) ? data.vehicles : Object.values(data.vehicles);
-            vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
-        } else { vehicleData = []; }
-        
         if(data && data.settings) {
             let dbSettings = data.settings;
             if (dbSettings.dropdowns) systemSettings.dropdowns = dbSettings.dropdowns;
@@ -606,6 +602,14 @@ function fetchDataFromLocalDB() {
                     if(found) return { ...defCard, active: found.active };
                     return defCard; 
                 });
+            }
+            if (dbSettings.vehicles) {
+                let parsedVehicles = Array.isArray(dbSettings.vehicles) ? dbSettings.vehicles : Object.values(dbSettings.vehicles);
+                vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
+                systemSettings.vehicles = vehicleData;
+            } else {
+                vehicleData = [];
+                systemSettings.vehicles = [];
             }
         }
 
@@ -661,20 +665,14 @@ function saveToDatabase() {
     return true; 
 }
 
-// Araçları veritabanına kaydetme motoru
-function saveVehiclesToDatabase() { 
-    if(typeof window.api !== 'undefined') {
-        window.api.saveVehicles(vehicleData).then(() => {
-            updateRefreshTime();
-        }).catch(e => { showToast("Araç kaydedilemedi.", "error"); });
-    }
-    return true; 
-}
-
+// ZEKİCE ÇÖZÜM: Ayarları kaydetme fonksiyonu artık Promise dönüyor
 function saveSettingsToDatabase() { 
     if(typeof window.api !== 'undefined') {
-        window.api.saveSettings(systemSettings).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
+        window.api.saveSettings(systemSettings).then(() => {
+            updateRefreshTime();
+        }).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
     }
+    return true; 
 }
 
 function openModal(id) {
@@ -721,7 +719,6 @@ function populateSelectOptions() {
                 let html = el.id.startsWith("filter-") ? `<option value="">TÜMÜ (${systemSettings.dropdowns[key].label.toLocaleUpperCase('tr-TR')})</option>` : "";
                 html += systemSettings.dropdowns[key].values.map(v => `<option value="${v}">${v.toLocaleUpperCase('tr-TR')}</option>`).join('');
                 
-                // Seçilen value kaybolmasın diye koruma
                 let oldVal = el.value;
                 el.innerHTML = html;
                 if(oldVal && !el.id.startsWith("filter-")) el.value = oldVal;
@@ -1532,7 +1529,6 @@ function handleFileUpload(event) {
     reader.readAsDataURL(file);
 }
 
-// YENİ: Araç fotoğrafı yükleme işlemi
 function handleVehicleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1598,14 +1594,12 @@ function openPersonnelForm() {
     setTimeout(() => { updateFormSilhouette(); }, 50); 
 }
 
-// YENİ: Araç Ekleme/Düzenleme Formunu Açma
 function openVehicleForm(vId = null) {
     document.getElementById("vehicleForm").reset();
     document.getElementById("v_id").value = "";
     uploadedBase64VehicleFoto = "";
     document.getElementById("v_previewFoto").src = vehiclePlaceholder;
     
-    // Sürücü (Personel) listesini doldur
     const surucuSelect = document.getElementById("v_surucu");
     let surucuHtml = '<option value="">-- Havuz (Sürücüsüz) --</option>';
     personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
@@ -1640,7 +1634,7 @@ function openVehicleForm(vId = null) {
     openModal('addVehicleModal');
 }
 
-// YENİ: Aracı Kaydetme Motoru
+// YENİ: ZEKİCE ÇÖZÜM - Araçlar direkt Settings (Ayarlar) üzerinden kaydediliyor
 function saveVehicle() {
     const plaka = document.getElementById("v_plaka").value.trim();
     const model = document.getElementById("v_model").value.trim();
@@ -1671,25 +1665,30 @@ function saveVehicle() {
         vehicleData.unshift(vData);
     }
     
-    if(saveVehiclesToDatabase()) {
+    // TRUVA ATI: Araçları ayarlar çekmecesine koy
+    systemSettings.vehicles = vehicleData;
+    
+    if(saveSettingsToDatabase()) {
         closeModal('addVehicleModal');
         renderVehicleGrid();
         showToast(idVal ? "Araç bilgileri güncellendi." : "Yeni araç filoya eklendi.", "success");
     }
 }
 
-// YENİ: Aracı Silme Motoru
 function deleteVehicle(id) {
     if(confirm("Bu aracı filodan kalıcı olarak silmek istediğinize emin misiniz?")) {
         vehicleData = vehicleData.filter(v => v.id !== id);
-        if(saveVehiclesToDatabase()) {
+        
+        // TRUVA ATI: Silme işlemini de ayarlar üzerinden kaydet
+        systemSettings.vehicles = vehicleData;
+        
+        if(saveSettingsToDatabase()) {
             renderVehicleGrid();
             showToast("Araç sistemden silindi.", "success");
         }
     }
 }
 
-// YENİ: Araç Vitrini (Grid) Çizim Motoru
 window.renderVehicleGrid = function() {
     const container = document.getElementById("vehicleGridContainer");
     if(!container) return;
