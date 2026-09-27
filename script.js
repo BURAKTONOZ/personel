@@ -373,13 +373,16 @@ async function checkLogin() {
                         document.getElementById('main-header').classList.add('z-[100]');
                         
                         const tm = document.getElementById('timelineModal');
-                        tm.classList.replace('p-4', 'pt-[90px]');
-                        tm.classList.replace('items-center', 'items-start');
-                        
-                        const tmContent = tm.querySelector('.modal-content');
-                        tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-                        tmContent.classList.replace('w-[96vw]', 'w-full');
-                        tmContent.classList.add('mx-4');
+                        if(tm) {
+                            tm.classList.replace('p-4', 'pt-[90px]');
+                            tm.classList.replace('items-center', 'items-start');
+                            const tmContent = tm.querySelector('.modal-content');
+                            if(tmContent) {
+                                tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+                                tmContent.classList.replace('w-[96vw]', 'w-full');
+                                tmContent.classList.add('mx-4');
+                            }
+                        }
                         
                         openModal('timelineModal');
                     } else {
@@ -432,13 +435,16 @@ async function saveNewDbPath() {
             document.getElementById('main-header').classList.add('z-[100]');
             
             const tm = document.getElementById('timelineModal');
-            tm.classList.replace('p-4', 'pt-[90px]');
-            tm.classList.replace('items-center', 'items-start');
-            
-            const tmContent = tm.querySelector('.modal-content');
-            tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-            tmContent.classList.replace('w-[96vw]', 'w-full');
-            tmContent.classList.add('mx-4');
+            if(tm) {
+                tm.classList.replace('p-4', 'pt-[90px]');
+                tm.classList.replace('items-center', 'items-start');
+                const tmContent = tm.querySelector('.modal-content');
+                if(tmContent) {
+                    tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+                    tmContent.classList.replace('w-[96vw]', 'w-full');
+                    tmContent.classList.add('mx-4');
+                }
+            }
             
             openModal('timelineModal');
         } else {
@@ -460,6 +466,7 @@ function changeDbPathFromSettings() {
     document.getElementById('dbPathModal').style.display = 'flex';
 }
 
+// ZEKİCE ÇÖZÜM: Kalkanlı Manuel Refresh (Artık Sınıf Bulamayınca Çökmez)
 async function manualRefresh(silent = false) {
     if (typeof window.api === 'undefined') return;
     if (!silent) showSpinner("Veriler Güncelleniyor...");
@@ -526,12 +533,19 @@ async function manualRefresh(silent = false) {
             if (document.getElementById('appContainer').style.display !== 'none' || currentUserRole === 'izin') {
                 applyFilters(); 
             }
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
-            if(document.getElementById("profileModal").classList.contains("show")) {
+            
+            // KALKAN: Elementler varsa ve açıksa yenile, yoksa atla (Çökmeyi Engeller)
+            const tm = document.getElementById("timelineModal");
+            if(tm && tm.classList.contains("show")) generateTimeline();
+            
+            const pm = document.getElementById("profileModal");
+            if(pm && pm.classList.contains("show")) {
                 renderIzinTable();
                 renderZimmetTable();
             }
-            if(document.getElementById("vehicleModal").classList.contains("show")) renderVehicleGrid();
+            
+            const vm = document.getElementById("vehicleModal");
+            if(vm && vm.classList.contains("show")) renderVehicleGrid();
             
             updateRefreshTime();
         }
@@ -623,13 +637,16 @@ function fetchDataFromLocalDB() {
                 document.getElementById('main-header').classList.add('z-[100]');
                 
                 const tm = document.getElementById('timelineModal');
-                tm.classList.replace('p-4', 'pt-[90px]');
-                tm.classList.replace('items-center', 'items-start');
-                
-                const tmContent = tm.querySelector('.modal-content');
-                tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-                tmContent.classList.replace('w-[96vw]', 'w-full');
-                tmContent.classList.add('mx-4');
+                if(tm) {
+                    tm.classList.replace('p-4', 'pt-[90px]');
+                    tm.classList.replace('items-center', 'items-start');
+                    const tmContent = tm.querySelector('.modal-content');
+                    if(tmContent) {
+                        tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
+                        tmContent.classList.replace('w-[96vw]', 'w-full');
+                        tmContent.classList.add('mx-4');
+                    }
+                }
                 
                 openModal('timelineModal');
             } else {
@@ -652,10 +669,11 @@ function fetchDataFromLocalDB() {
     });
 }
 
+// ZEKİCE ÇÖZÜM: Kaydetme komutları sessiz yenileme kalkanı ile arayüzü anında tazeler
 function saveToDatabase() { 
     if(typeof window.api !== 'undefined') {
         window.api.savePersonnel(personnelData).then(() => {
-            updateRefreshTime();
+            manualRefresh(true);
         }).catch(e => { showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error"); });
     }
     return true; 
@@ -663,13 +681,17 @@ function saveToDatabase() {
 
 function saveSettingsToDatabase() { 
     if(typeof window.api !== 'undefined') {
-        window.api.saveSettings(systemSettings).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
+        window.api.saveSettings(systemSettings).then(() => {
+            manualRefresh(true);
+        }).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
     }
     return true; 
 }
 
 function openModal(id) {
     const m = document.getElementById(id);
+    if(!m) return;
+    
     m.style.display = "flex";
     setTimeout(() => { m.classList.add('show'); m.querySelector('.modal-content').classList.add('show'); }, 10);
     
@@ -693,6 +715,8 @@ function openModal(id) {
 
 function closeModal(id) {
     const m = document.getElementById(id);
+    if(!m) return;
+    
     m.classList.remove('show');
     m.querySelector('.modal-content').classList.remove('show');
     setTimeout(() => { m.style.display = "none"; }, 300);
@@ -1147,8 +1171,7 @@ function saveZimmet() {
         p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
         
         if(saveToDatabase()) {
-            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
-            applyFilters(); closeModal('addZimmetModal');
+            closeModal('addZimmetModal');
             showToast("Demirbaş başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("Demirbaş eklenirken hata oluştu.", "error"); }
@@ -1160,8 +1183,6 @@ function deleteZimmet(id) {
             const p = personnelData.find(x => x.id == selectedUserId);
             p.zimmetler = p.zimmetler.filter(z => z.id !== id); 
             if(saveToDatabase()) {
-                if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable();
-                applyFilters();
                 showToast("Demirbaş silindi.", "success");
             }
         }
@@ -1235,9 +1256,7 @@ function saveIzin() {
         p.izinler.push({ id: Date.now(), tur: document.getElementById("i_tur").value, baslangic: bas, bitis: bit, aciklama: acik });
         
         if(saveToDatabase()) {
-            if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
-            applyFilters(); closeModal('addIzinModal'); 
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
+            closeModal('addIzinModal'); 
             showToast("İzin kaydı başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("İzin eklenirken hata oluştu.", "error"); }
@@ -1249,9 +1268,6 @@ function deleteIzin(id) {
             const p = personnelData.find(x => x.id == selectedUserId);
             p.izinler = p.izinler.filter(i => i.id !== id); 
             if(saveToDatabase()) {
-                if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
-                applyFilters(); 
-                if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
                 showToast("İzin silindi.", "success");
             }
         }
@@ -1285,9 +1301,7 @@ function saveBulkIzin() {
         });
 
         if(saveToDatabase()) {
-            applyFilters();
             closeModal('addBulkIzinModal');
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
             hideSpinner();
             showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
         } else { hideSpinner(); }
@@ -1499,7 +1513,6 @@ function saveSettings() {
     });
     systemSettings.cards.forEach((c, i) => c.active = document.getElementById("ct_" + i).checked);
     if(saveSettingsToDatabase()) {
-        populateSelectOptions(); applyFilters(); renderStatsCards(); closeModal('settingsModal');
         showToast("Ayarlar başarıyla güncellendi.", "success");
     }
 }
@@ -1532,7 +1545,6 @@ function handleFileUpload(event) {
     reader.readAsDataURL(file);
 }
 
-// Araç fotoğrafı yükleme işlemi
 function handleVehicleFileUpload(event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1598,14 +1610,12 @@ function openPersonnelForm() {
     setTimeout(() => { updateFormSilhouette(); }, 50); 
 }
 
-// Araç Ekleme/Düzenleme Formunu Açma
 function openVehicleForm(vId = null) {
     document.getElementById("vehicleForm").reset();
     document.getElementById("v_id").value = "";
     uploadedBase64VehicleFoto = "";
     document.getElementById("v_previewFoto").src = vehiclePlaceholder;
     
-    // Sürücü (Personel) listesini doldur
     const surucuSelect = document.getElementById("v_surucu");
     let surucuHtml = '<option value="">-- Havuz (Sürücüsüz) --</option>';
     personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
@@ -1632,17 +1642,16 @@ function openVehicleForm(vId = null) {
                 document.getElementById("v_previewFoto").src = v.fotoUrl;
             }
             document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck-monster text-sky-500"></i> Aracı Düzenle';
-            document.getElementById("btnDeleteVehicle").style.display = "flex";
+            document.getElementById("btnDeleteVehicle").classList.remove("hidden");
         }
     } else {
         document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck text-sky-500"></i> Yeni Araç Kaydı';
-        document.getElementById("btnDeleteVehicle").style.display = "none";
+        document.getElementById("btnDeleteVehicle").classList.add("hidden");
     }
     
     openModal('addVehicleModal');
 }
 
-// Aracı Kaydetme Motoru
 function saveVehicle() {
     const plaka = document.getElementById("v_plaka").value.trim();
     const model = document.getElementById("v_model").value.trim();
@@ -1673,17 +1682,14 @@ function saveVehicle() {
         vehicleData.unshift(vData);
     }
     
-    // TRUVA ATI: Araçları ayarlar çekmecesine koy
     systemSettings.vehicles = vehicleData;
     
     if(saveSettingsToDatabase()) {
         closeModal('addVehicleModal');
-        if(document.getElementById("vehicleModal").classList.contains("show")) renderVehicleGrid();
         showToast(idVal ? "Araç bilgileri güncellendi." : "Yeni araç filoya eklendi.", "success");
     }
 }
 
-// Aracı Silme Motoru
 function deleteVehicle() {
     const idVal = document.getElementById("v_id").value;
     if(!idVal) return;
@@ -1694,7 +1700,6 @@ function deleteVehicle() {
         
         if(saveSettingsToDatabase()) {
             closeModal('addVehicleModal');
-            if(document.getElementById("vehicleModal").classList.contains("show")) renderVehicleGrid();
             showToast("Araç sistemden silindi.", "success");
         }
     }
@@ -1738,7 +1743,6 @@ function editPersonnelFromProfile() {
                     if (option) {
                         el.value = option.value;
                     } else {
-                        // KORUMA KALKANI: Seçenek listede yoksa, veriyi ezmemek için geçici olarak listeye ekle
                         let newOpt = document.createElement("option");
                         newOpt.value = val.toLocaleUpperCase('tr-TR');
                         newOpt.innerHTML = val.toLocaleUpperCase('tr-TR');
@@ -1800,7 +1804,7 @@ function savePersonnel() {
         } else { personnelData.unshift(pData); }
         
         if(saveToDatabase()) {
-            applyFilters(); closeModal('personnelModal');
+            closeModal('personnelModal');
             showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
         }
     } catch (error) { showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error"); }
@@ -1810,8 +1814,9 @@ function deletePersonnelFromProfile() {
     if(confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?")) { 
         personnelData = personnelData.filter(x=>x.id!=selectedUserId); 
         if(saveToDatabase()) {
-            closeModal('profileModal'); setTimeout(applyFilters, 350); 
+            closeModal('profileModal'); 
             showToast("Personel kaydı silindi.", "success");
         }
     } 
 }
+```[cite: 1, 5]
