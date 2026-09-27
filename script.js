@@ -62,18 +62,17 @@ function closePhotoModal() {
 }
 
 let personnelData = [];
-let vehicleData = []; // YENİ: Araç veritabanı dizisi
+let vehicleData = []; 
 let currentFilteredData = [];
 const SYSTEM_TODAY = new Date();
 SYSTEM_TODAY.setHours(0,0,0,0);
 let selectedUserId = null;
 let tlCurrentDate = new Date();
 let uploadedBase64Foto = "";
-let uploadedBase64VehicleFoto = ""; // Araç fotoğrafı için
+let uploadedBase64VehicleFoto = ""; 
 window.tooltipTimeout = null; 
 
 let activeCardId = 'total'; 
-
 let isTlDragging = false;
 let tlDragStart = null;
 
@@ -112,10 +111,9 @@ function compareVersions(v1, v2) {
     return 0; 
 }
 
-// TRUVA ATI: Araçlar veritabanına settings içinden kaydediliyor.
 let systemSettings = {
     version: APP_VERSION,
-    vehicles: [], // Yeni eklenen Araçlar çekmecesi
+    vehicles: [], 
     dropdowns: {
         cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
         medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli"] },
@@ -227,7 +225,6 @@ function exportToExcel() {
     }, 800);
 }
 
-// YENİ: Araçları Excel'e aktarma fonksiyonu
 function exportVehiclesToExcel() {
     if(vehicleData.length === 0) {
         showToast("Dışa aktarılacak araç kaydı bulunamadı!", "error");
@@ -486,7 +483,6 @@ async function manualRefresh(silent = false) {
             }
         }
 
-        // AYARLAR VE ARAÇLAR SENKRONİZASYONU
         if (newData && newData.settings) {
             if (newData.settings.dropdowns) systemSettings.dropdowns = newData.settings.dropdowns;
             if (newData.settings.cards) {
@@ -496,7 +492,6 @@ async function manualRefresh(silent = false) {
                     return defCard;
                 });
             }
-            // TRUVA ATI: Araçları ayarların içinden çıkart ve belleğe al
             if (newData.settings.vehicles) {
                 let parsedVehicles = Array.isArray(newData.settings.vehicles) ? newData.settings.vehicles : Object.values(newData.settings.vehicles);
                 vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
@@ -656,20 +651,20 @@ function fetchDataFromLocalDB() {
     });
 }
 
+// ZEKİCE ÇÖZÜM: Tüm kaydetmelerde gizli yenileme (Sync) kalkanı çalışır
 function saveToDatabase() { 
     if(typeof window.api !== 'undefined') {
         window.api.savePersonnel(personnelData).then(() => {
-            updateRefreshTime();
+            manualRefresh(true);
         }).catch(e => { showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error"); });
     }
     return true; 
 }
 
-// ZEKİCE ÇÖZÜM: Ayarları kaydetme fonksiyonu artık Promise dönüyor
 function saveSettingsToDatabase() { 
     if(typeof window.api !== 'undefined') {
         window.api.saveSettings(systemSettings).then(() => {
-            updateRefreshTime();
+            manualRefresh(true);
         }).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
     }
     return true; 
@@ -949,7 +944,7 @@ function applyFilters() {
 });
 
 function openProfileModal(id) {
-    const p = personnelData.find(x => x.id === id);
+    const p = personnelData.find(x => x.id == id);
     if(!p) return;
     selectedUserId = id;
 
@@ -1026,7 +1021,7 @@ function openProfileModal(id) {
 
 function savePersonelNot() {
     const val = document.getElementById("pv_notlar_input").value;
-    const p = personnelData.find(x => x.id === selectedUserId);
+    const p = personnelData.find(x => x.id == selectedUserId);
     if(p) {
         p.notlar = val;
         if(saveToDatabase()) {
@@ -1095,10 +1090,14 @@ function openIzinForm() {
     document.getElementById('i_bit').value = '';
     document.getElementById('i_aciklama').value = '';
     
-    const p = personnelData.find(x => x.id === selectedUserId);
+    const p = personnelData.find(x => x.id == selectedUserId);
     const titleEl = document.getElementById("addIzinModalTitle");
-    if(titleEl && p) {
-        titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
+    if(titleEl) {
+        if(p && p.adSoyad) {
+            titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
+        } else {
+            titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle`;
+        }
     }
     
     openModal('addIzinModal');
@@ -1112,10 +1111,14 @@ function openIzinFormWithDates(pid, date1, date2) {
     document.getElementById('i_bit').value = date2.getFullYear() + '-' + String(date2.getMonth()+1).padStart(2,'0') + '-' + String(date2.getDate()).padStart(2,'0');
     document.getElementById('i_aciklama').value = '';
     
-    const p = personnelData.find(x => x.id === pid);
+    const p = personnelData.find(x => x.id == pid);
     const titleEl = document.getElementById("addIzinModalTitle");
-    if(titleEl && p) {
-        titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
+    if(titleEl) {
+        if(p && p.adSoyad) {
+            titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
+        } else {
+            titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle`;
+        }
     }
     
     openModal('addIzinModal');
@@ -1131,8 +1134,8 @@ function openBulkIzinForm() {
 
 function renderZimmetTable() {
     const tb = document.getElementById("zimmetTableBody"); if(!tb) return; tb.innerHTML = "";
-    const p = personnelData.find(x => x.id === selectedUserId);
-    if(!p.zimmetler || p.zimmetler.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500 font-semibold">Kayıtlı demirbaş bulunmuyor.</td></tr>'; return; }
+    const p = personnelData.find(x => x.id == selectedUserId);
+    if(!p || !p.zimmetler || p.zimmetler.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500 font-semibold">Kayıtlı demirbaş bulunmuyor.</td></tr>'; return; }
     p.zimmetler.forEach(z => tb.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-4 font-bold text-slate-700 uppercase">${z.urun}</td><td class="p-4 text-slate-600 uppercase">${z.seri}</td><td class="p-4 text-slate-600 font-semibold">${formatDateTR(z.tarih)}</td><td class="p-4 text-center"><button onclick="deleteZimmet(${z.id})" class="text-rose-500 hover:text-rose-700 bg-white border border-slate-200 hover:bg-rose-50 w-8 h-8 rounded-md transition"><i class="fas fa-trash-alt"></i></button></td></tr>`);
 }
 
@@ -1141,13 +1144,12 @@ function saveZimmet() {
         const u = document.getElementById("z_urun").value.trim();
         const t = document.getElementById("z_tarih").value;
         if(!u || !t) { showToast("Demirbaş adı ve tarihi zorunludur!", "error"); return; }
-        const p = personnelData.find(x => x.id === selectedUserId);
+        const p = personnelData.find(x => x.id == selectedUserId);
         p.zimmetler = p.zimmetler || []; 
         p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
         
         if(saveToDatabase()) {
-            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
-            applyFilters(); closeModal('addZimmetModal');
+            closeModal('addZimmetModal');
             showToast("Demirbaş başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("Demirbaş eklenirken hata oluştu.", "error"); }
@@ -1156,23 +1158,24 @@ function saveZimmet() {
 function deleteZimmet(id) { 
     try {
         if(confirm("Silmek istediğinize emin misiniz?")) {
-            personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
-            saveToDatabase(); 
-            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
-            applyFilters(); 
-            showToast("Demirbaş silindi.", "success");
+            const p = personnelData.find(x => x.id == selectedUserId);
+            p.zimmetler = p.zimmetler.filter(z => z.id !== id); 
+            if(saveToDatabase()) {
+                showToast("Demirbaş silindi.", "success");
+            }
         }
     } catch (error) { showToast("Demirbaş silinirken hata oluştu.", "error"); }
 }
 
 function renderIzinTable() {
     const tb = document.getElementById("izinTableBody"); if(!tb) return; tb.innerHTML = "";
-    const p = personnelData.find(x => x.id === selectedUserId);
+    const p = personnelData.find(x => x.id == selectedUserId);
+    if(!p) return;
     
     let yillik = 0, rapor = 0, idari = 0, saatlik = 0, ucretsiz = 0;
     const currentYear = SYSTEM_TODAY.getFullYear();
 
-    if(p && p.izinler) {
+    if(p.izinler) {
         p.izinler.forEach(iz => {
             let dBas = new Date(iz.baslangic); dBas.setHours(0,0,0,0);
             let dBit = new Date(iz.bitis); dBit.setHours(23,59,59,999);
@@ -1226,18 +1229,12 @@ function saveIzin() {
         if(!bas || !bit || !acik) { showToast("Tarihler ve açıklama zorunludur!", "error"); return; }
         if(new Date(bas) > new Date(bit)) { showToast("Bitiş tarihi başlangıçtan küçük olamaz!", "error"); return; }
 
-        const p = personnelData.find(x => x.id === selectedUserId);
+        const p = personnelData.find(x => x.id == selectedUserId);
         p.izinler = p.izinler || []; 
         p.izinler.push({ id: Date.now(), tur: document.getElementById("i_tur").value, baslangic: bas, bitis: bit, aciklama: acik });
         
         if(saveToDatabase()) {
-            if(document.getElementById("profileModal").classList.contains("show")) {
-                renderIzinTable(); 
-            }
-            applyFilters(); closeModal('addIzinModal'); 
-            if(document.getElementById("timelineModal").classList.contains("show")) {
-                generateTimeline();
-            }
+            closeModal('addIzinModal'); 
             showToast("İzin kaydı başarıyla eklendi.", "success");
         }
     } catch (error) { showToast("İzin eklenirken hata oluştu.", "error"); }
@@ -1246,12 +1243,11 @@ function saveIzin() {
 function deleteIzin(id) { 
     try {
         if(confirm("İzni silmek istediğinize emin misiniz?")) {
-            personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
-            saveToDatabase(); 
-            if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
-            applyFilters(); 
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
-            showToast("İzin silindi.", "success");
+            const p = personnelData.find(x => x.id == selectedUserId);
+            p.izinler = p.izinler.filter(i => i.id !== id); 
+            if(saveToDatabase()) {
+                showToast("İzin silindi.", "success");
+            }
         }
     } catch (error) { showToast("İzin silinirken hata oluştu.", "error"); }
 }
@@ -1283,9 +1279,7 @@ function saveBulkIzin() {
         });
 
         if(saveToDatabase()) {
-            applyFilters();
             closeModal('addBulkIzinModal');
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
             hideSpinner();
             showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
         } else { hideSpinner(); }
@@ -1429,7 +1423,7 @@ function generateTimeline() {
     }
 
     activeData.forEach(p => {
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle / İzin İşle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-id-card opacity-50 text-[10px]"></i></div>`;
+        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-id-card opacity-50 text-[10px]"></i></div>`;
         for(let d=1; d<=daysInMonth; d++) {
             let cellDate = new Date(y, m, d);
             let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
@@ -1497,7 +1491,6 @@ function saveSettings() {
     });
     systemSettings.cards.forEach((c, i) => c.active = document.getElementById("ct_" + i).checked);
     saveSettingsToDatabase();
-    populateSelectOptions(); applyFilters(); renderStatsCards(); closeModal('settingsModal');
     showToast("Ayarlar başarıyla güncellendi.", "success");
 }
 
@@ -1608,7 +1601,7 @@ function openVehicleForm(vId = null) {
     surucuSelect.innerHTML = surucuHtml;
 
     if(vId) {
-        const v = vehicleData.find(x => x.id === vId);
+        const v = vehicleData.find(x => x.id == vId);
         if(v) {
             document.getElementById("v_id").value = v.id;
             document.getElementById("v_plaka").value = v.plaka || "";
@@ -1626,15 +1619,16 @@ function openVehicleForm(vId = null) {
                 document.getElementById("v_previewFoto").src = v.fotoUrl;
             }
             document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck-monster text-sky-500"></i> Aracı Düzenle';
+            document.getElementById("btnDeleteVehicle").style.display = "flex";
         }
     } else {
         document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck text-sky-500"></i> Yeni Araç Kaydı';
+        document.getElementById("btnDeleteVehicle").style.display = "none";
     }
     
     openModal('addVehicleModal');
 }
 
-// YENİ: ZEKİCE ÇÖZÜM - Araçlar direkt Settings (Ayarlar) üzerinden kaydediliyor
 function saveVehicle() {
     const plaka = document.getElementById("v_plaka").value.trim();
     const model = document.getElementById("v_model").value.trim();
@@ -1665,25 +1659,24 @@ function saveVehicle() {
         vehicleData.unshift(vData);
     }
     
-    // TRUVA ATI: Araçları ayarlar çekmecesine koy
     systemSettings.vehicles = vehicleData;
     
     if(saveSettingsToDatabase()) {
         closeModal('addVehicleModal');
-        renderVehicleGrid();
         showToast(idVal ? "Araç bilgileri güncellendi." : "Yeni araç filoya eklendi.", "success");
     }
 }
 
-function deleteVehicle(id) {
+function deleteVehicle() {
+    const idVal = document.getElementById("v_id").value;
+    if(!idVal) return;
+    
     if(confirm("Bu aracı filodan kalıcı olarak silmek istediğinize emin misiniz?")) {
-        vehicleData = vehicleData.filter(v => v.id !== id);
-        
-        // TRUVA ATI: Silme işlemini de ayarlar üzerinden kaydet
+        vehicleData = vehicleData.filter(v => v.id != idVal);
         systemSettings.vehicles = vehicleData;
         
         if(saveSettingsToDatabase()) {
-            renderVehicleGrid();
+            closeModal('addVehicleModal');
             showToast("Araç sistemden silindi.", "success");
         }
     }
@@ -1698,7 +1691,7 @@ window.renderVehicleGrid = function() {
     let filteredVehicles = vehicleData;
     if(searchVal) {
         filteredVehicles = vehicleData.filter(v => {
-            const surucuAd = v.surucuId ? (personnelData.find(p => p.id === parseInt(v.surucuId))?.adSoyad || "") : "HAVUZ";
+            const surucuAd = v.surucuId ? (personnelData.find(p => p.id == v.surucuId)?.adSoyad || "") : "HAVUZ";
             return (v.plaka || "").includes(searchVal) || 
                    (v.model || "").includes(searchVal) || 
                    surucuAd.includes(searchVal);
@@ -1731,7 +1724,7 @@ window.renderVehicleGrid = function() {
         let surucu = "HAVUZ (SÜRÜCÜSÜZ)";
         let surucuFoto = avatarMale;
         if(v.surucuId) {
-            const sp = personnelData.find(p => p.id === parseInt(v.surucuId));
+            const sp = personnelData.find(p => p.id == v.surucuId);
             if(sp) {
                 surucu = sp.adSoyad;
                 surucuFoto = getAvatarUrl(sp.fotoUrl, sp.cinsiyet);
@@ -1744,19 +1737,15 @@ window.renderVehicleGrid = function() {
         if(v.muayene) {
             const msFark = new Date(v.muayene) - SYSTEM_TODAY;
             const gunFark = Math.ceil(msFark / (1000 * 60 * 60 * 24));
-            if(gunFark < 0) uyariHtml = `<div class="absolute top-2 right-2 bg-rose-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md animate-pulse"><i class="fas fa-exclamation-triangle"></i> Muayene Geçti!</div>`;
-            else if(gunFark <= 30) uyariHtml = `<div class="absolute top-2 right-2 bg-amber-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md"><i class="fas fa-clock"></i> Muayene Yaklaştı (${gunFark} Gün)</div>`;
+            if(gunFark < 0) uyariHtml = `<div class="absolute top-2 right-2 bg-rose-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md animate-pulse z-10"><i class="fas fa-exclamation-triangle"></i> Muayene Geçti!</div>`;
+            else if(gunFark <= 30) uyariHtml = `<div class="absolute top-2 right-2 bg-amber-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md z-10"><i class="fas fa-clock"></i> Muayene Yaklaştı (${gunFark} Gün)</div>`;
         }
 
         html += `
-            <div class="vehicle-card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative">
+            <div class="vehicle-card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative" onclick="openVehicleForm(${v.id})">
                 ${uyariHtml}
-                <div class="h-40 w-full bg-slate-100 border-b border-slate-200 overflow-hidden relative">
+                <div class="h-32 w-full bg-slate-100 border-b border-slate-200 overflow-hidden relative">
                     <img src="${vFoto}" class="w-full h-full object-cover">
-                    <div class="v-actions absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center gap-3">
-                        <button onclick="openVehicleForm(${v.id})" class="w-10 h-10 rounded-full bg-white text-blue-600 hover:scale-110 transition-transform shadow-lg flex items-center justify-center"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteVehicle(${v.id})" class="w-10 h-10 rounded-full bg-rose-500 text-white hover:bg-rose-600 hover:scale-110 transition-transform shadow-lg flex items-center justify-center"><i class="fas fa-trash-alt"></i></button>
-                    </div>
                 </div>
                 
                 <div class="p-4 flex-1 flex flex-col">
@@ -1774,7 +1763,10 @@ window.renderVehicleGrid = function() {
                             <i class="fas fa-sitemap w-4 text-center text-slate-400"></i> <span class="truncate">${v.seflik || '-'}</span>
                         </div>
                         <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
-                            <i class="fas fa-building w-4 text-center text-slate-400"></i> <span class="truncate">${v.bina || '-'}</span>
+                            <i class="fas fa-calendar-check w-4 text-center text-slate-400"></i> <span class="truncate text-rose-600">${v.muayene ? 'Muayene: ' + formatDateTR(v.muayene) : 'Muayene Yok'}</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
+                            <i class="fas fa-sticky-note w-4 text-center text-slate-400"></i> <span class="truncate w-full normal-case text-slate-400" title="${v.notlar || 'Not Yok'}">${v.notlar || 'Not Yok'}</span>
                         </div>
                     </div>
                 </div>
@@ -1793,7 +1785,7 @@ window.renderVehicleGrid = function() {
 function editPersonnelFromProfile() { 
     closeModal('profileModal');
     setTimeout(() => {
-        const p = personnelData.find(x => x.id === selectedUserId);
+        const p = personnelData.find(x => x.id == selectedUserId);
         document.getElementById("formId").value = p.id;
         
         uploadedBase64Foto = p.fotoUrl && !p.fotoUrl.includes('data:image/svg') && !p.fotoUrl.includes('placeholder') ? p.fotoUrl : "";
@@ -1881,15 +1873,15 @@ function savePersonnel() {
         });
 
         if(idVal) {
-            const old = personnelData.find(x=>x.id === pData.id);
+            const old = personnelData.find(x=>x.id == pData.id);
             pData.izinler = old.izinler || []; pData.zimmetler = old.zimmetler || [];
             pData.notlar = old.notlar || "";
             if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl || ""; 
-            personnelData[personnelData.findIndex(x=>x.id===pData.id)] = pData;
+            personnelData[personnelData.findIndex(x=>x.id==pData.id)] = pData;
         } else { personnelData.unshift(pData); }
         
         if(saveToDatabase()) {
-            applyFilters(); closeModal('personnelModal');
+            closeModal('personnelModal');
             showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
         }
     } catch (error) { showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error"); }
@@ -1897,9 +1889,9 @@ function savePersonnel() {
 
 function deletePersonnelFromProfile() { 
     if(confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?")) { 
-        personnelData = personnelData.filter(x=>x.id!==selectedUserId); 
+        personnelData = personnelData.filter(x=>x.id!=selectedUserId); 
         if(saveToDatabase()) {
-            closeModal('profileModal'); setTimeout(applyFilters, 350); 
+            closeModal('profileModal'); 
             showToast("Personel kaydı silindi.", "success");
         }
     } 
