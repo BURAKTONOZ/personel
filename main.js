@@ -66,10 +66,23 @@ function createWindow() {
 
   ipcMain.on('window-minimize', () => win.minimize());
   ipcMain.on('window-close', () => app.quit());
+  
+  // YENİDEN BAŞLATMA VE OTURUM KAPATMA (KUSURSUZ ÇÖZÜM)
   ipcMain.on('relaunch-app', () => {
-    app.relaunch();
-    app.exit(0);
+    win.hide(); // 1. Ekranı anında gizle
+    if(win.isMaximized()) {
+        win.unmaximize(); // 2. Tam ekransa küçült
+    }
+    win.setResizable(false); // 3. Şifre ekranı boyutlarını kilitle
+    win.setSize(450, 600); // 4. Şifre ekranı orijinal boyutuna döndür
+    win.center(); // 5. Ekranın tam ortasına al
+    win.reload(); // 6. Beyni ve sürükleme katmanlarını tamamen sıfırla
+    
+    setTimeout(() => {
+        win.show(); // 7. Yarım saniye sonra tertemiz şifre ekranını göster
+    }, 500);
   });
+
   ipcMain.on('window-maximize-toggle', () => {
     if(win.isMaximized()) {
         win.unmaximize();
