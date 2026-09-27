@@ -140,7 +140,7 @@ let systemSettings = {
         { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
         { id: "izinli", title: "Şu An İzinde", type: "custom", func: "izinli", active: true }
     ],
-    vehicles: [] // Araç verileri burada barınacak (Truva Atı Modeli)
+    vehicles: [] // Araç verileri
 };
 
 const statColorsAndIcons = {
@@ -239,14 +239,16 @@ function updateHeaderBadge() {
     const badge = document.getElementById('userBadge');
     badge.style.display = 'inline-block';
     
+    let baseClasses = "text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider hover:scale-105 transition-transform shadow-sm cursor-pointer ";
+
     if(currentUserRole === 'admin') {
-        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-blue-50 text-blue-700 border-blue-200 shadow-sm';
+        badge.className = baseClasses + 'bg-blue-50 text-blue-700 border-blue-200';
         badge.innerHTML = '👑 ANA KULLANICI';
     } else if(currentUserRole === '1011') {
-        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-violet-50 text-violet-700 border-violet-200 shadow-sm';
+        badge.className = baseClasses + 'bg-violet-50 text-violet-700 border-violet-200';
         badge.innerHTML = '📍 1011 YÖNETİCİSİ';
     } else if(currentUserRole === 'izin') {
-        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-orange-50 text-orange-700 border-orange-200 shadow-sm';
+        badge.className = baseClasses + 'bg-orange-50 text-orange-700 border-orange-200';
         badge.innerHTML = '🗓️ İZİN YÖNETİCİSİ';
     }
 
@@ -260,6 +262,32 @@ function updateHeaderBadge() {
             btnArac.classList.add('hidden');
             btnArac.classList.remove('flex');
         }
+    }
+}
+
+// HIZLI KULLANICI DEĞİŞTİRME / OTURUM KAPATMA
+function switchUserRole() {
+    if(confirm("Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?")) {
+        // Tüm modalları kapat
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.classList.remove('show');
+            let content = m.querySelector('.modal-content');
+            if(content) content.classList.remove('show');
+            m.style.display = 'none';
+        });
+
+        // Ana ekranı gizle ve login ekranını göster
+        document.getElementById('appContainer').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'flex';
+        
+        // Form alanlarını sıfırla
+        document.getElementById('loginInputArea').style.display = 'block';
+        document.getElementById('loginStatusText').style.display = 'none';
+        document.getElementById('loginPass').value = '';
+        
+        // Oturumu boşalt
+        currentUserRole = '';
+        showToast("Oturum kapatıldı.", "success");
     }
 }
 
@@ -450,7 +478,7 @@ async function manualRefresh(silent = false) {
 
         if (newData && newData.settings) {
             if (newData.settings.dropdowns) systemSettings.dropdowns = newData.settings.dropdowns;
-            if (newData.settings.vehicles) systemSettings.vehicles = newData.settings.vehicles; // Araçları yenile
+            if (newData.settings.vehicles) systemSettings.vehicles = newData.settings.vehicles; 
             if (newData.settings.cards) {
                 systemSettings.cards = systemSettings.cards.map(defCard => {
                     let found = newData.settings.cards.find(c => c.id === defCard.id);
@@ -550,7 +578,7 @@ function fetchDataFromLocalDB() {
         if(data && data.settings) {
             let dbSettings = data.settings;
             if (dbSettings.dropdowns) systemSettings.dropdowns = dbSettings.dropdowns;
-            if (dbSettings.vehicles) systemSettings.vehicles = dbSettings.vehicles; // Araçları yükle
+            if (dbSettings.vehicles) systemSettings.vehicles = dbSettings.vehicles; 
             if (dbSettings.cards) {
                 systemSettings.cards = systemSettings.cards.map(defCard => {
                     let found = dbSettings.cards.find(c => c.id === defCard.id);
