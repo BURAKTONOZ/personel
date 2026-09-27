@@ -235,7 +235,7 @@ function exportVehiclesToExcel() {
         const exportData = vehicleData.map(v => {
             let surucuAd = "Havuz (Sürücüsüz)";
             if(v.surucuId) {
-                const sp = personnelData.find(p => p.id === parseInt(v.surucuId));
+                const sp = personnelData.find(p => p.id == v.surucuId);
                 if(sp) surucuAd = sp.adSoyad;
             }
             
@@ -651,7 +651,6 @@ function fetchDataFromLocalDB() {
     });
 }
 
-// ZEKİCE ÇÖZÜM: Tüm kaydetmelerde gizli yenileme (Sync) kalkanı çalışır
 function saveToDatabase() { 
     if(typeof window.api !== 'undefined') {
         window.api.savePersonnel(personnelData).then(() => {
@@ -1490,8 +1489,9 @@ function saveSettings() {
         }
     });
     systemSettings.cards.forEach((c, i) => c.active = document.getElementById("ct_" + i).checked);
-    saveSettingsToDatabase();
-    showToast("Ayarlar başarıyla güncellendi.", "success");
+    if(saveSettingsToDatabase()) {
+        showToast("Ayarlar başarıyla güncellendi.", "success");
+    }
 }
 
 function handleFileUpload(event) {
@@ -1652,7 +1652,7 @@ function saveVehicle() {
     };
     
     if(idVal) {
-        const idx = vehicleData.findIndex(x => x.id === vData.id);
+        const idx = vehicleData.findIndex(x => x.id == vData.id);
         if(!uploadedBase64VehicleFoto) vData.fotoUrl = vehicleData[idx].fotoUrl || "";
         vehicleData[idx] = vData;
     } else {
@@ -1834,65 +1834,4 @@ function editPersonnelFromProfile() {
         if(currentUserRole === '1011') {
             binaEl.value = "1011 YERLEŞKESİ";
             binaEl.disabled = true;
-            binaEl.classList.add("bg-slate-100", "text-slate-400", "cursor-not-allowed");
-        } else {
-            binaEl.disabled = false;
-            binaEl.classList.remove("bg-slate-100", "text-slate-400", "cursor-not-allowed");
-        }
-
-        switchFormTab('kisisel');
-        openModal('personnelModal');
-    }, 350); 
-}
-
-function savePersonnel() {
-    try {
-        const tc = document.getElementById("f_tcNo").value.trim();
-        const ad = document.getElementById("f_adSoyad").value.trim();
-        if(!tc || tc.length !== 11 || isNaN(tc)) { showToast("Lütfen 11 haneli sayısal bir TC Kimlik No girin.", "error"); return; }
-        if(!ad) { showToast("Ad Soyad alanı zorunludur.", "error"); return; }
-        const idVal = document.getElementById("formId").value;
-        const exists = personnelData.find(p => p.tcNo === tc && p.id != idVal);
-        if(exists) { showToast("Bu TC Kimlik numarasıyla zaten bir kayıt mevcut!", "error"); return; }
-        const durumVal = document.getElementById("f_durum").value;
-        const ayrilisVal = document.getElementById("f_ayrilisTarihi").value;
-        if((durumVal === "Pasif" || durumVal === "PASİF") && !ayrilisVal) {
-            showToast("Durumu 'Pasif' olan personel için 'Ayrılış Tarihi' girmek zorunludur!", "error");
-            switchFormTab('kurum');
-            document.getElementById("f_ayrilisTarihi").focus(); 
-            return;
-        }
-        
-        const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "" };
-        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "dahili", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
-        
-        fields.forEach(f => { 
-            let rawVal = document.getElementById("f_"+f).value;
-            if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "dahili", "tcNo"].includes(f)) { pData[f] = rawVal; } 
-            else { pData[f] = rawVal ? rawVal.toLocaleUpperCase('tr-TR') : ""; }
-        });
-
-        if(idVal) {
-            const old = personnelData.find(x=>x.id == pData.id);
-            pData.izinler = old.izinler || []; pData.zimmetler = old.zimmetler || [];
-            pData.notlar = old.notlar || "";
-            if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl || ""; 
-            personnelData[personnelData.findIndex(x=>x.id==pData.id)] = pData;
-        } else { personnelData.unshift(pData); }
-        
-        if(saveToDatabase()) {
-            closeModal('personnelModal');
-            showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
-        }
-    } catch (error) { showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error"); }
-}
-
-function deletePersonnelFromProfile() { 
-    if(confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?")) { 
-        personnelData = personnelData.filter(x=>x.id!=selectedUserId); 
-        if(saveToDatabase()) {
-            closeModal('profileModal'); 
-            showToast("Personel kaydı silindi.", "success");
-        }
-    } 
-}
+            binaEl.classList.add("bg-slate-100", "text-slate-400", "
