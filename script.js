@@ -265,12 +265,45 @@ function updateHeaderBadge() {
     }
 }
 
-// HIZLI KULLANICI DEĞİŞTİRME / OTURUM KAPATMA (ÇÖZÜM 1)
+// OTURUMU KAPAT / KULLANICI DEĞİŞTİR: HATA ÇÖZÜMÜ İLE
 function switchUserRole() {
     if(confirm("Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?")) {
-        showSpinner("Oturum Kapatılıyor...");
-        // Tıklama hatalarını önlemek için uygulamayı tamamen yeniliyoruz (reload)
-        setTimeout(() => { location.reload(); }, 500);
+        // Modalları kapat
+        document.querySelectorAll('.modal-overlay').forEach(m => {
+            m.classList.remove('show');
+            let content = m.querySelector('.modal-content');
+            if(content) content.classList.remove('show');
+            m.style.display = 'none';
+        });
+
+        // Ekranları değiştir
+        document.getElementById('appContainer').style.display = 'none';
+        document.getElementById('loginScreen').style.display = 'flex';
+        
+        // Login alanını sıfırla
+        document.getElementById('loginInputArea').style.display = 'block';
+        document.getElementById('loginStatusText').style.display = 'none';
+        document.getElementById('loginPass').value = '';
+        
+        // Yetkiyi temizle
+        currentUserRole = '';
+
+        // TIKLANAMAMA (DRAG-REGION) HATASINI ÇÖZEN DOM REFLOW TETİKLEYİCİSİ
+        setTimeout(() => {
+            const loginModal = document.querySelector('#loginScreen .glass-modal');
+            if(loginModal) {
+                loginModal.style.webkitAppRegion = 'no-drag'; // Sürüklemeyi geçici olarak iptal et
+                document.body.style.transform = 'scale(1.0001)'; // Anlık yeniden hesaplama (reflow)
+                
+                setTimeout(() => {
+                    loginModal.style.webkitAppRegion = 'drag'; // Sürüklemeyi geri aç
+                    document.body.style.transform = 'none';
+                    document.getElementById('loginPass').focus(); // Şifre kutusuna odaklan
+                }, 50);
+            }
+        }, 100);
+
+        showToast("Oturum kapatıldı.", "success");
     }
 }
 
@@ -601,7 +634,7 @@ function fetchDataFromLocalDB() {
 
             if (window.api) window.api.maximizeWindow(); 
 
-            // BAĞLANTI BEKLENİYOR HATASI ÇÖZÜMÜ (ÇÖZÜM 2): İlk açılışta LED'i Yeşile ve yazıyı Bağlı'ya çeviriyoruz
+            // BAĞLANTI BEKLENİYOR HATASI ÇÖZÜMÜ: İlk açılışta LED'i Yeşile ve yazıyı Bağlı'ya çeviriyoruz
             window.api.getDbStatus().then(status => {
                 const led = document.getElementById('led-indicator');
                 const dbStatusText = document.getElementById('db-status-text');
