@@ -12,5 +12,6 @@ contextBridge.exposeInMainWorld('api', {
     windowMinimize: () => ipcRenderer.send('window-minimize'),
     windowMaximizeToggle: () => ipcRenderer.send('window-maximize-toggle'),
     windowClose: () => ipcRenderer.send('window-close'),
+    relaunchApp: () => ipcRenderer.send('relaunch-app'),
     maximizeWindow: () => ipcRenderer.send('maximize-window')
 });
