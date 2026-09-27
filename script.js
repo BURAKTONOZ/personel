@@ -140,7 +140,7 @@ let systemSettings = {
         { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
         { id: "izinli", title: "Şu An İzinde", type: "custom", func: "izinli", active: true }
     ],
-    vehicles: [] // Truva atı: Araçlar veritabanına bu dizi içinde gidecek
+    vehicles: [] // Araç verileri burada barınacak (Truva Atı Modeli)
 };
 
 const statColorsAndIcons = {
@@ -250,7 +250,7 @@ function updateHeaderBadge() {
         badge.innerHTML = '🗓️ İZİN YÖNETİCİSİ';
     }
 
-    // ARAÇ VİTRİNİ BUTON KONTROLÜ
+    // Araç Vitrini yetki kontrolü
     const btnArac = document.getElementById('btnAracVitrini');
     if (btnArac) {
         if (currentUserRole === 'admin') {
@@ -450,7 +450,7 @@ async function manualRefresh(silent = false) {
 
         if (newData && newData.settings) {
             if (newData.settings.dropdowns) systemSettings.dropdowns = newData.settings.dropdowns;
-            if (newData.settings.vehicles) systemSettings.vehicles = newData.settings.vehicles; // Araçları güncelle
+            if (newData.settings.vehicles) systemSettings.vehicles = newData.settings.vehicles; // Araçları yenile
             if (newData.settings.cards) {
                 systemSettings.cards = systemSettings.cards.map(defCard => {
                     let found = newData.settings.cards.find(c => c.id === defCard.id);
@@ -1541,7 +1541,6 @@ function editPersonnelFromProfile() {
                     if (option) {
                         el.value = option.value;
                     } else {
-                        // KORUMA KALKANI: Seçenek listede yoksa, veriyi ezmemek için geçici olarak listeye ekle
                         let newOpt = document.createElement("option");
                         newOpt.value = val.toLocaleUpperCase('tr-TR');
                         newOpt.innerHTML = val.toLocaleUpperCase('tr-TR');
@@ -1643,7 +1642,6 @@ function renderAracVitrini() {
         vList = vList.filter(v => (v.plaka || "").includes(search) || (v.marka || "").toLocaleUpperCase('tr-TR').includes(search));
     }
 
-    // İstatistikler
     document.getElementById("vStatTotal").innerText = (systemSettings.vehicles || []).length;
     document.getElementById("vStatAktif").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Aktif').length;
     document.getElementById("vStatHavuz").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Havuzda').length;
@@ -1666,14 +1664,13 @@ function renderAracVitrini() {
             }
         }
 
-        // Muayene Hesaplama
         let alarmHtml = "";
         if (v.muayeneTarihi) {
             const diffDays = Math.ceil((new Date(v.muayeneTarihi) - SYSTEM_TODAY) / (1000 * 60 * 60 * 24));
             if (diffDays < 0) {
-                alarmHtml = `<div class="absolute top-2 right-2 bg-rose-600 text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg animate-pulse border border-rose-800"><i class="fas fa-exclamation-triangle"></i> GEÇTİ</div>`;
+                alarmHtml = `<div class="absolute top-1.5 right-1.5 bg-rose-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-md animate-pulse border border-rose-800"><i class="fas fa-exclamation-triangle"></i> GEÇTİ</div>`;
             } else if (diffDays <= 30) {
-                alarmHtml = `<div class="absolute top-2 right-2 bg-orange-500 text-white text-[10px] font-black px-2 py-1 rounded-md shadow-lg border border-orange-700"><i class="fas fa-clock"></i> ${diffDays} GÜN</div>`;
+                alarmHtml = `<div class="absolute top-1.5 right-1.5 bg-orange-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-md border border-orange-700"><i class="fas fa-clock"></i> ${diffDays} GÜN</div>`;
             }
         }
 
@@ -1682,37 +1679,37 @@ function renderAracVitrini() {
         let fIcon = v.durum === 'Aktif' ? 'fa-check-circle' : (v.durum === 'Havuzda' ? 'fa-parking' : 'fa-wrench');
 
         html += `
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-xl hover:border-indigo-300 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full" onclick="openAracForm(${v.id})">
-            <div class="relative h-44 bg-slate-100 flex-shrink-0 border-b border-slate-100">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full" onclick="openAracForm(${v.id})">
+            <div class="relative h-28 bg-slate-100 flex-shrink-0 border-b border-slate-100">
                 <img src="${v.foto || defaultCarSvg}" class="w-full h-full object-cover">
                 ${alarmHtml}
             </div>
-            <div class="p-4 flex-1 flex flex-col">
-                <h3 class="text-lg font-black text-slate-800 tracking-tight uppercase">${v.plaka}</h3>
-                <p class="text-[11px] font-bold text-slate-400 uppercase">${v.marka || '-'}</p>
+            <div class="p-3 flex-1 flex flex-col">
+                <h3 class="text-base font-black text-slate-800 tracking-tight uppercase leading-tight">${v.plaka}</h3>
+                <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">${v.marka || '-'}</p>
 
-                <div class="mt-3 flex items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-100">
-                    <img src="${avatar}" class="w-8 h-8 rounded-lg object-cover bg-white border border-slate-200">
+                <div class="mt-2 flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                    <img src="${avatar}" class="w-6 h-6 rounded-md object-cover bg-white border border-slate-200 shrink-0">
                     <div class="truncate">
-                        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SÜRÜCÜ</div>
-                        <div class="text-xs font-bold text-slate-700 uppercase truncate">${surucuAd}</div>
+                        <div class="text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">SÜRÜCÜ</div>
+                        <div class="text-[10px] font-bold text-slate-700 uppercase truncate leading-tight">${surucuAd}</div>
                     </div>
                 </div>
 
-                <div class="mt-3 flex flex-wrap items-center gap-3 text-[10px] font-bold text-slate-500 uppercase">
-                    <span class="flex items-center gap-1" title="Şeflik"><i class="fas fa-sitemap text-indigo-400"></i> ${v.seflik || '-'}</span>
-                    <span class="flex items-center gap-1" title="Bina"><i class="fas fa-building text-indigo-400"></i> ${v.bina || '-'}</span>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-[9px] font-bold text-slate-500 uppercase">
+                    <span class="flex items-center gap-1 truncate w-full" title="Şeflik"><i class="fas fa-sitemap text-indigo-400 shrink-0"></i> ${v.seflik || '-'}</span>
+                    <span class="flex items-center gap-1 truncate w-full" title="Bina"><i class="fas fa-building text-indigo-400 shrink-0"></i> ${v.bina || '-'}</span>
                 </div>
 
-                <div class="mt-3 text-[11px] font-semibold text-slate-600 truncate border-t border-slate-100 pt-2" title="${v.notlar || 'Not Yok'}">
+                <div class="mt-2 text-[10px] font-semibold text-slate-600 truncate border-t border-slate-100 pt-1.5" title="${v.notlar || 'Not Yok'}">
                     <i class="fas fa-clipboard-list text-slate-400 mr-1"></i> ${v.notlar || 'Not Yok'}
                 </div>
             </div>
-            <div class="bg-slate-50 border-t border-slate-100 p-3 flex justify-between items-center flex-shrink-0">
-                <span class="px-2.5 py-1 text-[10px] font-bold rounded-md uppercase border flex items-center gap-1.5 ${durumColor}">
+            <div class="bg-slate-50 border-t border-slate-100 py-1.5 px-3 flex justify-between items-center flex-shrink-0">
+                <span class="px-2 py-0.5 text-[9px] font-bold rounded uppercase border flex items-center gap-1 ${durumColor}">
                     <i class="fas ${fIcon}"></i> ${v.durum}
                 </span>
-                <span class="text-[10px] font-black text-slate-500 bg-white border border-slate-200 px-2 py-1 rounded-md shadow-sm">
+                <span class="text-[9px] font-black text-slate-500 bg-white border border-slate-200 px-1.5 py-0.5 rounded shadow-sm">
                     ${v.km ? v.km + ' KM' : '- KM'}
                 </span>
             </div>
@@ -1822,8 +1819,8 @@ function saveArac() {
         systemSettings.vehicles.unshift(vData);
     }
 
-    saveSettingsToDatabase(); // TRUVA ATI: systemSettings.vehicles olarak veritabanına otomatik gider!
-    renderAracVitrini(); // Arayüzü sessizce yenile
+    saveSettingsToDatabase(); 
+    renderAracVitrini(); 
     closeModal('aracFormModal');
     showToast(idVal ? "Araç bilgileri güncellendi." : "Araç başarıyla eklendi.", "success");
 }
