@@ -265,16 +265,22 @@ function updateHeaderBadge() {
     }
 }
 
-// OTURUMU KAPAT / KULLANICI DEĞİŞTİR: HATA ÇÖZÜMÜ İLE
+
+// OTURUMU KAPAT / KULLANICI DEĞİŞTİR: KUSURSUZ ÇÖZÜM
 function switchUserRole() {
     if(confirm("Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?")) {
-        // Modalları kapat
-        document.querySelectorAll('.modal-overlay').forEach(m => {
-            m.classList.remove('show');
-            let content = m.querySelector('.modal-content');
-            if(content) content.classList.remove('show');
-            m.style.display = 'none';
-        });
+        showSpinner("Oturum Kapatılıyor...");
+        setTimeout(() => {
+            // Eğer masaüstü uygulamasındaysak programı komple kapatıp baştan açar (Hataları %100 sıfırlar)
+            if (typeof window.api !== 'undefined' && window.api.relaunchApp) {
+                window.api.relaunchApp();
+            } else {
+                // Sadece tarayıcıdan giriliyorsa klasik sayfa yenileme yapar
+                location.reload(); 
+            }
+        }, 500);
+    }
+}
 
         // Ekranları değiştir
         document.getElementById('appContainer').style.display = 'none';
