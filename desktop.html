@@ -1,1906 +1,461 @@
-const APP_VERSION = "7.4.0"; 
-const FIREBASE_URL = "https://personel-d7ad2-default-rtdb.firebaseio.com/.json";
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personel Yönetim Sistemi</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        .izin-u { background-color: #ede9fe !important; color: #6d28d9 !important; border: 1px solid #ddd6fe !important; }
+        .tl-selected { background-color: #dbeafe !important; box-shadow: inset 0 0 0 2px #3b82f6 !important; z-index: 10; position: relative; }
+        .tl-cell { user-select: none; -webkit-user-select: none; }
+        .vehicle-card { transition: all 0.2s ease; cursor: pointer; }
+        .vehicle-card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border-color: #bae6fd; }
+    </style>
+</head>
+<body class="text-sm">
 
-let currentUserRole = 'admin'; 
+    <div id="spinner-overlay">
+        <div class="loader"></div>
+        <div class="font-bold tracking-widest uppercase text-sm text-slate-700" id="spinnerText">İşleniyor...</div>
+    </div>
+    <div id="toast-container"></div>
 
-function showSpinner(text="İşleniyor...") { 
-    document.getElementById("spinnerText").innerText = text;
-    document.getElementById("spinner-overlay").style.display = "flex"; 
-}
+    <div id="photoZoomModal" class="fixed inset-0 z-[110] hidden items-center justify-center bg-slate-900/90 backdrop-blur-sm opacity-0 transition-opacity duration-300 cursor-zoom-out" onclick="closePhotoModal()">
+        <img id="fullSizePhoto" src="" class="max-w-[90vw] max-h-[90vh] rounded-xl shadow-2xl transform scale-95 transition-transform duration-300 border-4 border-white bg-slate-100">
+    </div>
 
-function hideSpinner() { 
-    document.getElementById("spinner-overlay").style.display = "none"; 
-}
+    <!-- ZORUNLU GÜNCELLEME MODALI -->
+    <div id="forceUpdateModal" class="fixed inset-0 flex-col items-center justify-center z-[200] p-4 bg-slate-900/95 backdrop-blur-md transition-all duration-300" style="display:none; -webkit-app-region: drag;">
+        <div class="glass-modal p-8 rounded-3xl w-full max-w-md bg-white shadow-2xl flex flex-col items-center text-center border-0 pointer-events-auto" style="-webkit-app-region: no-drag;">
+            <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 text-4xl mb-4 shadow-inner border border-rose-200 animate-pulse">
+                <i class="fas fa-sync-alt"></i>
+            </div>
+            <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight mb-2 uppercase">Sistem Güncellendi</h2>
+            <p class="text-sm font-semibold text-slate-600 mb-6 leading-relaxed">Numarataj Personel Yönetim Sistemi'nin yeni bir versiyonu yayınlandı. Veri güvenliği ve bütünlüğü için mevcut oturumunuz sonlandırılmıştır. Lütfen programı kapatıp güncel versiyon üzerinden giriş yapınız.</p>
+            <button onclick="if(window.api) window.api.windowClose()" class="w-full bg-rose-600 hover:bg-rose-700 text-white p-4 rounded-xl text-sm font-bold shadow-lg shadow-rose-500/30 transition-all flex justify-center items-center gap-2">
+                <i class="fas fa-power-off"></i> Anladım, Kapat
+            </button>
+        </div>
+    </div>
 
-function showToast(msg, type = "success") {
-    const container = document.getElementById("toast-container");
-    const toast = document.createElement("div");
-    toast.className = `toast toast-${type}`;
-    toast.innerHTML = `<i class="fas ${type==='success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} text-lg"></i> ${msg}`;
-    container.appendChild(toast);
-    setTimeout(() => toast.classList.add("show"), 10);
-    setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 400); }, 3000);
-}
+    <div id="dbPathModal" class="fixed inset-0 flex-col items-center justify-center z-[105] p-4 bg-slate-100 rounded-2xl shadow-2xl border border-slate-300" style="display:none; -webkit-app-region: drag;">
+        <div class="w-full flex justify-end mb-2" style="-webkit-app-region: drag;">
+            <button onclick="if(window.api) window.api.windowClose()" class="text-slate-400 hover:text-red-500 transition-colors p-2 cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;"><i class="fas fa-times text-xl"></i></button>
+        </div>
+        <div class="glass-modal p-7 rounded-2xl w-full max-w-md bg-white shadow-sm pointer-events-auto border-0" style="-webkit-app-region: no-drag;">
+            <h2 class="text-lg font-bold text-slate-800 mb-2 flex items-center gap-2"><i class="fas fa-exclamation-triangle text-rose-500"></i> Veritabanı Bulunamadı</h2>
+            <p class="text-xs text-slate-600 mb-6 font-medium leading-relaxed">Sistemde kayıtlı bir personel veritabanı yolu bulunamadı. Lütfen <strong class="text-slate-800">PersonelDB.sqlite</strong> dosyasının oluşturulacağı (veya var olduğu) bir klasör seçin.</p>
+            <div class="flex gap-2 mb-6 flex-col">
+                <input type="text" id="selectedDbPath" readonly placeholder="Klasör seçilmedi..." class="w-full glass-input p-3 rounded-lg text-xs font-mono bg-slate-50 border border-slate-300 text-slate-700 outline-none">
+                <button onclick="browseFolder()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-3 rounded-lg text-xs font-bold transition-all border border-slate-300 shadow-sm"><i class="fas fa-folder-open mr-1"></i> Klasör Gözat</button>
+            </div>
+            <button onclick="saveNewDbPath()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-lg text-sm font-bold shadow-sm transition-all flex justify-center items-center gap-2">Kaydet ve Devam Et <i class="fas fa-arrow-right"></i></button>
+        </div>
+    </div>
 
-function formatDateTR(dateString) {
-    if (!dateString) return '';
-    const parts = dateString.split('-');
-    if (parts.length === 3) return `${parts[2]}.${parts[1]}.${parts[0]}`;
-    return dateString;
-}
-
-function adjustStickyElements() {
-    const header = document.getElementById('main-header');
-    const filterPanel = document.getElementById('filter-panel');
-    if(header && filterPanel) {
-        const headerRect = header.getBoundingClientRect();
-        filterPanel.style.top = headerRect.height + 'px';
-    }
-}
-window.addEventListener('resize', adjustStickyElements);
-window.addEventListener('scroll', adjustStickyElements);
-
-function openPhotoModal() {
-    const src = document.getElementById("pv_foto").src;
-    if(!src || src.includes('placeholder') || src.includes('data:image/svg')) return;
-    document.getElementById("fullSizePhoto").src = src;
-    const m = document.getElementById('photoZoomModal');
-    m.style.display = 'flex';
-    setTimeout(() => {
-        m.classList.remove('opacity-0');
-        document.getElementById('fullSizePhoto').classList.remove('scale-95');
-        document.getElementById('fullSizePhoto').classList.add('scale-100');
-    }, 10);
-}
-
-function closePhotoModal() {
-    const m = document.getElementById('photoZoomModal');
-    m.classList.add('opacity-0');
-    document.getElementById('fullSizePhoto').classList.remove('scale-100');
-    document.getElementById('fullSizePhoto').classList.add('scale-95');
-    setTimeout(() => { m.style.display = 'none'; }, 300);
-}
-
-let personnelData = [];
-let vehicleData = []; // YENİ: Araç veritabanı dizisi
-let currentFilteredData = [];
-const SYSTEM_TODAY = new Date();
-SYSTEM_TODAY.setHours(0,0,0,0);
-let selectedUserId = null;
-let tlCurrentDate = new Date();
-let uploadedBase64Foto = "";
-let uploadedBase64VehicleFoto = ""; // Araç fotoğrafı için
-window.tooltipTimeout = null; 
-
-let activeCardId = 'total'; 
-
-let isTlDragging = false;
-let tlDragStart = null;
-
-const avatarMale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/></svg>";
-const avatarFemale = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2394a3b8'><path d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/><path d='M12 2C8.69 2 6 4.69 6 8v3c0 .83.67 1.5 1.5 1.5S9 11.83 9 11V8c0-1.65 1.35-3 3-3s3 1.35 3 3v3c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V8c0-3.31-2.69-6-6-6z' opacity='0.6'/></svg>";
-const vehiclePlaceholder = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cbd5e1'><path d='M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z'/></svg>";
-
-function getAvatarUrl(foto, cinsiyet) {
-    if(foto && foto.trim() !== "" && !foto.includes("via.placeholder.com")) return foto;
-    return (cinsiyet && cinsiyet.toUpperCase() === 'KADIN') ? avatarFemale : avatarMale;
-}
-
-window.updateFormSilhouette = function() {
-    if(!uploadedBase64Foto) {
-        const cin = document.getElementById("f_cinsiyet").value || "ERKEK";
-        document.getElementById("previewFoto").src = getAvatarUrl("", cin);
-    }
-}
-
-function getAge(dateString) {
-    if(!dateString) return '-';
-    let birthDate = new Date(dateString);
-    let age = SYSTEM_TODAY.getFullYear() - birthDate.getFullYear();
-    let m = SYSTEM_TODAY.getMonth() - birthDate.getMonth();
-    if (m < 0 || (m === 0 && SYSTEM_TODAY.getDate() < birthDate.getDate())) age--;
-    return age;
-}
-
-function compareVersions(v1, v2) {
-    let p1 = v1.split('.').map(Number);
-    let p2 = v2.split('.').map(Number);
-    for(let i=0; i<3; i++) {
-        if ((p1[i] || 0) > (p2[i] || 0)) return 1;  
-        if ((p1[i] || 0) < (p2[i] || 0)) return -1; 
-    }
-    return 0; 
-}
-
-// TRUVA ATI: Araçlar veritabanına settings içinden kaydediliyor.
-let systemSettings = {
-    version: APP_VERSION,
-    vehicles: [], // Yeni eklenen Araçlar çekmecesi
-    dropdowns: {
-        cinsiyet: { label: "Cinsiyet", values: ["Erkek", "Kadın"] },
-        medeniHal: { label: "Medeni Hal", values: ["Bekar", "Evli"] },
-        tahsil: { label: "Tahsil", values: ["İlköğretim", "Lise", "Önlisans", "Lisans", "Yüksek Lisans"] },
-        kadroSirket: { label: "Kadro / Şirket", values: ["MEMUR", "BELTAŞ", "BELKA"] },
-        unvan: { label: "Ünvanı", values: ["GIDA MÜHENDİSİ", "TEKNİKER", "TEKNİSYEN", "BİLGİSAYAR İŞLETMENİ", "BEKÇİ", "MUTEMET", "VERİ HAZIRLAMA", "HARİTA MÜHENDİSİ", "HARİTA TEKNİKERİ", "VASIFSIZ ELEMAN", "OFİS TEKNİKERİ", "ENGELLİ İŞÇİ", "ŞANTİYE TEKNİKERİ", "ŞANTİYE SÜRVEYANI", "ÇAĞRI MERKEZİ OPERATÖRÜ", "MAKAM PERSONELİ", "BÜRO PERSONELİ", "YARDIMCI PERSONEL", "HALKLA İLİŞKİLER", "OPERATÖR", "USTA", "AĞIR VASITA ŞOFÖRÜ", "KISIM ŞEFİ", "KANTAR İŞÇİSİ", "BİYOLOG", "İŞÇİ"] },
-        seflik: { label: "Çalıştığı Şeflik", values: ["MÜDÜR", "NUMARATAJ ŞEFLİĞİ", "BÜRO ŞEFLİĞİ", "ADRES YÖNETİM VE UYGULAMA ŞEFLİĞİ"] },
-        bina: { label: "Çalıştığı Bina", values: ["ANA BİNA", "1011 YERLEŞKESİ"] },
-        kanGrubu: { label: "Kan Grubu", values: ["Belirtilmemiş", "A Rh+", "A Rh-", "B Rh+", "B Rh-", "AB Rh+", "AB Rh-", "0 Rh+", "0 Rh-"] },
-        acilYakinlik: { label: "Yakınlık", values: ["Eşi", "Babası", "Annesi", "Kardeşi", "Çocuğu", "Arkadaşı"] },
-        durum: { label: "Çalışma Durumu", values: ["Aktif", "Pasif"] }
-    },
-    cards: [
-        { id: "total", title: "Toplam Personel", type: "all", active: true },
-        { id: "active", title: "Aktif Çalışan", type: "durum", value: "Aktif", active: true },
-        { id: "passive", title: "Pasif Personel", type: "durum", value: "Pasif", active: false },
-        { id: "anabina", title: "Ana Bina", type: "bina", value: "ANA BİNA", active: true },
-        { id: "yerleske1011", title: "1011 Yerleşkesi", type: "bina", value: "1011 YERLEŞKESİ", active: true },
-        { id: "numarataj", title: "Numarataj Şefliği", type: "seflik", value: "NUMARATAJ ŞEFLİĞİ", active: true },
-        { id: "burosef", title: "Büro Şefliği", type: "seflik", value: "BÜRO ŞEFLİĞİ", active: true },
-        { id: "adresyonetim", title: "Adres Yön. ve Uyg.", type: "seflik", value: "ADRES YÖNETİM VE UYGULAMA ŞEFLİĞİ", active: true },
-        { id: "memur", title: "Kadrolu Memur", type: "kadroSirket", value: "MEMUR", active: false },
-        { id: "beltas", title: "Beltaş Personeli", type: "kadroSirket", value: "BELTAŞ", active: false },
-        { id: "belka", title: "Belka Personeli", type: "kadroSirket", value: "BELKA", active: false },
-        { id: "kadin", title: "Kadın Personel", type: "cinsiyet", value: "Kadın", active: false },
-        { id: "erkek", title: "Erkek Personel", type: "cinsiyet", value: "Erkek", active: false },
-        { id: "zimmetli", title: "Demirbaş Sahipleri", type: "custom", func: "zimmetli", active: false },
-        { id: "izinli", title: "Şu An İzinde", type: "custom", func: "izinli", active: true }
-    ]
-};
-
-const statColorsAndIcons = {
-    "Toplam Personel": { bg: "bg-gradient-to-br from-slate-50 to-white", text: "text-slate-700", border: "border-slate-200", icon: "fa-users", ring: "ring-slate-400" },
-    "Aktif Çalışan": { bg: "bg-gradient-to-br from-emerald-50 to-white", text: "text-emerald-600", border: "border-emerald-200", icon: "fa-user-check", ring: "ring-emerald-400" },
-    "Pasif Personel": { bg: "bg-gradient-to-br from-rose-50 to-white", text: "text-rose-600", border: "border-rose-200", icon: "fa-user-times", ring: "ring-rose-400" },
-    "Ana Bina": { bg: "bg-gradient-to-br from-slate-100 to-white", text: "text-slate-800", border: "border-slate-300", icon: "fa-building", ring: "ring-slate-400" },
-    "1011 Yerleşkesi": { bg: "bg-gradient-to-br from-teal-50 to-white", text: "text-teal-600", border: "border-teal-200", icon: "fa-map-pin", ring: "ring-teal-400" },
-    "Numarataj Şefliği": { bg: "bg-gradient-to-br from-fuchsia-50 to-white", text: "text-fuchsia-600", border: "border-fuchsia-200", icon: "fa-sitemap", ring: "ring-fuchsia-400" },
-    "Büro Şefliği": { bg: "bg-gradient-to-br from-indigo-50 to-white", text: "text-indigo-600", border: "border-indigo-200", icon: "fa-desktop", ring: "ring-indigo-400" },
-    "Adres Yön. ve Uyg.": { bg: "bg-gradient-to-br from-cyan-50 to-white", text: "text-cyan-600", border: "border-cyan-200", icon: "fa-map-marked-alt", ring: "ring-cyan-400" },
-    "Kadrolu Memur": { bg: "bg-gradient-to-br from-blue-50 to-white", text: "text-blue-600", border: "border-blue-200", icon: "fa-user-tie", ring: "ring-blue-400" },
-    "Beltaş Personeli": { bg: "bg-gradient-to-br from-amber-50 to-white", text: "text-amber-600", border: "border-amber-200", icon: "fa-hard-hat", ring: "ring-amber-400" },
-    "Belka Personeli": { bg: "bg-gradient-to-br from-indigo-50 to-white", text: "text-indigo-600", border: "border-indigo-200", icon: "fa-id-badge", ring: "ring-indigo-400" },
-    "Kadın Personel": { bg: "bg-gradient-to-br from-pink-50 to-white", text: "text-pink-600", border: "border-pink-200", icon: "fa-female", ring: "ring-pink-400" },
-    "Erkek Personel": { bg: "bg-gradient-to-br from-cyan-50 to-white", text: "text-cyan-600", border: "border-cyan-200", icon: "fa-male", ring: "ring-cyan-400" },
-    "Şu An İzinde": { bg: "bg-gradient-to-br from-orange-50 to-white", text: "text-orange-500", border: "border-orange-200", icon: "fa-umbrella-beach", ring: "ring-orange-400" },
-    "Demirbaş Sahipleri": { bg: "bg-gradient-to-br from-lime-50 to-white", text: "text-lime-600", border: "border-lime-200", icon: "fa-laptop", ring: "ring-lime-400" }
-};
-
-function getVisiblePersonnel() {
-    if(currentUserRole === '1011') {
-        return personnelData.filter(p => p.bina && (p.bina === '1011 YERLEŞKESİ' || p.bina === '1011 Yerleşkesi'));
-    }
-    return personnelData;
-}
-
-function updateRefreshTime() {
-    const now = new Date();
-    document.getElementById('db-last-update').innerText = `Son Yenileme: ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-}
-
-function exportToExcel() {
-    if(currentFilteredData.length === 0) {
-        showToast("Dışa aktarılacak personel kaydı bulunamadı!", "error");
-        return;
-    }
-    showSpinner("Excel Dosyası Hazırlanıyor...");
-    setTimeout(() => {
-        const exportData = currentFilteredData.map(p => ({
-            "TC Kimlik No": p.tcNo || "",
-            "Ad Soyad": p.adSoyad || "",
-            "Doğum Tarihi": p.dogumTarihi ? formatDateTR(p.dogumTarihi) : "",
-            "Cinsiyet": p.cinsiyet || "",
-            "Medeni Hal": p.medeniHal || "",
-            "Çocuk Sayısı": p.cocukSayisi || "0",
-            "Tahsil Durumu": p.tahsil || "",
-            "Cep Telefonu": p.tel || "",
-            "Dahili No": p.dahili || "",
-            "Kan Grubu": p.kanGrubu || "",
-            "Ev Adresi": p.adres || "",
-            "Kadro / Şirket": p.kadroSirket || "",
-            "Ünvanı": p.unvan || "",
-            "Çalıştığı Şeflik": p.seflik || "",
-            "Çalıştığı Bina": p.bina || "",
-            "Sicil Numarası": p.sicil || "",
-            "Fiilen Yaptığı Görev": p.fiiliGorev || "",
-            "İşe Başlama Tarihi": p.gelisTarihi ? formatDateTR(p.gelisTarihi) : "",
-            "İşten Ayrılış Tarihi": p.ayrilisTarihi ? formatDateTR(p.ayrilisTarihi) : "",
-            "Çalışma Durumu": p.durum || "",
-            "Acil Durum Kişisi": p.acilKisi || "",
-            "Acil Kişi Yakınlık": p.acilYakinlik || "",
-            "Acil Kişi Telefonu": p.acilTel || "",
-            "Kayıtlı Demirbaş Sayısı": p.zimmetler ? p.zimmetler.length : 0,
-            "Kullanılan İzin Sayısı": p.izinler ? p.izinler.length : 0,
-            "Personel Notu": p.notlar || ""
-        }));
-
-        try {
-            const worksheet = XLSX.utils.json_to_sheet(exportData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Personel_Listesi");
-            XLSX.writeFile(workbook, "Personel_Raporu.xlsx");
-            hideSpinner();
-            showToast("Excel dosyası başarıyla indirildi.", "success");
-        } catch (error) {
-            hideSpinner();
-            showToast("Excel oluşturulurken bir hata meydana geldi.", "error");
-        }
-    }, 800);
-}
-
-// YENİ: Araçları Excel'e aktarma fonksiyonu
-function exportVehiclesToExcel() {
-    if(vehicleData.length === 0) {
-        showToast("Dışa aktarılacak araç kaydı bulunamadı!", "error");
-        return;
-    }
-    showSpinner("Araç Listesi Hazırlanıyor...");
-    setTimeout(() => {
-        const exportData = vehicleData.map(v => {
-            let surucuAd = "Havuz (Sürücüsüz)";
-            if(v.surucuId) {
-                const sp = personnelData.find(p => p.id === parseInt(v.surucuId));
-                if(sp) surucuAd = sp.adSoyad;
-            }
+    <!-- GİRİŞ EKRANI -->
+    <div id="loginScreen" class="fixed inset-0 z-[100] flex items-center justify-center transition-all duration-500 bg-transparent">
+        <div class="glass-modal p-8 pb-12 rounded-3xl w-full max-w-sm flex flex-col gap-5 text-center shadow-2xl bg-white/95 backdrop-blur-md relative border border-slate-200" style="-webkit-app-region: drag;">
             
-            return {
-                "Plaka": v.plaka || "",
-                "Marka & Model": v.model || "",
-                "Kullanan (Sürücü)": surucuAd,
-                "Araç Durumu": v.durum || "",
-                "Bağlı Olduğu Şeflik": v.seflik || "",
-                "Bulunduğu Bina": v.bina || "",
-                "Son KM": v.km || "",
-                "Muayene Bitiş": v.muayene ? formatDateTR(v.muayene) : "",
-                "Araç Notları / Donanım": v.notlar || ""
-            };
-        });
+            <button onclick="if(window.api) window.api.windowClose()" class="absolute top-4 right-4 w-7 h-7 rounded-full bg-slate-100 hover:bg-rose-500 hover:text-white text-slate-500 flex items-center justify-center transition-all shadow-sm cursor-pointer pointer-events-auto" style="-webkit-app-region: no-drag;">
+                <i class="fas fa-times text-xs"></i>
+            </button>
 
-        try {
-            const worksheet = XLSX.utils.json_to_sheet(exportData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Arac_Filosu");
-            XLSX.writeFile(workbook, "Arac_Raporu.xlsx");
-            hideSpinner();
-            showToast("Araç listesi başarıyla indirildi.", "success");
-        } catch (error) {
-            hideSpinner();
-            showToast("Excel oluşturulurken bir hata meydana geldi.", "error");
-        }
-    }, 800);
-}
-
-async function backupDatabase() {
-    if(typeof window.api === 'undefined') {
-        showToast("Tarayıcı modunda yedekleme yapılamaz.", "error");
-        return;
-    }
-    showSpinner("Veritabanı Yedekleniyor...");
-    const result = await window.api.backupDatabase();
-    hideSpinner();
-    if(result.success) { showToast("Veritabanı yedeği başarıyla alındı.", "success"); } 
-    else if(result.message !== "İşlem iptal edildi.") { showToast("Yedekleme hatası: " + result.message, "error"); }
-}
-
-function updateHeaderBadge() {
-    const badge = document.getElementById('userBadge');
-    badge.style.display = 'inline-block';
-    const vehicleBtn = document.getElementById('btnVehicleManagement');
-    
-    if(currentUserRole === 'admin') {
-        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-blue-50 text-blue-700 border-blue-200 shadow-sm';
-        badge.innerHTML = '👑 ANA KULLANICI';
-        if(vehicleBtn) vehicleBtn.style.display = 'flex'; 
-    } else if(currentUserRole === '1011') {
-        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-violet-50 text-violet-700 border-violet-200 shadow-sm';
-        badge.innerHTML = '📍 1011 YÖNETİCİSİ';
-        if(vehicleBtn) vehicleBtn.style.display = 'none';
-    } else if(currentUserRole === 'izin') {
-        badge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider bg-orange-50 text-orange-700 border-orange-200 shadow-sm';
-        badge.innerHTML = '🗓️ İZİN YÖNETİCİSİ';
-        if(vehicleBtn) vehicleBtn.style.display = 'none';
-    }
-}
-
-async function checkLogin() {
-    const pass = document.getElementById('loginPass').value;
-    const inputArea = document.getElementById('loginInputArea');
-    const statusText = document.getElementById('loginStatusText');
-    const lockScreenInfo = document.getElementById('lockScreenInfo');
-    const lockMessageText = document.getElementById('lockMessageText');
-
-    if(!pass) { showToast("Şifre boş olamaz!", "error"); return; }
-    
-    inputArea.style.display = 'none';
-    statusText.style.display = 'block';
-    statusText.className = 'text-xs font-bold text-slate-600 mt-2 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl animate-pulse';
-    statusText.innerHTML = '<i class="fas fa-satellite-dish text-blue-500 mr-2 text-sm"></i> Güvenlik politikaları sunucudan alınıyor...';
-    
-    try {
-        let response = await fetch(FIREBASE_URL);
-        let fbData = await response.json();
-
-        let isSystemOpen = fbData && fbData.sistemAcikMi !== undefined ? fbData.sistemAcikMi : true;
-        let remotePassword = fbData && fbData.sifre ? fbData.sifre : "numarataj26";
-        let remote1011Password = fbData && fbData.sifre1011 ? fbData.sifre1011 : "bin11";
-        let remoteIzinPassword = fbData && fbData.sifreIzin ? fbData.sifreIzin : "izin26";
-        let lockMsg = fbData && fbData.kilitMesaji ? fbData.kilitMesaji : "Sistem lisansınız sona ermiştir. Lütfen sistem yöneticisi ile görüşün.";
-
-        if (isSystemOpen === false || isSystemOpen === "false") {
-            statusText.style.display = 'none';
-            lockScreenInfo.style.display = 'flex';
-            lockMessageText.innerText = lockMsg;
-            return; 
-        }
-
-        let loginSuccess = false;
-
-        if(pass === remotePassword) {
-            currentUserRole = 'admin';
-            loginSuccess = true;
-        } else if (pass === remote1011Password) {
-            currentUserRole = '1011';
-            loginSuccess = true;
-        } else if (pass === remoteIzinPassword) {
-            currentUserRole = 'izin';
-            loginSuccess = true;
-        }
-
-        if(loginSuccess) {
-            updateHeaderBadge();
-            statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Veritabanı aranıyor...';
+            <div class="w-20 h-20 bg-blue-600 rounded-full mx-auto flex items-center justify-center text-white text-3xl shadow-lg shadow-blue-500/30 mt-2">
+                <i class="fas fa-fingerprint"></i>
+            </div>
+            <div>
+                <h2 class="text-xl font-extrabold text-slate-800 tracking-tight">Personel Yönetim Sistemi</h2>
+                <p class="text-[11px] font-bold text-slate-500 mt-1 uppercase tracking-wider">Numarataj Şube Müdürlüğü</p>
+            </div>
             
-            if (typeof window.api !== 'undefined') {
-                const dbCheck = await window.api.checkDatabase();
-                if (dbCheck.requirePath) {
-                    inputArea.style.display = 'block';
-                    statusText.style.display = 'none';
-                    document.getElementById('loginPass').value = '';
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('dbPathModal').style.display = 'flex';
-                } else {
-                    statusText.innerHTML = '<i class="fas fa-circle-notch fa-spin text-blue-500 mr-2 text-sm"></i> Sürüm kontrol ediliyor...';
-                    setTimeout(() => { fetchDataFromLocalDB(); }, 600); 
-                }
-            } else {
-                statusText.className = 'text-xs font-bold text-emerald-700 mt-2 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
-                statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Tarayıcı Modu Başarılı!';
-                setTimeout(() => {
-                    document.getElementById('loginScreen').style.display = 'none';
-                    document.getElementById('appContainer').style.display = 'flex';
-                    
-                    if (currentUserRole === 'izin') {
-                        document.getElementById('main-content').style.display = 'none';
-                        document.getElementById('headerActionButtons').style.display = 'none';
-                        document.getElementById('main-header').classList.remove('z-[60]');
-                        document.getElementById('main-header').classList.add('z-[100]');
-                        
-                        const tm = document.getElementById('timelineModal');
-                        tm.classList.replace('p-4', 'pt-[90px]');
-                        tm.classList.replace('items-center', 'items-start');
-                        
-                        const tmContent = tm.querySelector('.modal-content');
-                        tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-                        tmContent.classList.replace('w-[96vw]', 'w-full');
-                        tmContent.classList.add('mx-4');
-                        
-                        openModal('timelineModal');
-                    } else {
-                        document.getElementById('main-content').style.display = 'block';
-                        document.getElementById('headerActionButtons').style.display = 'flex';
-                    }
-
-                    showToast("Tarayıcı modundasınız, veritabanına bağlanılamaz.", "error");
-                    initSystem();
-                    updateRefreshTime();
-                }, 800);
-            }
-        } else {
-            statusText.style.display = 'none';
-            inputArea.style.display = 'block';
-            document.getElementById('loginPass').value = '';
-            showToast("Hatalı şifre girdiniz!", "error");
-        }
-
-    } catch (error) {
-        statusText.style.display = 'none';
-        inputArea.style.display = 'block';
-        document.getElementById('loginPass').value = '';
-        showToast("Sunucuya bağlanılamadı. İnternet bağlantınızı kontrol edin.", "error");
-    }
-}
-
-async function browseFolder() {
-    if (typeof window.api === 'undefined') return;
-    const folderPath = await window.api.selectFolder();
-    if (folderPath) { document.getElementById('selectedDbPath').value = folderPath; }
-}
-
-async function saveNewDbPath() {
-    const path = document.getElementById('selectedDbPath').value;
-    if (!path) return showToast("Lütfen gözat butonuna basarak bir klasör seçin!", "error");
-    
-    showSpinner("Veritabanı Oluşturuluyor...");
-    const result = await window.api.setCustomDbPath(path);
-    hideSpinner();
-    
-    if (result.success) {
-        document.getElementById('dbPathModal').style.display = 'none';
-        document.getElementById('appContainer').style.display = 'flex';
-        
-        if (currentUserRole === 'izin') {
-            document.getElementById('main-content').style.display = 'none';
-            document.getElementById('headerActionButtons').style.display = 'none';
-            document.getElementById('main-header').classList.remove('z-[60]');
-            document.getElementById('main-header').classList.add('z-[100]');
-            
-            const tm = document.getElementById('timelineModal');
-            tm.classList.replace('p-4', 'pt-[90px]');
-            tm.classList.replace('items-center', 'items-start');
-            
-            const tmContent = tm.querySelector('.modal-content');
-            tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-            tmContent.classList.replace('w-[96vw]', 'w-full');
-            tmContent.classList.add('mx-4');
-            
-            openModal('timelineModal');
-        } else {
-            document.getElementById('main-content').style.display = 'block';
-            document.getElementById('headerActionButtons').style.display = 'flex';
-        }
-
-        if (window.api) window.api.maximizeWindow();
-        showToast("Veritabanı yolu kaydedildi.", "success");
-        fetchDataFromLocalDB();
-    } else {
-        showToast("Bu klasöre bağlanılamadı, yazma yetkiniz olmayabilir.", "error");
-    }
-}
-
-function changeDbPathFromSettings() {
-    closeModal('settingsModal');
-    document.getElementById('appContainer').style.display = 'none';
-    document.getElementById('dbPathModal').style.display = 'flex';
-}
-
-async function manualRefresh(silent = false) {
-    if (typeof window.api === 'undefined') return;
-    if (!silent) showSpinner("Veriler Güncelleniyor...");
-    
-    const status = await window.api.getDbStatus();
-    const led = document.getElementById('led-indicator');
-    const statusText = document.getElementById('db-status-text');
-    
-    if (status.connected) {
-        if(led) led.className = 'led green';
-        if(statusText) statusText.innerText = 'Bağlı';
-        const pathDisplay = document.getElementById('settingsDbPath');
-        if (pathDisplay) pathDisplay.innerText = status.path;
-
-        const newData = await window.api.getData();
-        
-        if (newData && newData.settings && newData.settings.version) {
-            if (compareVersions(APP_VERSION, newData.settings.version) === -1) {
-                if (!silent) hideSpinner();
-                document.getElementById('forceUpdateModal').style.display = 'flex';
-                return;
-            }
-        }
-
-        // AYARLAR VE ARAÇLAR SENKRONİZASYONU
-        if (newData && newData.settings) {
-            if (newData.settings.dropdowns) systemSettings.dropdowns = newData.settings.dropdowns;
-            if (newData.settings.cards) {
-                systemSettings.cards = systemSettings.cards.map(defCard => {
-                    let found = newData.settings.cards.find(c => c.id === defCard.id);
-                    if(found) return { ...defCard, active: found.active };
-                    return defCard;
-                });
-            }
-            // TRUVA ATI: Araçları ayarların içinden çıkart ve belleğe al
-            if (newData.settings.vehicles) {
-                let parsedVehicles = Array.isArray(newData.settings.vehicles) ? newData.settings.vehicles : Object.values(newData.settings.vehicles);
-                vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
-                systemSettings.vehicles = vehicleData;
-            } else { 
-                vehicleData = []; 
-                systemSettings.vehicles = [];
-            }
-            
-            const fd = document.getElementById("filter-durum") ? document.getElementById("filter-durum").value : "";
-            const fk = document.getElementById("filter-kadroSirket") ? document.getElementById("filter-kadroSirket").value : "";
-            const fb = document.getElementById("filter-bina") ? document.getElementById("filter-bina").value : "";
-            const fs = document.getElementById("filter-seflik") ? document.getElementById("filter-seflik").value : "";
-            
-            populateSelectOptions();
-            
-            if(document.getElementById("filter-durum")) document.getElementById("filter-durum").value = fd;
-            if(document.getElementById("filter-kadroSirket")) document.getElementById("filter-kadroSirket").value = fk;
-            if(document.getElementById("filter-bina")) document.getElementById("filter-bina").value = fb;
-            if(document.getElementById("filter-seflik")) document.getElementById("filter-seflik").value = fs;
-        }
-
-        if (newData && newData.personnel) {
-            let parsedData = Array.isArray(newData.personnel) ? newData.personnel : Object.values(newData.personnel);
-            personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
-            personnelData.forEach(p => {
-                if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
-                if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
-            });
-            
-            if (document.getElementById('appContainer').style.display !== 'none' || currentUserRole === 'izin') {
-                applyFilters(); 
-            }
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
-            if(document.getElementById("profileModal").classList.contains("show")) {
-                renderIzinTable();
-                renderZimmetTable();
-            }
-            if(document.getElementById("vehicleModal").classList.contains("show")) renderVehicleGrid();
-            
-            updateRefreshTime();
-        }
-    } else {
-        if(led) led.className = 'led red';
-        if(statusText) statusText.innerText = 'Bağlantı Koptu!';
-    }
-    
-    if (!silent) {
-        hideSpinner();
-        showToast("Veriler güncellendi.", "success");
-    }
-}
-
-function logOut() {
-    if(confirm("Sistemden çıkış yapmak istediğinize emin misiniz?")) {
-        showSpinner("Çıkış Yapılıyor...");
-        setTimeout(() => { location.reload(); }, 500);
-    }
-}
-
-function fetchDataFromLocalDB() {
-    const statusText = document.getElementById('loginStatusText');
-    const inputArea = document.getElementById('loginInputArea');
-
-    if(typeof window.api === 'undefined') {
-        initSystem();
-        return;
-    }
-    
-    window.api.getData().then((data) => {
-        let dbVersion = "1.0.0";
-        if(data && data.settings && data.settings.version) { dbVersion = data.settings.version; }
-
-        if(compareVersions(APP_VERSION, dbVersion) === -1) {
-            inputArea.style.display = 'none'; 
-            statusText.style.display = 'none';
-            document.getElementById('versionError').classList.remove('hidden'); 
-            return; 
-        } 
-        else if(compareVersions(APP_VERSION, dbVersion) === 1) {
-            systemSettings.version = APP_VERSION;
-            saveSettingsToDatabase();
-        } 
-        else {
-            systemSettings.version = APP_VERSION;
-        }
-
-        if(data && data.personnel) {
-            let parsedData = Array.isArray(data.personnel) ? data.personnel : Object.values(data.personnel);
-            personnelData = parsedData.filter(p => p !== null && typeof p === 'object');
-            personnelData.forEach(p => {
-                if(p.izinler && !Array.isArray(p.izinler)) p.izinler = Object.values(p.izinler).filter(i => i !== null);
-                if(p.zimmetler && !Array.isArray(p.zimmetler)) p.zimmetler = Object.values(p.zimmetler).filter(z => z !== null);
-            });
-        } else { personnelData = []; }
-
-        if(data && data.settings) {
-            let dbSettings = data.settings;
-            if (dbSettings.dropdowns) systemSettings.dropdowns = dbSettings.dropdowns;
-            if (dbSettings.cards) {
-                systemSettings.cards = systemSettings.cards.map(defCard => {
-                    let found = dbSettings.cards.find(c => c.id === defCard.id);
-                    if(found) return { ...defCard, active: found.active };
-                    return defCard; 
-                });
-            }
-            if (dbSettings.vehicles) {
-                let parsedVehicles = Array.isArray(dbSettings.vehicles) ? dbSettings.vehicles : Object.values(dbSettings.vehicles);
-                vehicleData = parsedVehicles.filter(v => v !== null && typeof v === 'object');
-                systemSettings.vehicles = vehicleData;
-            } else {
-                vehicleData = [];
-                systemSettings.vehicles = [];
-            }
-        }
-
-        statusText.className = 'text-xs font-bold text-emerald-700 mt-2 tracking-wide bg-emerald-50 border border-emerald-200 p-3 rounded-xl';
-        statusText.innerHTML = '<i class="fas fa-check-circle text-emerald-500 mr-2 text-sm"></i> Giriş Başarılı!';
-
-        setTimeout(() => {
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('appContainer').style.display = 'flex';
-            
-            if (currentUserRole === 'izin') {
-                document.getElementById('main-content').style.display = 'none';
-                document.getElementById('headerActionButtons').style.display = 'none';
-                document.getElementById('main-header').classList.remove('z-[60]');
-                document.getElementById('main-header').classList.add('z-[100]');
-                
-                const tm = document.getElementById('timelineModal');
-                tm.classList.replace('p-4', 'pt-[90px]');
-                tm.classList.replace('items-center', 'items-start');
-                
-                const tmContent = tm.querySelector('.modal-content');
-                tmContent.classList.replace('h-[85vh]', 'h-[calc(100vh-110px)]');
-                tmContent.classList.replace('w-[96vw]', 'w-full');
-                tmContent.classList.add('mx-4');
-                
-                openModal('timelineModal');
-            } else {
-                document.getElementById('main-content').style.display = 'block';
-                document.getElementById('headerActionButtons').style.display = 'flex';
-            }
-
-            if (window.api) window.api.maximizeWindow(); 
-            
-            initSystem();
-            updateRefreshTime(); 
-        }, 800);
-
-    }).catch(e => {
-        statusText.style.display = 'none';
-        inputArea.style.display = 'block';
-        document.getElementById('loginPass').value = '';
-        showToast("Ağ klasörüne ulaşılamıyor!", "error");
-        console.error(e);
-    });
-}
-
-function saveToDatabase() { 
-    if(typeof window.api !== 'undefined') {
-        window.api.savePersonnel(personnelData).then(() => {
-            updateRefreshTime();
-        }).catch(e => { showToast("Kayıt hatası: Ağ bağlantınızı kontrol edin.", "error"); });
-    }
-    return true; 
-}
-
-// ZEKİCE ÇÖZÜM: Ayarları kaydetme fonksiyonu artık Promise dönüyor
-function saveSettingsToDatabase() { 
-    if(typeof window.api !== 'undefined') {
-        window.api.saveSettings(systemSettings).then(() => {
-            updateRefreshTime();
-        }).catch(e => { showToast("Ayarlar kaydedilemedi.", "error"); });
-    }
-    return true; 
-}
-
-function openModal(id) {
-    const m = document.getElementById(id);
-    m.style.display = "flex";
-    setTimeout(() => { m.classList.add('show'); m.querySelector('.modal-content').classList.add('show'); }, 10);
-    
-    if(id === 'settingsModal') {
-        buildSettingsMenu();
-        const saveBtn = document.getElementById("settingsSaveBtn");
-        if(saveBtn) saveBtn.style.display = (currentUserRole === '1011') ? 'none' : 'flex';
-    }
-    if(id === 'timelineModal') {
-        document.getElementById("timelineMonth").value = `${tlCurrentDate.getFullYear()}-${String(tlCurrentDate.getMonth()+1).padStart(2,'0')}`;
-        document.getElementById("timelineSearchInput").value = ""; 
-        document.getElementById("btnTopluIzin").style.display = (currentUserRole === '1011' || currentUserRole === 'izin') ? 'none' : 'flex';
-        document.getElementById("btnTimelineClose").style.display = (currentUserRole === 'izin') ? 'none' : 'flex';
-        generateTimeline();
-    }
-    if(id === 'vehicleModal') {
-        document.getElementById("vehicleSearchInput").value = ""; 
-        renderVehicleGrid();
-    }
-}
-
-function closeModal(id) {
-    const m = document.getElementById(id);
-    m.classList.remove('show');
-    m.querySelector('.modal-content').classList.remove('show');
-    setTimeout(() => { m.style.display = "none"; }, 300);
-}
-
-function initSystem() {
-    populateSelectOptions();
-    applyFilters();
-    setTimeout(adjustStickyElements, 100); 
-}
-
-function populateSelectOptions() {
-    Object.keys(systemSettings.dropdowns).forEach(key => {
-        const els = document.querySelectorAll("#f_" + key + ", #filter-" + key + ", #v_" + key);
-        els.forEach(el => {
-            if (el) {
-                let html = el.id.startsWith("filter-") ? `<option value="">TÜMÜ (${systemSettings.dropdowns[key].label.toLocaleUpperCase('tr-TR')})</option>` : "";
-                html += systemSettings.dropdowns[key].values.map(v => `<option value="${v}">${v.toLocaleUpperCase('tr-TR')}</option>`).join('');
-                
-                let oldVal = el.value;
-                el.innerHTML = html;
-                if(oldVal && !el.id.startsWith("filter-")) el.value = oldVal;
-            }
-        });
-    });
-}
-
-function filterFromCard(cardId) {
-    activeCardId = cardId;
-    const card = systemSettings.cards.find(c => c.id === cardId);
-    if(!card) return;
-
-    ["durum", "kadroSirket", "bina", "seflik"].forEach(id => {
-        document.getElementById("filter-" + id).value = "";
-    });
-
-    if (card.type !== 'all' && card.type !== 'custom' && card.type !== 'cinsiyet' && card.type !== 'unvan') {
-        const drop = document.getElementById("filter-" + card.type);
-        if(drop) {
-            for(let i=0; i<drop.options.length; i++) {
-                if(drop.options[i].value.toLocaleUpperCase('tr-TR') === card.value.toLocaleUpperCase('tr-TR')) {
-                    drop.selectedIndex = i;
-                    break;
-                }
-            }
-        }
-    }
-    
-    applyFilters();
-}
-
-function renderStatsCards() {
-    const container = document.getElementById("stats-container");
-    container.innerHTML = "";
-    
-    const baseData = getVisiblePersonnel();
-    const activeData = baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
-    const passiveData = baseData.filter(p => p.durum !== "Aktif" && p.durum !== "AKTİF");
-
-    systemSettings.cards.filter(c => c.active).forEach(card => {
-        let count = 0;
-        
-        if (card.id === "total") {
-            count = activeData.length; 
-        } 
-        else if (card.id === "passive") {
-            count = passiveData.length; 
-        }
-        else if (card.type === "custom" && card.func === "izinli") {
-            count = activeData.filter(p => {
-                if (!p.izinler) return false;
-                return p.izinler.some(iz => {
-                    let b = new Date(iz.baslangic); b.setHours(0,0,0,0);
-                    let bit = new Date(iz.bitis); bit.setHours(23,59,59,999);
-                    return SYSTEM_TODAY >= b && SYSTEM_TODAY <= bit;
-                });
-            }).length;
-        } else if (card.type === "custom" && card.func === "zimmetli") {
-            count = activeData.filter(p => p.zimmetler && p.zimmetler.length > 0).length;
-        } else {
-            count = activeData.filter(p => p[card.type] === card.value || p[card.type] === card.value.toLocaleUpperCase('tr-TR')).length;
-        }
-        
-        const styling = statColorsAndIcons[card.title] || { bg: "bg-white", text: "text-slate-600", border: "border-slate-200", icon: "fa-info-circle", ring: "ring-slate-400" };
-        
-        const isActive = (activeCardId === card.id);
-        const activeClass = isActive ? `ring-2 ${styling.ring} ring-offset-2 scale-105 shadow-md z-10 opacity-100` : `hover:-translate-y-1 hover:shadow-md opacity-90 hover:opacity-100`;
-
-        container.innerHTML += `
-            <div onclick="filterFromCard('${card.id}')" class="cursor-pointer ${styling.bg} p-4 rounded-xl border ${styling.border} flex-1 flex flex-col justify-between transition-all duration-300 ${activeClass}">
-                <h3 class="text-[10px] font-bold uppercase text-slate-500 tracking-wide flex items-center gap-1.5"><i class="fas ${styling.icon} ${styling.text}"></i> ${card.title}</h3>
-                <p class="text-2xl font-black ${styling.text} mt-2 drop-shadow-sm">${count}</p>
-            </div>`;
-    });
-}
-
-function renderTable(data) {
-    const tbody = document.getElementById("personnelTableBody");
-    tbody.innerHTML = "";
-
-    if(data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="px-5 py-8 text-center text-slate-500 font-semibold bg-white mt-4">Kayıtlı veya aranan kriterde personel bulunmuyor.</td></tr>`;
-        renderStatsCards();
-        setTimeout(adjustStickyElements, 50);
-        return;
-    }
-
-    data.forEach(p => {
-        const isAktif = p.durum === "Aktif" || p.durum === "AKTİF";
-        let leaveBadge = '<span class="px-2.5 py-1 text-[10px] font-bold text-slate-600 bg-slate-100 rounded-md border border-slate-200">GÖREVDE</span>';
-
-        if(isAktif && p.izinler) {
-            p.izinler.forEach(iz => {
-                let b = new Date(iz.baslangic); b.setHours(0,0,0,0);
-                let bit = new Date(iz.bitis); bit.setHours(23,59,59,999);
-                
-                if(SYSTEM_TODAY >= b && SYSTEM_TODAY <= bit) {
-                    let cl = iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK') ? 'izin-y' : 
-                             (iz.tur.includes('Rapor') || iz.tur.includes('RAPOR') ? 'izin-r' : 
-                             (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 
-                             (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ') ? 'izin-u' : 'izin-s')));
-                    
-                    let turLabel = iz.tur;
-                    leaveBadge = `<span class="px-2.5 py-1 text-[10px] font-bold rounded-md ${cl} uppercase">${turLabel}</span>`;
-                }
-            });
-        }
-        
-        let zimmetCount = p.zimmetler ? p.zimmetler.length : 0;
-        let tarihBilgisi = isAktif ? `🗓️ Başlama: <span class="font-semibold text-slate-600">${formatDateTR(p.gelisTarihi) || '-'}</span>` : `🚪 Ayrılış: <span class="font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">${formatDateTR(p.ayrilisTarihi) || 'Belirtilmedi'}</span>`;
-
-        let fUnvan = p.unvan || '-';
-        let fSeflik = p.seflik || '-';
-        let fKadroSirket = p.kadroSirket || '-';
-        let fDahili = p.dahili ? `<span class="text-slate-800 bg-slate-100 px-1.5 rounded border border-slate-200">${p.dahili}</span>` : '-';
-
-        tbody.innerHTML += `
-            <tr onclick="openProfileModal(${p.id})" class="row-hover cursor-pointer group ${!isAktif ? 'opacity-70 bg-slate-50 grayscale-[20%]' : ''}">
-                <td class="px-5 py-3 border-b border-slate-100">
-                    <div class="flex items-center gap-4">
-                        <div class="relative"><img src="${getAvatarUrl(p.fotoUrl, p.cinsiyet)}" class="w-12 h-12 rounded-lg object-cover border border-slate-200 shadow-sm bg-slate-100 p-0.5"></div>
-                        <div>
-                            <div class="font-bold text-slate-800 text-[13px] group-hover:text-blue-600 transition-colors uppercase force-upper">${p.adSoyad}</div>
-                            <div class="text-[11px] text-slate-500 font-mono mt-0.5 font-medium">🆔 ${p.tcNo} <span class="mx-1 text-slate-300">•</span> ${p.cinsiyet === 'Erkek' || p.cinsiyet === 'ERKEK'?'Erkek':'Kadın'} <span class="mx-1 text-slate-300">•</span> ${getAge(p.dogumTarihi)} Yaş</div>
-                        </div>
-                    </div>
-                </td>
-                <td class="px-5 py-3 border-b border-slate-100">
-                    <div class="font-bold text-slate-700 text-xs uppercase">${fUnvan}</div>
-                    <div class="text-slate-600 text-[11px] mt-1 font-semibold">💼 <span class="text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 uppercase">${fSeflik}</span> (${fKadroSirket})</div>
-                    <div class="text-[10px] text-slate-500 font-mono mt-1 font-medium flex items-center gap-2 uppercase">🏷️ Sicil: ${p.sicil || '-'} <span class="text-slate-300">|</span> ${tarihBilgisi}</div>
-                </td>
-                <td class="px-5 py-3 border-b border-slate-100">
-                    <div class="font-bold text-slate-700 text-xs flex items-center gap-2">📱 ${p.tel || '-'}</div>
-                    <div class="text-[10px] font-bold text-slate-500 mt-1"><i class="fas fa-phone-square-alt"></i> Dahili: ${fDahili}</div>
-                    <div class="text-[11px] text-slate-500 mt-1 truncate w-48 font-medium uppercase force-upper" title="${p.adres}">🏠 ${p.adres || '-'}</div>
-                </td>
-                <td class="px-5 py-3 border-b border-slate-100">
-                    <div class="text-[11px] font-bold text-slate-700 whitespace-normal break-words leading-tight uppercase force-upper"><i class="fas fa-ambulance text-rose-500"></i> ${p.acilKisi || '-'} <span class="text-slate-400 font-normal">(${p.acilYakinlik || '-'})</span></div>
-                    <div class="text-[11px] text-slate-600 mt-0.5 font-medium mb-1">📞 ${p.acilTel || '-'}</div>
-                    <div class="text-[10px] font-bold text-rose-600 inline-flex">🩸 Kan: <span class="bg-rose-50 px-1 ml-1 rounded border border-rose-100 uppercase">${p.kanGrubu || '-'}</span></div>
-                </td>
-                <td class="px-5 py-3 border-b border-slate-100 text-center">
-                    <div class="mb-2"><span class="px-3 py-1 text-[10px] font-bold ${isAktif?'bg-emerald-50 text-emerald-700 border border-emerald-200':'bg-rose-50 text-rose-700 border border-rose-200'} rounded-md uppercase">${p.durum}</span></div>
-                    <div>${leaveBadge}</div>
-                    <div class="mt-2 text-[10px] text-slate-400 font-semibold"><i class="fas fa-box text-slate-300"></i> ${zimmetCount} Demirbaş</div>
-                </td>
-            </tr>
-        `;
-    });
-    
-    renderStatsCards();
-    setTimeout(adjustStickyElements, 50); 
-}
-
-function applyFilters() {
-    const search = document.getElementById("filter-search").value.toLocaleUpperCase('tr-TR');
-    const baseData = getVisiblePersonnel();
-
-    let targetData = activeCardId === 'passive' 
-        ? baseData.filter(p => p.durum !== "Aktif" && p.durum !== "AKTİF")
-        : baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
-
-    currentFilteredData = targetData.filter(p => {
-        let pAd = p.adSoyad ? p.adSoyad.toLocaleUpperCase('tr-TR') : "";
-        let pSicil = p.sicil ? p.sicil.toLocaleUpperCase('tr-TR') : "";
-        let pTel = p.tel || "";
-        let matchSearch = pAd.includes(search) || (p.tcNo||"").includes(search) || pSicil.includes(search) || pTel.includes(search);
-        
-        let valDurum = document.getElementById("filter-durum").value.toLocaleUpperCase('tr-TR');
-        let mDurum = !valDurum || (p.durum||"").toLocaleUpperCase('tr-TR') === valDurum;
-
-        let valKadroSirket = document.getElementById("filter-kadroSirket").value.toLocaleUpperCase('tr-TR');
-        let pKadroSirket = (p.kadroSirket || "").toLocaleUpperCase('tr-TR');
-        let mKadroSirket = !valKadroSirket || pKadroSirket === valKadroSirket || pKadroSirket.includes(valKadroSirket);
-
-        let valBina = document.getElementById("filter-bina").value.toLocaleUpperCase('tr-TR');
-        let pBina = (p.bina || "").toLocaleUpperCase('tr-TR');
-        let mBina = !valBina || pBina === valBina;
-
-        let valSeflik = document.getElementById("filter-seflik").value.toLocaleUpperCase('tr-TR');
-        let pSeflik = (p.seflik || "").toLocaleUpperCase('tr-TR');
-        let mSeflik = !valSeflik || pSeflik === valSeflik || pSeflik.includes(valSeflik);
-        
-        let matchCard = true;
-        if (activeCardId !== 'total' && activeCardId !== 'passive') {
-            let c = systemSettings.cards.find(x => x.id === activeCardId);
-            if (c) {
-                if (c.type === 'custom') {
-                    if (c.func === 'izinli') {
-                        let izinde = false;
-                        if(p.izinler) {
-                            izinde = p.izinler.some(iz => {
-                                let b = new Date(iz.baslangic); b.setHours(0,0,0,0);
-                                let bit = new Date(iz.bitis); bit.setHours(23,59,59,999);
-                                return SYSTEM_TODAY >= b && SYSTEM_TODAY <= bit;
-                            });
-                        }
-                        matchCard = izinde;
-                    } else if (c.func === 'zimmetli') {
-                        matchCard = p.zimmetler && p.zimmetler.length > 0;
-                    }
-                } else if (c.type === 'cinsiyet') {
-                    matchCard = (p.cinsiyet || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
-                } else if (c.type === 'unvan') {
-                    matchCard = (p.unvan || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
-                } else if (c.type === 'bina') {
-                    matchCard = (p.bina || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
-                } else if (c.type === 'seflik') {
-                    matchCard = (p.seflik || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
-                } else if (c.type === 'kadroSirket') {
-                    matchCard = (p.kadroSirket || "").toLocaleUpperCase('tr-TR') === c.value.toLocaleUpperCase('tr-TR');
-                }
-            }
-        }
-        
-        return matchSearch && mDurum && mKadroSirket && mBina && mSeflik && matchCard;
-    });
-    renderTable(currentFilteredData);
-}
-
-["filter-search", "filter-durum", "filter-kadroSirket", "filter-bina", "filter-seflik"].forEach(id => {
-    document.getElementById(id).addEventListener(id === "filter-search" ? "input" : "change", () => {
-        if(id !== "filter-search" && activeCardId !== 'total') activeCardId = 'total'; 
-        applyFilters();
-    });
-});
-
-function openProfileModal(id) {
-    const p = personnelData.find(x => x.id === id);
-    if(!p) return;
-    selectedUserId = id;
-
-    const setVal = (eId, val) => { const el = document.getElementById(eId); if(el) el.innerHTML = val; };
-
-    document.getElementById("pv_foto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
-    setVal("pv_ad", (p.adSoyad || "").toLocaleUpperCase('tr-TR'));
-    
-    let fUnvan = p.unvan || "";
-    let fSeflik = p.seflik || "";
-    setVal("pv_gorev", `${fUnvan} / ${fSeflik}`.toLocaleUpperCase('tr-TR'));
-    
-    const durumEl = document.getElementById("pv_durum");
-    if(durumEl) {
-        durumEl.innerText = p.durum;
-        durumEl.className = `px-2 py-0.5 text-[10px] font-bold rounded uppercase border ${p.durum === 'Aktif' || p.durum === 'AKTİF' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-rose-50 text-rose-700 border-rose-200'}`;
-    }
-    setVal("pv_tcHeader", p.tcNo);
-    setVal("pv_dogum", `${formatDateTR(p.dogumTarihi) || '-'} <span class="text-slate-400">(${getAge(p.dogumTarihi)} Yaş)</span>`); 
-    setVal("pv_medeni", `${(p.medeniHal||"-").toLocaleUpperCase('tr-TR')} (${p.cocukSayisi || 0} Çocuk)`);
-    setVal("pv_cinsiyet", (p.cinsiyet||"-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_tahsil", (p.tahsil||"-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_anababa", `${(p.anaAdi||"-").toLocaleUpperCase('tr-TR')} / ${(p.babaAdi||"-").toLocaleUpperCase('tr-TR')}`); 
-    setVal("pv_tel", p.tel || '-');
-    setVal("pv_dahili", p.dahili || '-');
-    setVal("pv_kan", (p.kanGrubu||"-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_adres", (p.adres||"-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_acilAd", (p.acilKisi||"-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_acilYakinlik", (p.acilYakinlik||"-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_acilTel", p.acilTel || '-'); 
-    
-    setVal("pv_kadroSirket", (p.kadroSirket || "-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_unvan", (p.unvan || "-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_seflik", (p.seflik || "-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_bina", (p.bina||"-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_sicil", (p.sicil||"-").toLocaleUpperCase('tr-TR'));
-    setVal("pv_fiiliGorev", (p.fiiliGorev || "-").toLocaleUpperCase('tr-TR')); 
-    setVal("pv_baslama", formatDateTR(p.gelisTarihi) || '-'); 
-    setVal("pv_ayrilis", formatDateTR(p.ayrilisTarihi) || 'Halen Çalışıyor');
-
-    const notlarInput = document.getElementById("pv_notlar_input");
-    if(notlarInput) notlarInput.value = p.notlar || "";
-
-    renderZimmetTable();
-    renderIzinTable();
-    
-    if (currentUserRole === 'izin') {
-        document.getElementById('btnProfileEdit').style.display = 'none';
-        document.getElementById('btnProfileDelete').style.display = 'none';
-        
-        document.getElementById('tabBtn_genel').style.display = 'none';
-        document.getElementById('tabBtn_kurum').style.display = 'none';
-        document.getElementById('tabBtn_acil').style.display = 'none';
-        document.getElementById('tabBtn_zimmet').style.display = 'none';
-        document.getElementById('tabBtn_notlar').style.display = 'none';
-        
-        document.getElementById('tabBtn_izin').style.display = 'flex';
-        switchTab('izin');
-    } else {
-        document.getElementById('btnProfileEdit').style.display = 'flex';
-        document.getElementById('btnProfileDelete').style.display = 'flex';
-        
-        document.getElementById('tabBtn_genel').style.display = 'flex';
-        document.getElementById('tabBtn_kurum').style.display = 'flex';
-        document.getElementById('tabBtn_acil').style.display = 'flex';
-        document.getElementById('tabBtn_zimmet').style.display = 'flex';
-        document.getElementById('tabBtn_notlar').style.display = 'flex';
-        
-        switchTab('genel');
-    }
-
-    openModal('profileModal');
-}
-
-function savePersonelNot() {
-    const val = document.getElementById("pv_notlar_input").value;
-    const p = personnelData.find(x => x.id === selectedUserId);
-    if(p) {
-        p.notlar = val;
-        if(saveToDatabase()) {
-            showToast("Not başarıyla kaydedildi.", "success");
-        }
-    }
-}
-
-function switchTab(t) {
-    document.querySelectorAll('.tab-panel').forEach(el => { el.classList.add('hidden'); el.classList.remove('animate-fadeIn'); });
-    const aT = document.getElementById('tab_' + t); 
-    if(aT) { aT.classList.remove('hidden'); aT.classList.add('animate-fadeIn'); }
-    
-    document.querySelectorAll('.profile-tab-btn').forEach(b => { b.classList.remove('border-blue-600', 'text-blue-600'); b.classList.add('border-transparent', 'text-slate-500'); });
-    const aB = document.getElementById('tabBtn_' + t);
-    if(aB) { aB.classList.remove('border-transparent', 'text-slate-500'); aB.classList.add('border-blue-600', 'text-blue-600'); }
-}
-
-let currentFormTabIdx = 0;
-const formTabs = ['kisisel', 'kurum', 'iletisim'];
-
-function switchFormTab(t) {
-    currentFormTabIdx = formTabs.indexOf(t);
-    document.querySelectorAll('.form-tab-panel').forEach(el => {
-        el.classList.add('hidden'); el.classList.remove('animate-fadeIn');
-    });
-    const aT = document.getElementById('formTab_' + t); 
-    if(aT) { aT.classList.remove('hidden'); aT.classList.add('animate-fadeIn'); }
-    
-    document.querySelectorAll('.form-tab-btn').forEach(b => { 
-        b.classList.remove('border-blue-600', 'text-blue-600'); 
-        b.classList.add('border-transparent', 'text-slate-500'); 
-    });
-    const aB = document.getElementById('formTabBtn_' + t);
-    if(aB) { 
-        aB.classList.remove('border-transparent', 'text-slate-500'); 
-        aB.classList.add('border-blue-600', 'text-blue-600'); 
-    }
-
-    const btnPrev = document.getElementById('formBtnPrev');
-    const btnNext = document.getElementById('formBtnNext');
-    if(btnPrev) btnPrev.classList.toggle('hidden', currentFormTabIdx === 0);
-    if(btnNext) btnNext.classList.toggle('hidden', currentFormTabIdx === formTabs.length - 1);
-}
-
-function navigateFormTab(dir) {
-    let newIdx = currentFormTabIdx + dir;
-    if(newIdx >= 0 && newIdx < formTabs.length) { switchFormTab(formTabs[newIdx]); }
-}
-
-function openZimmetForm() {
-    document.getElementById('z_urun').value = '';
-    document.getElementById('z_seri').value = '';
-    document.getElementById('z_tarih').value = '';
-    openModal('addZimmetModal');
-}
-
-function openIzinFromTimeline(id) {
-    selectedUserId = id;
-    openIzinForm();
-}
-
-function openIzinForm() {
-    document.getElementById('i_tur').selectedIndex = 0;
-    document.getElementById('i_bas').value = '';
-    document.getElementById('i_bit').value = '';
-    document.getElementById('i_aciklama').value = '';
-    
-    const p = personnelData.find(x => x.id === selectedUserId);
-    const titleEl = document.getElementById("addIzinModalTitle");
-    if(titleEl && p) {
-        titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
-    }
-    
-    openModal('addIzinModal');
-}
-
-function openIzinFormWithDates(pid, date1, date2) {
-    selectedUserId = pid;
-    document.getElementById('i_tur').selectedIndex = 0;
-    
-    document.getElementById('i_bas').value = date1.getFullYear() + '-' + String(date1.getMonth()+1).padStart(2,'0') + '-' + String(date1.getDate()).padStart(2,'0');
-    document.getElementById('i_bit').value = date2.getFullYear() + '-' + String(date2.getMonth()+1).padStart(2,'0') + '-' + String(date2.getDate()).padStart(2,'0');
-    document.getElementById('i_aciklama').value = '';
-    
-    const p = personnelData.find(x => x.id === pid);
-    const titleEl = document.getElementById("addIzinModalTitle");
-    if(titleEl && p) {
-        titleEl.innerHTML = `<i class="fas fa-plane-departure text-blue-500"></i> İzin İşle <span class="text-[10px] text-slate-400 font-bold ml-1 border-l border-slate-200 pl-2 uppercase">${p.adSoyad.split(' ')[0]}</span>`;
-    }
-    
-    openModal('addIzinModal');
-}
-
-function openBulkIzinForm() {
-    document.getElementById('bi_tur').selectedIndex = 0;
-    document.getElementById('bi_bas').value = '';
-    document.getElementById('bi_bit').value = '';
-    document.getElementById('bi_aciklama').value = '';
-    openModal('addBulkIzinModal');
-}
-
-function renderZimmetTable() {
-    const tb = document.getElementById("zimmetTableBody"); if(!tb) return; tb.innerHTML = "";
-    const p = personnelData.find(x => x.id === selectedUserId);
-    if(!p.zimmetler || p.zimmetler.length === 0) { tb.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-500 font-semibold">Kayıtlı demirbaş bulunmuyor.</td></tr>'; return; }
-    p.zimmetler.forEach(z => tb.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-4 font-bold text-slate-700 uppercase">${z.urun}</td><td class="p-4 text-slate-600 uppercase">${z.seri}</td><td class="p-4 text-slate-600 font-semibold">${formatDateTR(z.tarih)}</td><td class="p-4 text-center"><button onclick="deleteZimmet(${z.id})" class="text-rose-500 hover:text-rose-700 bg-white border border-slate-200 hover:bg-rose-50 w-8 h-8 rounded-md transition"><i class="fas fa-trash-alt"></i></button></td></tr>`);
-}
-
-function saveZimmet() {
-    try {
-        const u = document.getElementById("z_urun").value.trim();
-        const t = document.getElementById("z_tarih").value;
-        if(!u || !t) { showToast("Demirbaş adı ve tarihi zorunludur!", "error"); return; }
-        const p = personnelData.find(x => x.id === selectedUserId);
-        p.zimmetler = p.zimmetler || []; 
-        p.zimmetler.push({ id: Date.now(), urun: u, seri: document.getElementById("z_seri").value, tarih: t });
-        
-        if(saveToDatabase()) {
-            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
-            applyFilters(); closeModal('addZimmetModal');
-            showToast("Demirbaş başarıyla eklendi.", "success");
-        }
-    } catch (error) { showToast("Demirbaş eklenirken hata oluştu.", "error"); }
-}
-
-function deleteZimmet(id) { 
-    try {
-        if(confirm("Silmek istediğinize emin misiniz?")) {
-            personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
-            saveToDatabase(); 
-            if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
-            applyFilters(); 
-            showToast("Demirbaş silindi.", "success");
-        }
-    } catch (error) { showToast("Demirbaş silinirken hata oluştu.", "error"); }
-}
-
-function renderIzinTable() {
-    const tb = document.getElementById("izinTableBody"); if(!tb) return; tb.innerHTML = "";
-    const p = personnelData.find(x => x.id === selectedUserId);
-    
-    let yillik = 0, rapor = 0, idari = 0, saatlik = 0, ucretsiz = 0;
-    const currentYear = SYSTEM_TODAY.getFullYear();
-
-    if(p && p.izinler) {
-        p.izinler.forEach(iz => {
-            let dBas = new Date(iz.baslangic); dBas.setHours(0,0,0,0);
-            let dBit = new Date(iz.bitis); dBit.setHours(23,59,59,999);
-            
-            let tempDate = new Date(dBas);
-            let gunSayisi = 0;
-            while(tempDate <= dBit) {
-                if(tempDate.getFullYear() === currentYear) gunSayisi++;
-                tempDate.setDate(tempDate.getDate() + 1);
-            }
-
-            if(gunSayisi > 0) {
-                if(iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK')) yillik += gunSayisi;
-                else if(iz.tur.includes('Rapor') || iz.tur.includes('RAPOR')) rapor += gunSayisi;
-                else if(iz.tur.includes('İdari') || iz.tur.includes('İDARİ')) idari += gunSayisi;
-                else if(iz.tur.includes('Saatlik') || iz.tur.includes('SAATLİK')) saatlik += gunSayisi; 
-                else if(iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ')) ucretsiz += gunSayisi; 
-            }
-        });
-    }
-
-    const summaryContainer = document.getElementById("izinSummaryContainer");
-    if(summaryContainer) {
-        summaryContainer.innerHTML = `
-            <div class="bg-rose-50 border border-rose-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-rose-500 uppercase tracking-widest mb-1">${currentYear} YILLIK</div><div class="text-2xl font-black text-rose-700 leading-none">${yillik} <span class="text-[10px] font-semibold text-rose-500">GÜN</span></div></div>
-            <div class="bg-emerald-50 border border-emerald-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">${currentYear} RAPOR</div><div class="text-2xl font-black text-emerald-800 leading-none">${rapor} <span class="text-[10px] font-semibold text-emerald-600">GÜN</span></div></div>
-            <div class="bg-amber-50 border border-amber-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-amber-600 uppercase tracking-widest mb-1">${currentYear} İDARİ</div><div class="text-2xl font-black text-amber-800 leading-none">${idari} <span class="text-[10px] font-semibold text-amber-600">GÜN</span></div></div>
-            <div class="bg-violet-50 border border-violet-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-violet-600 uppercase tracking-widest mb-1">${currentYear} ÜCRETSİZ</div><div class="text-2xl font-black text-violet-800 leading-none">${ucretsiz} <span class="text-[10px] font-semibold text-violet-600">GÜN</span></div></div>
-            <div class="bg-sky-50 border border-sky-200 py-3 rounded-lg text-center flex flex-col justify-center"><div class="text-[10px] font-bold text-sky-600 uppercase tracking-widest mb-1">${currentYear} SAATLİK</div><div class="text-2xl font-black text-sky-800 leading-none">${saatlik} <span class="text-[10px] font-semibold text-sky-600">KEZ</span></div></div>
-        `;
-    }
-
-    if(!p.izinler || p.izinler.length === 0) { tb.innerHTML = '<tr><td colspan="5" class="p-6 text-center text-slate-500 font-semibold">Kayıtlı izin bulunmuyor.</td></tr>'; return; }
-    p.izinler.sort((a,b)=>new Date(b.baslangic)-new Date(a.baslangic)).forEach(iz => {
-        let cl = iz.tur.includes('Yıllık') || iz.tur.includes('YILLIK') ? 'izin-y' : 
-                 (iz.tur.includes('Rapor') || iz.tur.includes('RAPOR') ? 'izin-r' : 
-                 (iz.tur.includes('İdari') || iz.tur.includes('İDARİ') ? 'izin-i' : 
-                 (iz.tur.includes('Ücretsiz') || iz.tur.includes('ÜCRETSİZ') ? 'izin-u' : 'izin-s')));
-        
-        let turLabel = iz.tur;
-
-        tb.innerHTML += `<tr class="border-b border-slate-100 hover:bg-slate-50 transition"><td class="p-4"><span class="px-2 py-1 text-[10px] font-bold rounded ${cl} uppercase">${turLabel}</span></td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.baslangic)}</td><td class="p-4 font-semibold text-slate-700">${formatDateTR(iz.bitis)}</td><td class="p-4 text-slate-600 uppercase">${iz.aciklama}</td><td class="p-4 text-center"><button onclick="deleteIzin(${iz.id})" class="text-rose-500 hover:text-rose-700 bg-white border border-slate-200 hover:bg-rose-50 w-8 h-8 rounded-md transition"><i class="fas fa-trash-alt"></i></button></td></tr>`;
-    });
-}
-
-function saveIzin() {
-    try {
-        const bas = document.getElementById("i_bas").value;
-        const bit = document.getElementById("i_bit").value;
-        const acik = document.getElementById("i_aciklama").value.trim();
-        if(!bas || !bit || !acik) { showToast("Tarihler ve açıklama zorunludur!", "error"); return; }
-        if(new Date(bas) > new Date(bit)) { showToast("Bitiş tarihi başlangıçtan küçük olamaz!", "error"); return; }
-
-        const p = personnelData.find(x => x.id === selectedUserId);
-        p.izinler = p.izinler || []; 
-        p.izinler.push({ id: Date.now(), tur: document.getElementById("i_tur").value, baslangic: bas, bitis: bit, aciklama: acik });
-        
-        if(saveToDatabase()) {
-            if(document.getElementById("profileModal").classList.contains("show")) {
-                renderIzinTable(); 
-            }
-            applyFilters(); closeModal('addIzinModal'); 
-            if(document.getElementById("timelineModal").classList.contains("show")) {
-                generateTimeline();
-            }
-            showToast("İzin kaydı başarıyla eklendi.", "success");
-        }
-    } catch (error) { showToast("İzin eklenirken hata oluştu.", "error"); }
-}
-
-function deleteIzin(id) { 
-    try {
-        if(confirm("İzni silmek istediğinize emin misiniz?")) {
-            personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
-            saveToDatabase(); 
-            if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
-            applyFilters(); 
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
-            showToast("İzin silindi.", "success");
-        }
-    } catch (error) { showToast("İzin silinirken hata oluştu.", "error"); }
-}
-
-function saveBulkIzin() {
-    const tur = document.getElementById("bi_tur").value;
-    const bas = document.getElementById("bi_bas").value;
-    const bit = document.getElementById("bi_bit").value;
-    const acik = document.getElementById("bi_aciklama").value.trim();
-
-    if(!bas || !bit || !acik) { showToast("Tarihler ve açıklama zorunludur!", "error"); return; }
-    if(new Date(bas) > new Date(bit)) { showToast("Bitiş tarihi başlangıçtan küçük olamaz!", "error"); return; }
-
-    const formatBas = formatDateTR(bas);
-    const formatBit = formatDateTR(bit);
-
-    if(!confirm(`DİKKAT: Sistemdeki tüm "Aktif" personellere ${formatBas} - ${formatBit} tarihleri arasında "${tur}" işlenecektir. Onaylıyor musunuz?`)) return;
-
-    showSpinner("Toplu İzinler İşleniyor...");
-    
-    setTimeout(() => {
-        let islenenPersonelSayisi = 0;
-        personnelData.forEach(p => {
-            if(p.durum === "Aktif" || p.durum === "AKTİF") {
-                p.izinler = p.izinler || [];
-                p.izinler.push({ id: Date.now() + Math.floor(Math.random()*10000), tur: tur, baslangic: bas, bitis: bit, aciklama: acik });
-                islenenPersonelSayisi++;
-            }
-        });
-
-        if(saveToDatabase()) {
-            applyFilters();
-            closeModal('addBulkIzinModal');
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
-            hideSpinner();
-            showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
-        } else { hideSpinner(); }
-    }, 500);
-}
-
-function changeMonth(dir) {
-    tlCurrentDate.setMonth(tlCurrentDate.getMonth() + dir);
-    document.getElementById("timelineMonth").value = `${tlCurrentDate.getFullYear()}-${String(tlCurrentDate.getMonth()+1).padStart(2,'0')}`;
-    generateTimeline();
-}
-
-window.showTooltip = function(e, el) {
-    if (window.tooltipTimeout) { clearTimeout(window.tooltipTimeout); window.tooltipTimeout = null; }
-    const tt = document.getElementById('global-tooltip');
-    if(!tt) return;
-    const tur = el.getAttribute('data-tur');
-    const tarih = el.getAttribute('data-tarih');
-    const desc = el.getAttribute('data-desc');
-    const colorClass = el.getAttribute('data-color');
-    let colorHex = "#fff";
-    if(colorClass === "rose") colorHex = "#fb7185";
-    if(colorClass === "emerald") colorHex = "#34d399";
-    if(colorClass === "amber") colorHex = "#fbbf24";
-    if(colorClass === "sky") colorHex = "#38bdf8";
-    if(colorClass === "violet") colorHex = "#a78bfa";
-
-    tt.innerHTML = `<div class='font-bold text-[12px] mb-1.5 flex items-center gap-1.5 uppercase' style='color:${colorHex}'><i class="fas fa-info-circle"></i> ${tur}</div><div class='text-slate-300 font-semibold mb-1.5 border-b border-slate-600 pb-2 text-[10px] uppercase tracking-wide'>Tarih: ${tarih}</div><div class='text-white mt-1 uppercase text-[11px] font-medium'>${desc}</div>`;
-    tt.style.display = 'block';
-    setTimeout(() => { tt.style.opacity = '1'; }, 10);
-    window.updateTooltip(e);
-}
-
-window.updateTooltip = function(e) {
-    const tt = document.getElementById('global-tooltip');
-    if(tt && tt.style.display === 'block') {
-        let left = e.clientX + 20; let top = e.clientY + 20;
-        if (left + 240 > window.innerWidth) left = e.clientX - 260;
-        if (top + 90 > window.innerHeight) top = e.clientY - 100;
-        tt.style.left = left + 'px'; tt.style.top = top + 'px';
-    }
-}
-
-window.hideTooltip = function() { 
-    const tt = document.getElementById('global-tooltip');
-    if(tt) { 
-        tt.style.opacity = '0'; 
-        window.tooltipTimeout = setTimeout(() => { tt.style.display = 'none'; }, 200); 
-    }
-}
-
-window.tlMouseDown = function(e, pid, y, m, d) {
-    if(e.button !== 0) return; 
-    isTlDragging = true;
-    tlDragStart = { pid, y, m, d };
-    clearTlSelection();
-    highlightTlCells(pid, d, d);
-}
-
-window.tlMouseEnter = function(e, pid, y, m, d) {
-    if(!isTlDragging) return;
-    if(pid !== tlDragStart.pid) return; 
-    highlightTlCells(pid, tlDragStart.d, d);
-}
-
-window.tlMouseUp = function(e, pid, y, m, d) {
-    if(!isTlDragging) return;
-    if(pid !== tlDragStart.pid) { 
-        isTlDragging = false; 
-        clearTlSelection(); 
-        return; 
-    }
-    
-    let startD = Math.min(tlDragStart.d, d);
-    let endD = Math.max(tlDragStart.d, d);
-    
-    let d1 = new Date(y, m, startD);
-    let d2 = new Date(y, m, endD);
-    
-    isTlDragging = false;
-    clearTlSelection();
-    
-    openIzinFormWithDates(pid, d1, d2);
-}
-
-document.addEventListener('mouseup', () => {
-    if(isTlDragging) {
-        isTlDragging = false;
-        clearTlSelection();
-    }
-});
-
-function highlightTlCells(pid, start, end) {
-    clearTlSelection();
-    let s = Math.min(start, end);
-    let e = Math.max(start, end);
-    for(let i = s; i <= e; i++) {
-        let cell = document.getElementById(`tl-cell-${pid}-${i}`);
-        if(cell) cell.classList.add('tl-selected');
-    }
-}
-
-function clearTlSelection() {
-    document.querySelectorAll('.tl-selected').forEach(el => el.classList.remove('tl-selected'));
-}
-
-function generateTimeline() {
-    const inputVal = document.getElementById("timelineMonth").value;
-    if(inputVal) {
-        const parts = inputVal.split("-");
-        tlCurrentDate.setFullYear(parseInt(parts[0]), parseInt(parts[1])-1, 1);
-    }
-    const y = tlCurrentDate.getFullYear(); const m = tlCurrentDate.getMonth();
-    const daysInMonth = new Date(y, m+1, 0).getDate();
-    const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-    const gunIsimleri = ["PZR", "PZT", "SAL", "ÇAR", "PER", "CUM", "CMT"]; 
-    
-    document.getElementById("timelineCurrentLabel").innerText = `${monthNames[m]} ${y}`.toLocaleUpperCase('tr-TR');
-
-    let searchVal = "";
-    const searchInputEl = document.getElementById("timelineSearchInput");
-    if(searchInputEl) {
-        searchVal = searchInputEl.value.toLocaleUpperCase('tr-TR');
-    }
-
-    let html = '<div class="inline-block min-w-full"><div class="tl-row tl-row-header"><div class="tl-name tl-name-header text-center justify-center text-[11px] font-bold text-slate-500 uppercase tracking-wide border-b border-slate-200 w-[240px] min-w-[240px] shrink-0"><i class="fas fa-users mr-1.5"></i> PERSONEL</div>';
-    
-    for(let d=1; d<=daysInMonth; d++) {
-        let currDate = new Date(y, m, d);
-        let isWeek = (currDate.getDay() === 0 || currDate.getDay() === 6);
-        let gunAdi = gunIsimleri[currDate.getDay()];
-        html += `<div class="tl-cell flex flex-col items-center justify-center py-1.5 ${isWeek?'text-rose-600 bg-rose-50':'text-slate-600 bg-white'} border-b border-slate-200"><span class="text-[9px] font-semibold tracking-wide">${gunAdi}</span><span class="text-xs font-bold leading-tight">${d}</span></div>`;
-    }
-    html += '</div>';
-
-    let baseData = getVisiblePersonnel(); 
-    let activeData = baseData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF");
-
-    if(searchVal) {
-        activeData = activeData.filter(p => p.adSoyad && p.adSoyad.toLocaleUpperCase('tr-TR').includes(searchVal));
-    }
-
-    activeData.forEach(p => {
-        html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle / İzin İşle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-id-card opacity-50 text-[10px]"></i></div>`;
-        for(let d=1; d<=daysInMonth; d++) {
-            let cellDate = new Date(y, m, d);
-            let isWeek = (cellDate.getDay() === 0 || cellDate.getDay() === 6);
-            let cellClass = isWeek ? 'weekend border-b border-slate-100' : 'border-b border-slate-100';
-            let content = ''; let tooltipEvents = '';
-
-            if(p.izinler) {
-                for(let iz of p.izinler) {
-                    let bas = new Date(iz.baslangic); bas.setHours(0,0,0,0);
-                    let bit = new Date(iz.bitis); bit.setHours(23,59,59,999);
-                    if(cellDate >= bas && cellDate <= bit) {
-                        let clColor = "";
-                        if(iz.tur.includes("Yıllık") || iz.tur.includes('YILLIK')) { cellClass = "izin-y"; content = "Y"; clColor="rose"; }
-                        else if(iz.tur.includes("Rapor") || iz.tur.includes('RAPOR')) { cellClass = "izin-r"; content = "R"; clColor="emerald"; }
-                        else if(iz.tur.includes("İdari") || iz.tur.includes('İDARİ')) { cellClass = "izin-i"; content = "İ"; clColor="amber"; }
-                        else if(iz.tur.includes("Saatlik") || iz.tur.includes('SAATLİK')) { cellClass = "izin-s"; content = "S"; clColor="sky"; }
-                        else if(iz.tur.includes("Ücretsiz") || iz.tur.includes('ÜCRETSİZ')) { cellClass = "izin-u"; content = "Üİ"; clColor="violet"; }
-                        
-                        let safeDesc = (iz.aciklama || 'Açıklama belirtilmemiş').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-                        let toolTipDate = String(d).padStart(2,'0') + "." + String(m+1).padStart(2,'0') + "." + y;
-                        tooltipEvents = `data-tur="${iz.tur}" data-tarih="${toolTipDate}" data-desc="${safeDesc}" data-color="${clColor}" onmouseover="showTooltip(event, this)" onmousemove="updateTooltip(event)" onmouseout="hideTooltip()"`;
-                        break;
-                    }
-                }
-            }
-            
-            html += `<div id="tl-cell-${p.id}-${d}" class="tl-cell flex items-center justify-center font-bold text-[10px] cursor-pointer transition-colors duration-75 ${cellClass}" ${tooltipEvents} onmousedown="tlMouseDown(event, ${p.id}, ${y}, ${m}, ${d})" onmouseenter="tlMouseEnter(event, ${p.id}, ${y}, ${m}, ${d})" onmouseup="tlMouseUp(event, ${p.id}, ${y}, ${m}, ${d})">${content}</div>`;
-        }
-        html += `</div>`;
-    });
-    html += '</div>';
-    document.getElementById("timelineContainer").innerHTML = html;
-}
-
-function buildSettingsMenu() {
-    const is1011 = currentUserRole === '1011';
-    
-    const tc = document.getElementById("settings-textareas-container"); tc.innerHTML = "";
-    Object.keys(systemSettings.dropdowns).forEach(key => {
-        if(key !== 'durum') {
-            tc.innerHTML += `<div class="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <label class="block text-[11px] font-bold uppercase text-slate-600 mb-2">${systemSettings.dropdowns[key].label}</label>
-                <textarea id="set_${key}" rows="4" class="w-full text-xs border border-slate-300 p-2.5 rounded-lg font-semibold text-slate-700 resize-none focus:outline-none focus:border-blue-500 uppercase force-upper ${is1011 ? 'bg-slate-100 opacity-70 cursor-not-allowed' : 'bg-white'}" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')" ${is1011 ? 'readonly' : ''}>${systemSettings.dropdowns[key].values.join('\n')}</textarea>
-            </div>`;
-        }
-    });
-    const cc = document.getElementById("settings-cards-container"); cc.innerHTML = "";
-    systemSettings.cards.forEach((c, i) => {
-        cc.innerHTML += `<div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between transition hover:bg-slate-100 ${is1011 ? 'opacity-70' : ''}">
-            <span class="text-[11px] font-bold uppercase text-slate-600 truncate mr-2" title="${c.title}">${c.title}</span>
-            <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-                <input type="checkbox" id="ct_${i}" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 border-slate-300 appearance-none transition-all ${is1011 ? 'cursor-not-allowed' : 'cursor-pointer'}" ${c.active?'checked':''} ${is1011 ? 'disabled' : ''}/>
-                <label for="ct_${i}" class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-300 transition-colors ${is1011 ? 'cursor-not-allowed' : 'cursor-pointer'}"></label>
-            </div></div>`;
-    });
-}
-
-function saveSettings() {
-    Object.keys(systemSettings.dropdowns).forEach(key => {
-        if(key !== 'durum') {
-            let vals = document.getElementById("set_" + key).value.toLocaleUpperCase('tr-TR').split('\n').map(s=>s.trim()).filter(s=>s!=="");
-            if(vals.length === 0) vals = systemSettings.dropdowns[key].values;
-            systemSettings.dropdowns[key].values = vals;
-        }
-    });
-    systemSettings.cards.forEach((c, i) => c.active = document.getElementById("ct_" + i).checked);
-    saveSettingsToDatabase();
-    populateSelectOptions(); applyFilters(); renderStatsCards(); closeModal('settingsModal');
-    showToast("Ayarlar başarıyla güncellendi.", "success");
-}
-
-function handleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (!file.type.match('image.*')) { showToast("Sadece resim dosyası yükleyebilirsiniz.", "error"); return; }
-    
-    showSpinner("Fotoğraf İşleniyor...");
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 400; const MAX_HEIGHT = 400;
-            let width = img.width; let height = img.height;
-            if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
-            else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            uploadedBase64Foto = canvas.toDataURL('image/jpeg', 0.75); 
-            document.getElementById("previewFoto").src = uploadedBase64Foto;
-            hideSpinner();
-            showToast("Fotoğraf optimize edildi.", "success");
-        }
-        img.src = e.target.result;
-    }
-    reader.readAsDataURL(file);
-}
-
-function handleVehicleFileUpload(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    if (!file.type.match('image.*')) { showToast("Sadece resim dosyası yükleyebilirsiniz.", "error"); return; }
-    
-    showSpinner("Fotoğraf İşleniyor...");
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const img = new Image();
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 600; const MAX_HEIGHT = 400;
-            let width = img.width; let height = img.height;
-            if (width > height) { if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } } 
-            else { if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; } }
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            uploadedBase64VehicleFoto = canvas.toDataURL('image/jpeg', 0.80); 
-            document.getElementById("v_previewFoto").src = uploadedBase64VehicleFoto;
-            hideSpinner();
-        }
-        img.src = e.target.result;
-    }
-    reader.readAsDataURL(file);
-}
-
-function checkDurumStatus() {
-    const bas = document.getElementById("f_gelisTarihi").value;
-    const ayr = document.getElementById("f_ayrilisTarihi").value;
-    const durumEl = document.getElementById("f_durum");
-    let targetStatus = "";
-    if(ayr) { targetStatus = "PASİF"; } else if (bas) { targetStatus = "AKTİF"; }
-    if(targetStatus) {
-        for(let i=0; i<durumEl.options.length; i++) {
-            if(durumEl.options[i].value.toLocaleUpperCase('tr-TR') === targetStatus) { durumEl.selectedIndex = i; break; }
-        }
-    }
-}
-
-function openPersonnelForm() { 
-    document.getElementById("personnelForm").reset(); 
-    document.getElementById("formId").value = ""; 
-    
-    uploadedBase64Foto = ""; 
-    const fileInput = document.getElementById("f_fotoFile");
-    if(fileInput) fileInput.value = "";
-
-    document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-plus text-blue-600"></i> Yeni Personel Kaydı';
-    
-    const binaEl = document.getElementById("f_bina");
-    if(currentUserRole === '1011') {
-        binaEl.value = "1011 YERLEŞKESİ";
-        binaEl.disabled = true;
-        binaEl.classList.add("bg-slate-100", "text-slate-400", "cursor-not-allowed");
-    } else {
-        binaEl.disabled = false;
-        binaEl.classList.remove("bg-slate-100", "text-slate-400", "cursor-not-allowed");
-    }
-
-    switchFormTab('kisisel'); 
-    openModal('personnelModal'); 
-    setTimeout(() => { updateFormSilhouette(); }, 50); 
-}
-
-function openVehicleForm(vId = null) {
-    document.getElementById("vehicleForm").reset();
-    document.getElementById("v_id").value = "";
-    uploadedBase64VehicleFoto = "";
-    document.getElementById("v_previewFoto").src = vehiclePlaceholder;
-    
-    const surucuSelect = document.getElementById("v_surucu");
-    let surucuHtml = '<option value="">-- Havuz (Sürücüsüz) --</option>';
-    personnelData.filter(p => p.durum === "Aktif" || p.durum === "AKTİF").forEach(p => {
-        surucuHtml += `<option value="${p.id}">${p.adSoyad}</option>`;
-    });
-    surucuSelect.innerHTML = surucuHtml;
-
-    if(vId) {
-        const v = vehicleData.find(x => x.id === vId);
-        if(v) {
-            document.getElementById("v_id").value = v.id;
-            document.getElementById("v_plaka").value = v.plaka || "";
-            document.getElementById("v_model").value = v.model || "";
-            document.getElementById("v_surucu").value = v.surucuId || "";
-            document.getElementById("v_durum").value = v.durum || "Aktif (Sahada)";
-            document.getElementById("v_seflik").value = v.seflik || "";
-            document.getElementById("v_bina").value = v.bina || "";
-            document.getElementById("v_km").value = v.km || "";
-            document.getElementById("v_muayene").value = v.muayene || "";
-            document.getElementById("v_notlar").value = v.notlar || "";
-            
-            if(v.fotoUrl && !v.fotoUrl.includes('data:image/svg')) {
-                uploadedBase64VehicleFoto = v.fotoUrl;
-                document.getElementById("v_previewFoto").src = v.fotoUrl;
-            }
-            document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck-monster text-sky-500"></i> Aracı Düzenle';
-        }
-    } else {
-        document.getElementById("vehicleFormTitle").innerHTML = '<i class="fas fa-truck text-sky-500"></i> Yeni Araç Kaydı';
-    }
-    
-    openModal('addVehicleModal');
-}
-
-// YENİ: ZEKİCE ÇÖZÜM - Araçlar direkt Settings (Ayarlar) üzerinden kaydediliyor
-function saveVehicle() {
-    const plaka = document.getElementById("v_plaka").value.trim();
-    const model = document.getElementById("v_model").value.trim();
-    
-    if(!plaka || !model) { showToast("Plaka ve Marka/Model zorunludur!", "error"); return; }
-    
-    const idVal = document.getElementById("v_id").value;
-    
-    const vData = {
-        id: idVal ? parseInt(idVal) : Date.now(),
-        plaka: plaka,
-        model: model,
-        surucuId: document.getElementById("v_surucu").value,
-        durum: document.getElementById("v_durum").value,
-        seflik: document.getElementById("v_seflik").value,
-        bina: document.getElementById("v_bina").value,
-        km: document.getElementById("v_km").value,
-        muayene: document.getElementById("v_muayene").value,
-        notlar: document.getElementById("v_notlar").value.trim(),
-        fotoUrl: uploadedBase64VehicleFoto || ""
-    };
-    
-    if(idVal) {
-        const idx = vehicleData.findIndex(x => x.id === vData.id);
-        if(!uploadedBase64VehicleFoto) vData.fotoUrl = vehicleData[idx].fotoUrl || "";
-        vehicleData[idx] = vData;
-    } else {
-        vehicleData.unshift(vData);
-    }
-    
-    // TRUVA ATI: Araçları ayarlar çekmecesine koy
-    systemSettings.vehicles = vehicleData;
-    
-    if(saveSettingsToDatabase()) {
-        closeModal('addVehicleModal');
-        renderVehicleGrid();
-        showToast(idVal ? "Araç bilgileri güncellendi." : "Yeni araç filoya eklendi.", "success");
-    }
-}
-
-function deleteVehicle(id) {
-    if(confirm("Bu aracı filodan kalıcı olarak silmek istediğinize emin misiniz?")) {
-        vehicleData = vehicleData.filter(v => v.id !== id);
-        
-        // TRUVA ATI: Silme işlemini de ayarlar üzerinden kaydet
-        systemSettings.vehicles = vehicleData;
-        
-        if(saveSettingsToDatabase()) {
-            renderVehicleGrid();
-            showToast("Araç sistemden silindi.", "success");
-        }
-    }
-}
-
-window.renderVehicleGrid = function() {
-    const container = document.getElementById("vehicleGridContainer");
-    if(!container) return;
-    
-    const searchVal = document.getElementById("vehicleSearchInput").value.toLocaleUpperCase('tr-TR');
-    
-    let filteredVehicles = vehicleData;
-    if(searchVal) {
-        filteredVehicles = vehicleData.filter(v => {
-            const surucuAd = v.surucuId ? (personnelData.find(p => p.id === parseInt(v.surucuId))?.adSoyad || "") : "HAVUZ";
-            return (v.plaka || "").includes(searchVal) || 
-                   (v.model || "").includes(searchVal) || 
-                   surucuAd.includes(searchVal);
-        });
-    }
-    
-    let aktif = 0, havuz = 0, ariza = 0;
-    vehicleData.forEach(v => {
-        if(v.durum.includes('Aktif')) aktif++;
-        else if(v.durum.includes('Havuzda')) havuz++;
-        else if(v.durum.includes('Sanayi')) ariza++;
-    });
-    
-    document.getElementById("vs_total").innerText = vehicleData.length;
-    document.getElementById("vs_aktif").innerText = aktif;
-    document.getElementById("vs_havuz").innerText = havuz;
-    document.getElementById("vs_arizali").innerText = ariza;
-
-    if(filteredVehicles.length === 0) {
-        container.innerHTML = `<div class="col-span-full py-16 text-center text-slate-500 font-bold bg-white rounded-xl border border-slate-200 shadow-sm"><i class="fas fa-search-minus text-4xl mb-3 text-slate-300 block"></i>Kayıtlı veya aranan kriterde araç bulunmuyor.</div>`;
-        return;
-    }
-    
-    let html = '';
-    filteredVehicles.forEach(v => {
-        let badgeColor = "bg-emerald-50 text-emerald-600 border-emerald-200";
-        if(v.durum.includes('Havuzda')) badgeColor = "bg-amber-50 text-amber-600 border-amber-200";
-        if(v.durum.includes('Sanayi')) badgeColor = "bg-rose-50 text-rose-600 border-rose-200";
-        
-        let surucu = "HAVUZ (SÜRÜCÜSÜZ)";
-        let surucuFoto = avatarMale;
-        if(v.surucuId) {
-            const sp = personnelData.find(p => p.id === parseInt(v.surucuId));
-            if(sp) {
-                surucu = sp.adSoyad;
-                surucuFoto = getAvatarUrl(sp.fotoUrl, sp.cinsiyet);
-            }
-        }
-        
-        const vFoto = (v.fotoUrl && !v.fotoUrl.includes('data:image/svg')) ? v.fotoUrl : vehiclePlaceholder;
-        
-        let uyariHtml = '';
-        if(v.muayene) {
-            const msFark = new Date(v.muayene) - SYSTEM_TODAY;
-            const gunFark = Math.ceil(msFark / (1000 * 60 * 60 * 24));
-            if(gunFark < 0) uyariHtml = `<div class="absolute top-2 right-2 bg-rose-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md animate-pulse"><i class="fas fa-exclamation-triangle"></i> Muayene Geçti!</div>`;
-            else if(gunFark <= 30) uyariHtml = `<div class="absolute top-2 right-2 bg-amber-500 text-white text-[9px] font-bold px-2 py-1 rounded shadow-md"><i class="fas fa-clock"></i> Muayene Yaklaştı (${gunFark} Gün)</div>`;
-        }
-
-        html += `
-            <div class="vehicle-card bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col relative">
-                ${uyariHtml}
-                <div class="h-40 w-full bg-slate-100 border-b border-slate-200 overflow-hidden relative">
-                    <img src="${vFoto}" class="w-full h-full object-cover">
-                    <div class="v-actions absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center gap-3">
-                        <button onclick="openVehicleForm(${v.id})" class="w-10 h-10 rounded-full bg-white text-blue-600 hover:scale-110 transition-transform shadow-lg flex items-center justify-center"><i class="fas fa-edit"></i></button>
-                        <button onclick="deleteVehicle(${v.id})" class="w-10 h-10 rounded-full bg-rose-500 text-white hover:bg-rose-600 hover:scale-110 transition-transform shadow-lg flex items-center justify-center"><i class="fas fa-trash-alt"></i></button>
-                    </div>
+            <div id="versionError" class="hidden bg-rose-50 border border-rose-200 text-rose-700 p-5 rounded-2xl text-xs font-semibold text-center mb-1 shadow-sm animate-fadeIn" style="-webkit-app-region: no-drag;">
+                <i class="fas fa-exclamation-triangle text-rose-500 text-2xl mb-3 block"></i>
+                <span class="block font-bold text-sm mb-1 uppercase tracking-wide">Güncel Versiyon Mevcut!</span>
+                Eski bir versiyon kullanıyorsunuz. Veritabanı güvenliği için giriş engellendi. Lütfen ağ klasöründeki güncel programı kullanın.
+            </div>
+
+            <div id="loginFormContainer" style="-webkit-app-region: no-drag;" class="w-full relative">
+                <div id="lockScreenInfo" class="hidden flex-col items-center justify-center p-4 bg-rose-50 border border-rose-200 rounded-2xl animate-fadeIn">
+                    <i class="fas fa-lock text-4xl text-rose-500 mb-3"></i>
+                    <h3 class="font-bold text-[13px] text-rose-700 uppercase tracking-wide mb-1.5">Sistem Erişime Kapatıldı</h3>
+                    <p id="lockMessageText" class="text-xs font-semibold text-slate-700 leading-relaxed"></p>
                 </div>
-                
-                <div class="p-4 flex-1 flex flex-col">
-                    <div class="text-center mb-3">
-                        <div class="inline-block border-2 border-slate-800 rounded px-3 py-1 font-black text-lg tracking-widest text-slate-800 bg-slate-50 shadow-sm">${v.plaka}</div>
-                        <div class="text-xs font-bold text-slate-500 mt-2 uppercase truncate" title="${v.model}">${v.model}</div>
-                    </div>
-                    
-                    <div class="flex-1 bg-slate-50 rounded-xl p-3 border border-slate-100 flex flex-col gap-2 justify-center">
-                        <div class="flex items-center gap-2">
-                            <img src="${surucuFoto}" class="w-6 h-6 rounded-full object-cover border border-slate-200 bg-white">
-                            <span class="text-[10px] font-bold text-slate-700 truncate uppercase force-upper" title="${surucu}">${surucu}</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
-                            <i class="fas fa-sitemap w-4 text-center text-slate-400"></i> <span class="truncate">${v.seflik || '-'}</span>
-                        </div>
-                        <div class="flex items-center gap-2 text-[10px] text-slate-500 font-semibold uppercase">
-                            <i class="fas fa-building w-4 text-center text-slate-400"></i> <span class="truncate">${v.bina || '-'}</span>
+                <div id="loginInputArea">
+                    <div class="text-left mt-2">
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-building mr-1 text-slate-400"></i> Yetkili Birim</label>
+                        <div class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-semibold text-xs text-slate-700 flex items-center justify-between">
+                            <span>Numarataj Şube Md.</span>
+                            <i class="fas fa-check-circle text-emerald-500"></i>
                         </div>
                     </div>
+                    <div class="text-left mt-4">
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1.5 uppercase tracking-wide"><i class="fas fa-lock mr-1 text-slate-400"></i> Sistem Şifresi</label>
+                        <input type="password" id="loginPass" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl font-bold text-center tracking-[0.5em] focus:border-blue-500 focus:bg-white transition-all outline-none" placeholder="••••••" onkeypress="if(event.key === 'Enter') checkLogin()">
+                    </div>
+                    <button id="loginBtn" onclick="checkLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-xl font-bold transition-all shadow-md shadow-blue-500/20 text-sm mt-5 flex items-center justify-center gap-2">
+                        GİRİŞ YAP <i class="fas fa-arrow-right"></i>
+                    </button>
                 </div>
-                
-                <div class="border-t border-slate-100 bg-slate-50 p-3 flex justify-between items-center shrink-0">
-                    <span class="px-2.5 py-1 text-[9px] font-bold rounded-md uppercase border ${badgeColor}">${v.durum}</span>
-                    <span class="text-[10px] font-mono font-bold text-slate-400">${v.km ? v.km + ' KM' : '-'}</span>
+                <div id="loginStatusText" class="hidden text-xs font-bold text-slate-600 mt-2 tracking-wide bg-slate-50 border border-slate-200 p-3 rounded-xl"></div>
+            </div>
+
+            <div class="absolute bottom-4 left-0 w-full px-7 flex justify-between items-center text-[10px] text-slate-400 font-bold tracking-wide" style="-webkit-app-region: no-drag;">
+                <span>v7.4.0</span>
+                <span>Copyright &copy; 2026 - TONOZ</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANA UYGULAMA ÇERÇEVESİ -->
+    <div id="appContainer" style="display:none;" class="flex flex-col relative">
+        <header id="main-header" class="bg-white/95 backdrop-blur-sm sticky top-0 z-[60] h-[76px] flex items-center shadow-sm border-b border-slate-200 w-full px-5" style="-webkit-app-region: drag;">
+            <div class="flex items-center gap-4 flex-1">
+                <div class="bg-blue-600 w-11 h-11 rounded-xl text-white shadow-sm flex items-center justify-center"><i class="fas fa-users-cog text-xl"></i></div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-800 leading-none tracking-tight">Numarataj Şube Müdürlüğü</h1>
+                    <div class="flex items-center gap-2 mt-1.5">
+                        <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest">Personel Yönetim Sistemi</p>
+                        <span id="userBadge" class="hidden text-[9px] font-bold px-2 py-0.5 rounded-md border tracking-wider"></span>
+                    </div>
                 </div>
             </div>
-        `;
-    });
+
+            <div class="hidden md:flex items-center justify-center gap-2 bg-slate-50 px-4 py-2 rounded-full border border-slate-200 shadow-inner" style="-webkit-app-region: no-drag;">
+                <span id="led-indicator" class="led orange"></span>
+                <span id="db-status-text" class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">Bağlantı Bekleniyor...</span>
+                <div class="flex items-center border-l border-slate-200 pl-2 ml-1">
+                    <span id="db-last-update" class="text-[10px] font-semibold text-slate-400"></span>
+                    <button onclick="manualRefresh()" class="ml-2 w-6 h-6 rounded bg-slate-200 hover:bg-blue-100 text-slate-600 hover:text-blue-600 flex items-center justify-center transition-colors shadow-sm border border-slate-300" title="Veritabanını Yenile"><i class="fas fa-sync-alt text-[10px]"></i></button>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end flex-1 gap-4" style="-webkit-app-region: no-drag;">
+                <div id="headerActionButtons" class="flex items-center gap-2">
+                    <button id="btnVehicleManagement" onclick="openModal('vehicleModal')" class="hidden bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-sky-200 shadow-sm mr-1"><i class="fas fa-truck text-sky-600"></i> Araç Yönetimi</button>
+                    
+                    <button onclick="exportToExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-emerald-200 shadow-sm"><i class="fas fa-file-excel text-emerald-600"></i> Excel Çıktısı</button>
+                    <button onclick="openModal('timelineModal')" class="bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-slate-200 shadow-sm"><i class="fas fa-calendar-alt text-blue-600"></i> İzin Çizelgesi</button>
+                    <button onclick="openPersonnelForm()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 shadow-sm shadow-blue-500/20"><i class="fas fa-user-plus"></i> Yeni Kayıt</button>
+                    <button onclick="openModal('settingsModal')" class="bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-blue-600 text-sm w-10 h-10 rounded-xl flex items-center justify-center border border-slate-200 transition-all shadow-sm"><i class="fas fa-cog"></i></button>
+                </div>
+                
+                <div class="w-px h-8 bg-slate-200 mx-1"></div> 
+                
+                <div class="flex items-center gap-1.5">
+                    <button onclick="if(window.api) window.api.windowMinimize()" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-500 transition-all"><i class="fas fa-minus text-xs"></i></button>
+                    <button onclick="if(window.api) window.api.windowMaximizeToggle()" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-slate-200 border border-slate-200 flex items-center justify-center text-slate-500 transition-all"><i class="far fa-window-maximize text-xs"></i></button>
+                    <button onclick="if(window.api) window.api.windowClose()" class="w-8 h-8 rounded-full bg-slate-50 hover:bg-rose-500 border border-slate-200 hover:border-rose-500 flex items-center justify-center text-slate-500 hover:text-white transition-all"><i class="fas fa-times text-xs"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <main id="main-content" class="container mx-auto px-4 mt-6 pb-20 flex-1 relative">
+            <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-6"></div>
+
+            <div id="filter-panel" class="glass-panel p-4 rounded-xl mb-6 sticky z-[50] transition-all border-0 shadow-md">
+                <div class="flex flex-col lg:flex-row gap-4 w-full">
+                    <div class="relative w-full lg:w-2/5 group">
+                        <i class="fas fa-search absolute left-4 top-3 text-slate-400 text-sm group-focus-within:text-blue-600 transition-colors"></i>
+                        <input type="text" id="filter-search" placeholder="İSİM, TC, SİCİL VEYA TELEFON ARA..." class="w-full pl-10 pr-4 py-2.5 glass-input rounded-lg text-xs font-semibold text-slate-800 uppercase force-upper placeholder-slate-400" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')">
+                    </div>
+                    <div class="w-full lg:w-3/5 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <select id="filter-durum" class="glass-input rounded-lg px-2 py-2.5 text-[11px] font-semibold text-slate-700 cursor-pointer"></select>
+                        <select id="filter-kadroSirket" class="glass-input rounded-lg px-2 py-2.5 text-[11px] font-semibold text-slate-700 cursor-pointer"></select>
+                        <select id="filter-bina" class="glass-input rounded-lg px-2 py-2.5 text-[11px] font-semibold text-slate-700 cursor-pointer"></select>
+                        <select id="filter-seflik" class="glass-input rounded-lg px-2 py-2.5 text-[11px] font-semibold text-slate-700 cursor-pointer"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-panel rounded-xl overflow-hidden pb-0 border-0 shadow-md">
+                <div class="w-full relative overflow-auto max-h-[55vh] custom-scrollbar">
+                    <table class="min-w-full leading-normal text-left relative border-collapse">
+                        <thead id="table-head" class="sticky top-0 z-[40]">
+                            <tr>
+                                <th class="px-5 py-3.5 border-b border-slate-200 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wide"><i class="fas fa-id-card mr-1 text-slate-400"></i> Personel Kimliği</th>
+                                <th class="px-5 py-3.5 border-b border-slate-200 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wide"><i class="fas fa-building mr-1 text-slate-400"></i> Görev & Kurum</th>
+                                <th class="px-5 py-3.5 border-b border-slate-200 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wide"><i class="fas fa-phone-alt mr-1 text-slate-400"></i> İletişim & Adres</th>
+                                <th class="px-5 py-3.5 border-b border-slate-200 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wide"><i class="fas fa-ambulance mr-1 text-slate-400"></i> Acil Durum & Sağlık</th>
+                                <th class="px-5 py-3.5 text-center border-b border-slate-200 bg-slate-100 text-slate-600 text-xs font-bold uppercase tracking-wide"><i class="fas fa-info-circle mr-1 text-slate-400"></i> Durum / İzin</th>
+                            </tr>
+                        </thead>
+                        <tbody id="personnelTableBody" class="text-sm divide-y divide-slate-200 bg-white">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- YENİ ARAÇ YÖNETİMİ MODALI (Sadece Ana Kullanıcı İçin) -->
+    <div id="vehicleModal" class="fixed inset-0 modal-overlay justify-center items-center z-[70] p-4">
+        <div class="glass-modal rounded-2xl w-[96vw] max-w-[1600px] h-[85vh] flex flex-col modal-content overflow-hidden border-0 shadow-2xl bg-slate-50">
+            <div class="flex flex-col md:flex-row justify-between items-center p-5 bg-white border-b border-slate-200 gap-4 shrink-0" style="-webkit-app-region: drag;">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-truck text-sky-600"></i> Kurum Araç Filosu</h3>
+                
+                <!-- Araç İstatistikleri -->
+                <div class="flex flex-wrap justify-center gap-3 text-xs font-semibold uppercase bg-slate-50 p-2.5 rounded-lg border border-slate-200" style="-webkit-app-region: no-drag;" id="vehicleStatsContainer">
+                    <span class="flex items-center gap-1.5"><span class="w-6 h-6 flex items-center justify-center rounded bg-white text-slate-600 font-bold border border-slate-200 shadow-sm" id="vs_total">0</span> Toplam Araç</span>
+                    <span class="flex items-center gap-1.5"><span class="w-6 h-6 flex items-center justify-center rounded bg-emerald-50 text-emerald-600 font-bold border border-emerald-200 shadow-sm" id="vs_aktif">0</span> Aktif</span>
+                    <span class="flex items-center gap-1.5"><span class="w-6 h-6 flex items-center justify-center rounded bg-amber-50 text-amber-600 font-bold border border-amber-200 shadow-sm" id="vs_havuz">0</span> Havuzda</span>
+                    <span class="flex items-center gap-1.5"><span class="w-6 h-6 flex items-center justify-center rounded bg-rose-50 text-rose-600 font-bold border border-rose-200 shadow-sm" id="vs_arizali">0</span> Arızalı</span>
+                </div>
+                
+                <div class="flex items-center gap-3" style="-webkit-app-region: no-drag;">
+                    <div class="relative group">
+                        <i class="fas fa-search absolute left-3 top-[10px] text-slate-400 text-xs transition-colors group-focus-within:text-sky-500"></i>
+                        <input type="text" id="vehicleSearchInput" placeholder="Plaka, Sürücü veya Model Ara..." class="glass-input pl-8 pr-3 py-2 rounded-lg text-xs font-bold w-56 outline-none focus:border-sky-500 uppercase force-upper" oninput="renderVehicleGrid()">
+                    </div>
+
+                    <button onclick="manualRefresh()" class="bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 w-10 h-10 rounded-lg transition-all flex justify-center items-center text-lg shadow-sm" title="Verileri Yenile"><i class="fas fa-sync-alt"></i></button>
+                    <button onclick="exportVehiclesToExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm" title="Araç Listesini Excel Olarak İndir"><i class="fas fa-file-excel"></i> Excel</button>
+                    <button onclick="openVehicleForm()" class="bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm"><i class="fas fa-plus"></i> Araç Ekle</button>
+                    <div class="w-px h-6 bg-slate-200 mx-1"></div>
+                    <button onclick="closeModal('vehicleModal')" class="bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 w-10 h-10 rounded-lg transition-all flex justify-center items-center text-lg shadow-sm"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            
+            <!-- Araç Vitrini (Grid System) -->
+            <div class="flex-1 overflow-y-auto p-6 relative custom-scrollbar bg-slate-100">
+                <div id="vehicleGridContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+                    <!-- Araç Kartları JavaScript ile buraya çizilecek -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ARAÇ EKLEME/DÜZENLEME FORMU -->
+    <div id="addVehicleModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90]">
+        <div class="glass-modal p-6 rounded-2xl w-full max-w-2xl shadow-2xl modal-content border-0 bg-white">
+            <h3 class="font-bold text-lg mb-5 text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3" id="vehicleFormTitle"><i class="fas fa-truck text-sky-500"></i> Araç Kaydı İşlemi</h3>
+            <form id="vehicleForm" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <input type="hidden" id="v_id">
+                
+                <div class="md:col-span-2 flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <img id="v_previewFoto" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23cbd5e1'><path d='M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z'/></svg>" class="w-20 h-14 rounded-lg object-cover border border-slate-300 bg-white p-1 shadow-sm">
+                    <div class="flex-1">
+                        <label class="block font-bold text-slate-600 mb-1.5 text-xs uppercase tracking-wide">Araç Fotoğrafı</label>
+                        <input type="file" id="v_fotoFile" accept="image/*" onchange="handleVehicleFileUpload(event)" class="w-full text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-sky-100 file:text-sky-700 hover:file:bg-sky-200 cursor-pointer text-slate-500 transition-all">
+                    </div>
+                </div>
+
+                <div><label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase">Plaka *</label><input type="text" id="v_plaka" placeholder="Örn: 06 ABC 123" class="w-full glass-input p-3 rounded-xl text-sm font-black text-slate-800 force-upper tracking-wider" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')" required></div>
+                <div><label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase">Marka & Model *</label><input type="text" id="v_model" placeholder="Örn: Fiat Fiorino" class="w-full glass-input p-3 rounded-xl text-sm font-bold text-slate-700 force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')" required></div>
+                
+                <div><label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase">Sürücü (Kullanan)</label>
+                    <select id="v_surucu" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper text-slate-700">
+                        <option value="">-- Havuz (Sürücüsüz) --</option>
+                        <!-- Personeller JS ile eklenecek -->
+                    </select>
+                </div>
+                <div><label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase">Araç Durumu</label>
+                    <select id="v_durum" class="w-full glass-input p-3 rounded-xl text-sm font-bold force-upper">
+                        <option value="Aktif (Sahada)">Aktif (Sahada)</option>
+                        <option value="Havuzda (Boşta)">Havuzda (Boşta)</option>
+                        <option value="Sanayide (Arızalı)">Sanayide (Arızalı)</option>
+                    </select>
+                </div>
+                
+                <div><label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase">Bağlı Olduğu Şeflik</label><select id="v_seflik" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper text-slate-700"></select></div>
+                <div><label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase">Bulunduğu Bina</label><select id="v_bina" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper text-slate-700"></select></div>
+                
+                <div><label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase">Son KM Bilgisi</label><input type="number" id="v_km" placeholder="Örn: 150000" class="w-full glass-input p-3 rounded-xl text-sm font-semibold text-slate-700"></div>
+                <div><label class="block text-[11px] font-semibold text-rose-500 mb-1 uppercase">Muayene Bitiş Tarihi</label><input type="date" id="v_muayene" class="w-full bg-rose-50 border border-rose-200 p-3 rounded-xl text-sm font-semibold text-rose-700 focus:outline-none focus:border-rose-400"></div>
+                
+                <div class="md:col-span-2"><label class="block text-[11px] font-semibold text-slate-500 mb-1 uppercase">Demirbaş / Araç İçi Donanım & Notlar</label><textarea id="v_notlar" rows="2" class="w-full glass-input p-3 rounded-xl text-sm font-semibold resize-none force-upper text-slate-600" placeholder="Tepe lambası, tablet, kriko vb. araçtaki eşyalar veya özel notlar..." oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></textarea></div>
+
+                <div class="md:col-span-2 flex justify-between gap-3 pt-4 border-t border-slate-100 mt-2">
+                    <button type="button" id="btnDeleteVehicle" onclick="deleteVehicle()" class="hidden px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold transition-all shadow-sm"><i class="fas fa-trash-alt"></i> Aracı Sil</button>
+                    <div class="flex gap-3 ml-auto">
+                        <button type="button" onclick="closeModal('addVehicleModal')" class="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 transition-all shadow-sm">İptal</button>
+                        <button type="button" onclick="saveVehicle()" class="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-md shadow-sky-500/20 transition-all flex items-center gap-2"><i class="fas fa-save"></i> Aracı Kaydet</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="global-tooltip"></div>
     
-    container.innerHTML = html;
-}
+    <!-- PROFİL GÖRÜNTÜLEME MODALI -->
+    <div id="profileModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
+        <div class="glass-modal rounded-xl w-full max-w-5xl flex flex-col h-[80vh] modal-content overflow-hidden border-0 shadow-2xl">
+            <div class="bg-white border-b border-slate-200 p-5 flex justify-between items-start shrink-0">
+                <div class="flex items-center gap-4">
+                    <img id="pv_foto" src="" class="w-16 h-16 rounded-lg object-cover border border-slate-200 shadow-sm bg-slate-100 p-0.5 zoomable-img cursor-zoom-in" onclick="openPhotoModal()" title="Büyütmek için tıklayın">
+                    <div>
+                        <h2 id="pv_ad" class="text-xl font-bold tracking-tight text-slate-800 uppercase"></h2>
+                        <div class="flex flex-wrap items-center gap-2 mt-1.5">
+                            <span id="pv_durum" class="px-2 py-0.5 text-[11px] font-bold rounded uppercase"></span>
+                            <span class="text-slate-700 text-[11px] font-semibold bg-slate-100 border border-slate-200 px-2 py-0.5 rounded flex items-center gap-1.5"><i class="fas fa-briefcase text-slate-400"></i> <span id="pv_gorev" class="uppercase"></span></span>
+                            <span class="text-slate-600 text-[11px] font-mono font-semibold bg-slate-50 border border-slate-200 px-2 py-0.5 rounded flex items-center gap-1.5"><i class="fas fa-fingerprint text-slate-400"></i> <span id="pv_tcHeader"></span></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="btnProfileEdit" onclick="editPersonnelFromProfile()" class="bg-white hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-slate-300 flex items-center gap-1.5 shadow-sm"><i class="fas fa-edit text-blue-600"></i> Düzenle</button>
+                    <button id="btnProfileDelete" onclick="deletePersonnelFromProfile()" class="bg-white hover:bg-rose-50 text-rose-600 px-4 py-2 rounded-lg text-xs font-semibold transition-all border border-slate-300 hover:border-rose-200 flex items-center gap-1.5 shadow-sm"><i class="fas fa-trash-alt"></i> Sil</button>
+                    <button onclick="closeModal('profileModal')" class="ml-2 text-slate-400 hover:text-slate-700 transition-all w-9 h-9 rounded-lg flex items-center justify-center bg-slate-50 hover:bg-slate-100 border border-slate-200"><i class="fas fa-times text-lg"></i></button>
+                </div>
+            </div>
 
-function editPersonnelFromProfile() { 
-    closeModal('profileModal');
-    setTimeout(() => {
-        const p = personnelData.find(x => x.id === selectedUserId);
-        document.getElementById("formId").value = p.id;
-        
-        uploadedBase64Foto = p.fotoUrl && !p.fotoUrl.includes('data:image/svg') && !p.fotoUrl.includes('placeholder') ? p.fotoUrl : "";
-        
-        const fileInput = document.getElementById("f_fotoFile");
-        if(fileInput) fileInput.value = "";
+            <div class="bg-slate-50 border-b border-slate-200 flex overflow-x-auto px-4 shrink-0">
+                <button onclick="switchTab('genel')" id="tabBtn_genel" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-blue-600 border-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-id-card text-sm"></i> Genel</button>
+                <button onclick="switchTab('kurum')" id="tabBtn_kurum" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-building text-sm"></i> Kurum</button>
+                <button onclick="switchTab('acil')" id="tabBtn_acil" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-ambulance text-sm"></i> Acil Durum</button>
+                <button onclick="switchTab('zimmet')" id="tabBtn_zimmet" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-laptop text-sm"></i> Demirbaşlar</button>
+                <button onclick="switchTab('izin')" id="tabBtn_izin" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-plane-departure text-sm"></i> İzinler</button>
+                <button onclick="switchTab('notlar')" id="tabBtn_notlar" class="profile-tab-btn py-3.5 px-4 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-sticky-note text-sm"></i> Notlar</button>
+            </div>
 
-        document.getElementById("previewFoto").src = getAvatarUrl(p.fotoUrl, p.cinsiyet);
-        document.getElementById("formTitle").innerHTML = '<i class="fas fa-user-edit text-blue-600"></i> Personeli Düzenle';
-        
-        const fieldsMap = {
-            tcNo: p.tcNo, adSoyad: p.adSoyad, cinsiyet: p.cinsiyet, dogumTarihi: p.dogumTarihi,
-            medeniHal: p.medeniHal, cocukSayisi: p.cocukSayisi, tahsil: p.tahsil,
-            anaAdi: p.anaAdi, babaAdi: p.babaAdi, 
-            kadroSirket: p.kadroSirket,
-            unvan: p.unvan,
-            seflik: p.seflik,
-            bina: p.bina,
-            sicil: p.sicil,
-            fiiliGorev: p.fiiliGorev,
-            durum: p.durum, gelisTarihi: p.gelisTarihi, ayrilisTarihi: p.ayrilisTarihi,
-            tel: p.tel, dahili: p.dahili, kanGrubu: p.kanGrubu, adres: p.adres,
-            acilKisi: p.acilKisi, acilYakinlik: p.acilYakinlik, acilTel: p.acilTel
-        };
+            <div class="flex-1 overflow-y-auto p-5 text-sm relative bg-slate-50 custom-scrollbar">
+                <div id="tab_genel" class="tab-panel">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-5 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Doğum Tarihi / Yaş</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-birthday-cake text-slate-400"></i> <span id="pv_dogum"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Cinsiyet</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="fas fa-venus-mars text-slate-400"></i> <span id="pv_cinsiyet"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Medeni Hal</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="fas fa-ring text-slate-400"></i> <span id="pv_medeni"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Tahsil Durumu</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="fas fa-graduation-cap text-slate-400"></i> <span id="pv_tahsil"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Anne / Baba Adı</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="fas fa-users text-slate-400"></i> <span id="pv_anababa"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Telefon</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-phone text-slate-400"></i> <span id="pv_tel"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Dahili No</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-phone-square-alt text-slate-400"></i> <span id="pv_dahili"></span></p></div>
+                        <div class="col-span-2"><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Adres</p><p class="font-bold text-slate-800 text-sm flex items-start gap-2 uppercase force-upper"><i class="fas fa-map-marker-alt text-slate-400 mt-0.5"></i> <span id="pv_adres"></span></p></div>
+                    </div>
+                </div>
 
-        Object.keys(fieldsMap).forEach(f => {
-            let el = document.getElementById("f_"+f);
-            if(el) {
-                let val = fieldsMap[f] || "";
-                if(el.tagName === 'SELECT' && val) {
-                    let option = Array.from(el.options).find(o => o.value.toLocaleUpperCase('tr-TR') === val.toLocaleUpperCase('tr-TR'));
-                    if (option) {
-                        el.value = option.value;
-                    } else {
-                        let newOpt = document.createElement("option");
-                        newOpt.value = val.toLocaleUpperCase('tr-TR');
-                        newOpt.innerHTML = val.toLocaleUpperCase('tr-TR');
-                        el.appendChild(newOpt);
-                        el.value = val.toLocaleUpperCase('tr-TR');
-                    }
-                } else { el.value = val; }
-            }
-        });
-        
-        const binaEl = document.getElementById("f_bina");
-        if(currentUserRole === '1011') {
-            binaEl.value = "1011 YERLEŞKESİ";
-            binaEl.disabled = true;
-            binaEl.classList.add("bg-slate-100", "text-slate-400", "cursor-not-allowed");
-        } else {
-            binaEl.disabled = false;
-            binaEl.classList.remove("bg-slate-100", "text-slate-400", "cursor-not-allowed");
-        }
+                <div id="tab_acil" class="tab-panel hidden">
+                    <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm">
+                        <h4 class="text-slate-800 font-bold text-sm mb-4 flex items-center gap-2"><i class="fas fa-ambulance text-rose-500"></i> Acil Durum & Sağlık Bilgileri</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200"><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Ad Soyad</p><p class="font-bold text-slate-800 text-sm uppercase force-upper" id="pv_acilAd"></p></div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200"><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Yakınlık</p><p class="font-bold text-slate-800 text-sm uppercase force-upper" id="pv_acilYakinlik"></p></div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200"><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Telefon</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-phone text-slate-400"></i> <span id="pv_acilTel"></span></p></div>
+                            <div class="bg-slate-50 p-4 rounded-lg border border-slate-200"><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Kan Grubu</p><p class="font-bold text-rose-600 text-sm bg-rose-50 px-2 py-0.5 rounded inline-flex border border-rose-100 uppercase"><i class="fas fa-tint mr-1.5"></i> <span id="pv_kan"></span></p></div>
+                        </div>
+                    </div>
+                </div>
 
-        switchFormTab('kisisel');
-        openModal('personnelModal');
-    }, 350); 
-}
+                <div id="tab_kurum" class="tab-panel hidden">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-6 bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Kadro / Şirket</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="far fa-building text-slate-400"></i> <span id="pv_kadroSirket"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Ünvanı</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="fas fa-clipboard-list text-slate-400"></i> <span id="pv_unvan"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Çalıştığı Şeflik</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="fas fa-sitemap text-slate-400"></i> <span id="pv_seflik"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Çalıştığı Bina</p><p class="font-bold text-slate-800 text-sm flex items-center gap-2 uppercase"><i class="fas fa-map-pin text-slate-400"></i> <span id="pv_bina"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Sicil No</p><p class="font-bold text-blue-600 text-sm flex items-center gap-2 uppercase force-upper"><i class="fas fa-id-badge text-slate-400"></i> <span id="pv_sicil"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">Fiilen Yaptığı Görev</p><p class="font-bold text-slate-700 text-sm bg-slate-100 px-3 py-1 inline-flex rounded-md border border-slate-200 uppercase"><span id="pv_fiiliGorev"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">İşe Başlama</p><p class="font-bold text-emerald-600 text-sm flex items-center gap-2"><i class="far fa-calendar-check text-emerald-400"></i> <span id="pv_baslama"></span></p></div>
+                        <div><p class="text-slate-500 text-xs font-semibold uppercase mb-1">İşten Ayrılış</p><p class="font-bold text-rose-600 text-sm flex items-center gap-2"><i class="far fa-calendar-times text-rose-400"></i> <span id="pv_ayrilis"></span></p></div>
+                    </div>
+                </div>
 
-function savePersonnel() {
-    try {
-        const tc = document.getElementById("f_tcNo").value.trim();
-        const ad = document.getElementById("f_adSoyad").value.trim();
-        if(!tc || tc.length !== 11 || isNaN(tc)) { showToast("Lütfen 11 haneli sayısal bir TC Kimlik No girin.", "error"); return; }
-        if(!ad) { showToast("Ad Soyad alanı zorunludur.", "error"); return; }
-        const idVal = document.getElementById("formId").value;
-        const exists = personnelData.find(p => p.tcNo === tc && p.id != idVal);
-        if(exists) { showToast("Bu TC Kimlik numarasıyla zaten bir kayıt mevcut!", "error"); return; }
-        const durumVal = document.getElementById("f_durum").value;
-        const ayrilisVal = document.getElementById("f_ayrilisTarihi").value;
-        if((durumVal === "Pasif" || durumVal === "PASİF") && !ayrilisVal) {
-            showToast("Durumu 'Pasif' olan personel için 'Ayrılış Tarihi' girmek zorunludur!", "error");
-            switchFormTab('kurum');
-            document.getElementById("f_ayrilisTarihi").focus(); 
-            return;
-        }
-        
-        const pData = { id: idVal ? parseInt(idVal) : Date.now(), izinler: [], zimmetler: [], fotoUrl: uploadedBase64Foto || "" };
-        const fields = ["tcNo", "adSoyad", "cinsiyet", "dogumTarihi", "medeniHal", "cocukSayisi", "tahsil", "anaAdi", "babaAdi", "kadroSirket", "unvan", "seflik", "bina", "sicil", "fiiliGorev", "durum", "gelisTarihi", "ayrilisTarihi", "tel", "dahili", "kanGrubu", "adres", "acilKisi", "acilYakinlik", "acilTel"];
-        
-        fields.forEach(f => { 
-            let rawVal = document.getElementById("f_"+f).value;
-            if(["dogumTarihi", "gelisTarihi", "ayrilisTarihi", "cocukSayisi", "tel", "dahili", "tcNo"].includes(f)) { pData[f] = rawVal; } 
-            else { pData[f] = rawVal ? rawVal.toLocaleUpperCase('tr-TR') : ""; }
-        });
+                <div id="tab_zimmet" class="tab-panel hidden h-full flex-col">
+                    <div class="flex justify-between items-center mb-4 shrink-0">
+                        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-boxes text-slate-400"></i> Personele Kayıtlı Demirbaşlar</h3>
+                        <button onclick="openZimmetForm()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-1.5 shadow-sm text-xs"><i class="fas fa-plus text-blue-600"></i> Ekle</button>
+                    </div>
+                    <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm custom-scrollbar">
+                        <table class="min-w-full text-left border-collapse">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold sticky top-0 z-10 border-b border-slate-200">
+                                <tr><th class="p-4">Demirbaş Adı</th><th class="p-4">Seri No / Not</th><th class="p-4">Veriliş Tarihi</th><th class="p-4 text-center w-24">İşlem</th></tr>
+                            </thead>
+                            <tbody id="zimmetTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
 
-        if(idVal) {
-            const old = personnelData.find(x=>x.id === pData.id);
-            pData.izinler = old.izinler || []; pData.zimmetler = old.zimmetler || [];
-            pData.notlar = old.notlar || "";
-            if(!uploadedBase64Foto) pData.fotoUrl = old.fotoUrl || ""; 
-            personnelData[personnelData.findIndex(x=>x.id===pData.id)] = pData;
-        } else { personnelData.unshift(pData); }
-        
-        if(saveToDatabase()) {
-            applyFilters(); closeModal('personnelModal');
-            showToast(idVal ? "Kayıt başarıyla güncellendi." : "Yeni personel kaydedildi.", "success");
-        }
-    } catch (error) { showToast("Personel kaydedilirken beklenmeyen bir hata oluştu.", "error"); }
-}
+                <div id="tab_izin" class="tab-panel hidden h-full flex-col">
+                    <div class="flex justify-between items-center mb-4 shrink-0">
+                        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-plane text-slate-400"></i> İzin Geçmişi ve Kayıtları</h3>
+                        <div class="flex gap-2">
+                            <button onclick="openIzinForm()" class="bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-1.5 shadow-sm text-xs"><i class="fas fa-calendar-plus text-blue-600"></i> İzin İşle</button>
+                        </div>
+                    </div>
+                    
+                    <div id="izinSummaryContainer" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 shrink-0"></div>
 
-function deletePersonnelFromProfile() { 
-    if(confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?")) { 
-        personnelData = personnelData.filter(x=>x.id!==selectedUserId); 
-        if(saveToDatabase()) {
-            closeModal('profileModal'); setTimeout(applyFilters, 350); 
-            showToast("Personel kaydı silindi.", "success");
-        }
-    } 
-}
+                    <div class="bg-white rounded-xl overflow-hidden border border-slate-200 flex-1 overflow-y-auto relative shadow-sm custom-scrollbar">
+                        <table class="min-w-full text-left border-collapse">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase font-semibold sticky top-0 z-10 border-b border-slate-200">
+                                <tr><th class="p-4 w-36">İzin Türü</th><th class="p-4 w-32">Başlangıç</th><th class="p-4 w-32">Bitiş</th><th class="p-4">Açıklama</th><th class="p-4 text-center w-24">İşlem</th></tr>
+                            </thead>
+                            <tbody id="izinTableBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="tab_notlar" class="tab-panel hidden h-full flex-col">
+                    <div class="flex justify-between items-center mb-4 shrink-0">
+                        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2"><i class="fas fa-sticky-note text-blue-500"></i> Personel Notları</h3>
+                        <button onclick="savePersonelNot()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2 text-xs"><i class="fas fa-save"></i> Notu Kaydet</button>
+                    </div>
+                    <textarea id="pv_notlar_input" class="w-full flex-1 glass-input p-5 rounded-xl text-sm font-semibold text-slate-700 resize-none outline-none focus:border-blue-500 transition-colors custom-scrollbar" placeholder="Bu personel ile ilgili özel durumlar, izin notları veya ek bilgiler buraya yazılabilir..."></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MİNİ FORMLAR -->
+    <div id="addZimmetModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90]">
+        <div class="glass-modal p-6 rounded-xl w-80 shadow-2xl modal-content border-0 bg-white">
+            <h3 class="font-bold text-base mb-5 text-slate-800 flex items-center gap-2"><i class="fas fa-laptop text-blue-500"></i> Zimmet Ekle</h3>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Demirbaş Adı *</label><input type="text" id="z_urun" placeholder="Örn: 3D Tarayıcı" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-semibold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Seri No / Not</label><input type="text" id="z_seri" placeholder="Seri No" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-semibold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Veriliş Tarihi *</label><input type="date" id="z_tarih" class="w-full glass-input p-2.5 rounded-lg mb-6 text-sm font-semibold"></div>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('addZimmetModal')" class="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 transition-all shadow-sm">İptal</button>
+                <button onclick="saveZimmet()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all">Kaydet</button>
+            </div>
+        </div>
+    </div>
+    
+    <div id="addIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[120]">
+        <div class="glass-modal p-6 rounded-xl w-80 shadow-2xl modal-content border-0 bg-white">
+            <h3 class="font-bold text-base mb-5 text-slate-800 flex items-center gap-2" id="addIzinModalTitle"><i class="fas fa-plane-departure text-blue-500"></i> İzin İşle</h3>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">İzin Türü *</label><select id="i_tur" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-bold text-slate-700 force-upper">
+                <option value="Yıllık İzin">Yıllık İzin (Y)</option><option value="Sağlık Raporu">Sağlık Raporu (R)</option><option value="İdari İzin">İdari İzin (İ)</option><option value="Saatlik İzin">Saatlik İzin (S)</option>
+                <option value="Ücretsiz İzin">Ücretsiz İzin (Üİ)</option>
+            </select></div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div><label class="block text-xs text-slate-500 font-semibold mb-1 uppercase">Başlangıç *</label><input type="date" id="i_bas" class="w-full glass-input p-2.5 rounded-lg text-sm font-semibold"></div>
+                <div><label class="block text-xs text-slate-500 font-semibold mb-1 uppercase">Bitiş *</label><input type="date" id="i_bit" class="w-full glass-input p-2.5 rounded-lg text-sm font-semibold"></div>
+            </div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Açıklama *</label><input type="text" id="i_aciklama" placeholder="Kısa Not" class="w-full glass-input p-2.5 rounded-lg mb-6 text-sm font-semibold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('addIzinModal')" class="px-4 py-2 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 transition-all shadow-sm">İptal</button>
+                <button onclick="saveIzin()" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-all">İşle</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="addBulkIzinModal" class="fixed inset-0 modal-overlay justify-center items-center z-[110]">
+        <div class="glass-modal p-7 rounded-xl w-[400px] shadow-2xl modal-content border-0 bg-white">
+            <h3 class="font-bold text-lg mb-2 text-slate-800 flex items-center gap-2"><i class="fas fa-users text-blue-500"></i> Toplu İzin Girişi</h3>
+            <p class="text-xs text-slate-500 font-medium mb-6">Dikkat: Bu işlem sistemdeki tüm <span class="font-bold text-emerald-600">"Aktif"</span> personellerin profiline aynı izni tek seferde otomatik olarak işler.</p>
+            
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">İzin Türü *</label><select id="bi_tur" class="w-full glass-input p-2.5 rounded-lg mb-4 text-sm font-bold text-slate-700 force-upper">
+                <option value="İdari İzin">İdari İzin (İ)</option><option value="Yıllık İzin">Yıllık İzin (Y)</option><option value="Sağlık Raporu">Sağlık Raporu (R)</option><option value="Saatlik İzin">Saatlik İzin (S)</option>
+                <option value="Ücretsiz İzin">Ücretsiz İzin (Üİ)</option>
+            </select></div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div><label class="block text-xs text-slate-500 font-semibold mb-1 uppercase">Başlangıç *</label><input type="date" id="bi_bas" class="w-full glass-input p-2.5 rounded-lg text-sm font-semibold"></div>
+                <div><label class="block text-xs text-slate-500 font-semibold mb-1 uppercase">Bitiş *</label><input type="date" id="bi_bit" class="w-full glass-input p-2.5 rounded-lg text-sm font-semibold"></div>
+            </div>
+            <div><label class="block text-xs font-semibold text-slate-500 mb-1 uppercase">Açıklama *</label><input type="text" id="bi_aciklama" placeholder="Örn: 30 Ağustos Zafer Bayramı" class="w-full glass-input p-2.5 rounded-lg mb-6 text-sm font-semibold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
+            
+            <div class="flex justify-end gap-3 pt-2 border-t border-slate-100">
+                <button onclick="closeModal('addBulkIzinModal')" class="px-5 py-2.5 bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-xs font-semibold text-slate-700 transition-all shadow-sm">İptal</button>
+                <button onclick="saveBulkIzin()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-md shadow-blue-500/20 transition-all flex items-center gap-2"><i class="fas fa-magic"></i> Herkese İşle</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
