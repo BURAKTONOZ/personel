@@ -1678,13 +1678,14 @@ function renderAracVitrini() {
                          (v.durum === 'Havuzda' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200');
         let fIcon = v.durum === 'Aktif' ? 'fa-check-circle' : (v.durum === 'Havuzda' ? 'fa-parking' : 'fa-wrench');
 
+        // h-full ve flex-1 KALDIRILDI - KART ARTIK İÇERİĞE GÖRE BOYLANACAK
         html += `
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full" onclick="openAracForm(${v.id})">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300 hover:-translate-y-1 flex flex-col" onclick="openAracForm(${v.id})">
             <div class="relative h-28 bg-slate-100 flex-shrink-0 border-b border-slate-100">
                 <img src="${v.foto || defaultCarSvg}" class="w-full h-full object-cover">
                 ${alarmHtml}
             </div>
-            <div class="p-3 flex-1 flex flex-col">
+            <div class="p-3 flex flex-col">
                 <h3 class="text-base font-black text-slate-800 tracking-tight uppercase leading-tight">${v.plaka}</h3>
                 <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">${v.marka || '-'}</p>
 
