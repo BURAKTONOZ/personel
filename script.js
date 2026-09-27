@@ -265,7 +265,6 @@ function updateHeaderBadge() {
     }
 }
 
-
 // OTURUMU KAPAT / KULLANICI DEĞİŞTİR: KUSURSUZ ÇÖZÜM
 function switchUserRole() {
     if(confirm("Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?")) {
@@ -279,37 +278,6 @@ function switchUserRole() {
                 location.reload(); 
             }
         }, 500);
-    }
-}
-
-        // Ekranları değiştir
-        document.getElementById('appContainer').style.display = 'none';
-        document.getElementById('loginScreen').style.display = 'flex';
-        
-        // Login alanını sıfırla
-        document.getElementById('loginInputArea').style.display = 'block';
-        document.getElementById('loginStatusText').style.display = 'none';
-        document.getElementById('loginPass').value = '';
-        
-        // Yetkiyi temizle
-        currentUserRole = '';
-
-        // TIKLANAMAMA (DRAG-REGION) HATASINI ÇÖZEN DOM REFLOW TETİKLEYİCİSİ
-        setTimeout(() => {
-            const loginModal = document.querySelector('#loginScreen .glass-modal');
-            if(loginModal) {
-                loginModal.style.webkitAppRegion = 'no-drag'; // Sürüklemeyi geçici olarak iptal et
-                document.body.style.transform = 'scale(1.0001)'; // Anlık yeniden hesaplama (reflow)
-                
-                setTimeout(() => {
-                    loginModal.style.webkitAppRegion = 'drag'; // Sürüklemeyi geri aç
-                    document.body.style.transform = 'none';
-                    document.getElementById('loginPass').focus(); // Şifre kutusuna odaklan
-                }, 50);
-            }
-        }, 100);
-
-        showToast("Oturum kapatıldı.", "success");
     }
 }
 
@@ -1679,7 +1647,6 @@ function deletePersonnelFromProfile() {
         }
     } 
 }
-
 
 /* =========================================
    ARAÇ VİTRİNİ (FİLO YÖNETİMİ) MODÜLÜ
