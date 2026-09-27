@@ -195,7 +195,6 @@
     <div id="global-tooltip"></div>
     
     <!-- PROFİL GÖRÜNTÜLEME MODALI -->
-    <!-- z-index 80 yapıldı ki timeline üzerinde her zaman görünsün -->
     <div id="profileModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
         <div class="glass-modal rounded-xl w-full max-w-5xl flex flex-col h-[80vh] modal-content overflow-hidden border-0 shadow-2xl">
             <div class="bg-white border-b border-slate-200 p-5 flex justify-between items-start shrink-0">
@@ -347,105 +346,6 @@
         </div>
     </div>
 
-    <!-- YENİ KAYIT / DÜZENLE FORMU -->
-    <div id="personnelModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
-        <div class="glass-modal rounded-2xl shadow-2xl w-full max-w-5xl flex flex-col h-[85vh] modal-content border-0 bg-white overflow-hidden">
-            
-            <div class="flex justify-between items-center border-b border-slate-200 p-5 bg-white shrink-0">
-                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="formTitle"><i class="fas fa-user-plus text-blue-600"></i> Yeni Personel Kaydı</h3>
-                <button onclick="closeModal('personnelModal')" class="text-slate-500 hover:text-slate-800 bg-white border border-slate-200 w-10 h-10 rounded-lg hover:bg-slate-50 flex items-center justify-center transition-all text-lg"><i class="fas fa-times"></i></button>
-            </div>
-
-            <div class="bg-slate-50 border-b border-slate-200 flex overflow-x-auto px-4 shrink-0">
-                <button type="button" onclick="switchFormTab('kisisel')" id="formTabBtn_kisisel" class="form-tab-btn py-3.5 px-5 font-semibold text-xs border-b-2 text-blue-600 border-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-id-badge text-sm"></i> Kişisel Bilgiler</button>
-                <button type="button" onclick="switchFormTab('kurum')" id="formTabBtn_kurum" class="form-tab-btn py-3.5 px-5 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-building text-sm"></i> Kurum Bilgileri</button>
-                <button type="button" onclick="switchFormTab('iletisim')" id="formTabBtn_iletisim" class="form-tab-btn py-3.5 px-5 font-semibold text-xs border-b-2 text-slate-500 border-transparent hover:text-blue-600 focus:outline-none whitespace-nowrap flex items-center gap-2 transition-colors"><i class="fas fa-phone-alt text-sm"></i> İletişim & Acil</button>
-            </div>
-            
-            <form id="personnelForm" class="flex-1 overflow-hidden flex flex-col relative">
-                <input type="hidden" id="formId">
-                
-                <div id="formTab_kisisel" class="form-tab-panel flex-1 overflow-y-auto p-6 bg-slate-50 custom-scrollbar">
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-4">
-                        <h4 class="font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5 text-sm uppercase tracking-wide flex items-center gap-2"><i class="fas fa-id-badge text-blue-500"></i> Kimlik & Aile Bilgileri</h4>
-                        
-                        <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-5">
-                            <img id="previewFoto" src="" class="w-16 h-16 rounded-xl object-cover border border-slate-300 bg-slate-100 p-0.5 shadow-sm">
-                            <div class="flex-1">
-                                <label class="block font-bold text-slate-600 mb-1.5 text-xs uppercase tracking-wide">Vesikalık Fotoğraf Yükle</label>
-                                <input type="file" id="f_fotoFile" accept="image/*" onchange="handleFileUpload(event)" class="w-full text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer text-slate-500 transition-all">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                            <div class="col-span-1 md:col-span-2 lg:col-span-1"><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">TC Kimlik No *</label><input type="text" id="f_tcNo" maxlength="11" class="w-full glass-input p-3 rounded-xl text-sm font-semibold" placeholder="11 Haneli TC Girin" required></div>
-                            <div class="col-span-1 md:col-span-2 lg:col-span-2"><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Ad Soyad *</label><input type="text" id="f_adSoyad" class="w-full glass-input p-3 rounded-xl font-bold text-slate-800 text-sm force-upper" placeholder="Personel Tam Adı" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')" required></div>
-                            
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Cinsiyet</label><select id="f_cinsiyet" onchange="updateFormSilhouette()" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper"></select></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Doğum Tarihi</label><input type="date" id="f_dogumTarihi" class="w-full glass-input p-3 rounded-xl text-sm font-semibold"></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Tahsil Durumu</label><select id="f_tahsil" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper"></select></div>
-                            
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Medeni Hal</label><select id="f_medeniHal" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper"></select></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Çocuk Sayısı</label><input type="number" id="f_cocukSayisi" value="0" min="0" class="w-full glass-input p-3 rounded-xl text-sm font-semibold"></div>
-                            <div class="hidden lg:block"></div>
-                            
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Anne Adı</label><input type="text" id="f_anaAdi" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Baba Adı</label><input type="text" id="f_babaAdi" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="formTab_kurum" class="form-tab-panel hidden flex-1 overflow-y-auto p-6 bg-slate-50 custom-scrollbar">
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-                        <h4 class="font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5 flex items-center gap-2 text-sm uppercase tracking-wide"><i class="fas fa-building text-blue-500"></i> Şirket & Görev Detayları</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Kadro / Şirket</label><select id="f_kadroSirket" class="w-full glass-input p-3 rounded-xl font-bold text-slate-700 text-sm force-upper"></select></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Ünvanı</label><select id="f_unvan" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper"></select></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Çalıştığı Şeflik</label><select id="f_seflik" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper"></select></div>
-                            
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Çalıştığı Bina</label><select id="f_bina" class="w-full glass-input p-3 rounded-xl text-sm font-semibold force-upper transition-colors"></select></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Sicil No</label><input type="text" id="f_sicil" class="w-full glass-input p-3 rounded-xl font-bold text-slate-700 text-sm force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Fiilen Yaptığı Görev</label><input type="text" id="f_fiiliGorev" placeholder="Örn: Saha Ekibi, Arşiv vb." class="w-full glass-input p-3 rounded-xl font-bold text-blue-700 text-sm force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
-
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">İşe Başlama Tarihi</label><input type="date" id="f_gelisTarihi" onchange="checkDurumStatus()" class="w-full glass-input p-3 rounded-xl font-semibold text-sm"></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Ayrılış Tarihi</label><input type="date" id="f_ayrilisTarihi" onchange="checkDurumStatus()" class="w-full bg-slate-50 border border-slate-200 p-3 rounded-xl text-slate-700 font-semibold text-sm focus:border-blue-500 focus:outline-none"></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Çalışma Durumu</label><select id="f_durum" class="w-full bg-slate-50 border border-slate-300 p-3 rounded-xl font-black uppercase text-slate-800 text-sm outline-none focus:border-blue-500 force-upper"></select></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="formTab_iletisim" class="form-tab-panel hidden flex-1 overflow-y-auto p-6 bg-slate-50 custom-scrollbar">
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm mb-5">
-                        <h4 class="font-bold text-slate-700 border-b border-slate-100 pb-3 mb-5 flex items-center gap-2 text-sm uppercase tracking-wide"><i class="fas fa-phone-alt text-blue-500"></i> İletişim & Adres</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Cep Telefonu</label><input type="tel" id="f_tel" class="w-full glass-input p-3 rounded-xl font-bold text-slate-700 text-sm"></div>
-                            <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Kurum Dahili No</label><input type="text" id="f_dahili" class="w-full glass-input p-3 rounded-xl font-bold text-slate-700 text-sm" placeholder="Örn: 2450"></div>
-                            <div class="md:col-span-2"><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Adres</label><textarea id="f_adres" rows="3" class="w-full glass-input p-3 rounded-xl text-sm font-semibold resize-none force-upper" placeholder="Personel İkamet Adresi" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></textarea></div>
-                        </div>
-                    </div>
-
-                    <div class="bg-rose-50 p-6 rounded-xl border border-rose-200 shadow-sm">
-                        <h5 class="font-bold text-rose-700 flex items-center gap-2 text-sm uppercase tracking-wide mb-5 border-b border-rose-200 pb-3"><i class="fas fa-ambulance text-rose-500"></i> Acil Durum & Sağlık</h5>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                            <div><label class="block font-bold text-rose-500 mb-1.5 text-[11px] uppercase">Ad Soyad</label><input type="text" id="f_acilKisi" class="w-full bg-white border border-rose-200 p-3 rounded-xl font-bold text-slate-800 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 force-upper" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
-                            <div><label class="block font-bold text-rose-500 mb-1.5 text-[11px] uppercase">Derecesi (Yakınlık)</label><select id="f_acilYakinlik" class="w-full bg-white border border-rose-200 p-3 rounded-xl font-bold text-slate-800 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100 force-upper"></select></div>
-                            <div><label class="block font-bold text-rose-500 mb-1.5 text-[11px] uppercase">Telefonu</label><input type="tel" id="f_acilTel" class="w-full bg-white border border-rose-200 p-3 rounded-xl font-bold text-slate-800 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"></div>
-                            <div><label class="block font-bold text-rose-500 mb-1.5 text-[11px] uppercase">Kan Grubu</label><select id="f_kanGrubu" class="w-full bg-white border border-rose-200 p-3 rounded-xl text-rose-600 font-bold text-sm force-upper outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"></select></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white border-t border-slate-200 p-4 flex justify-between items-center shrink-0">
-                    <button type="button" id="formBtnPrev" onclick="navigateFormTab(-1)" class="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-semibold transition-all flex items-center gap-2 shadow-sm text-xs"><i class="fas fa-arrow-left"></i> Geri</button>
-                    <div class="flex-1"></div>
-                    <button type="button" id="formBtnNext" onclick="navigateFormTab(1)" class="px-5 py-2.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-lg font-semibold transition-all flex items-center gap-2 shadow-sm text-xs mr-3">İleri <i class="fas fa-arrow-right"></i></button>
-                    <button type="button" onclick="savePersonnel()" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold transition-all flex items-center gap-2 shadow-md text-xs"><i class="fas fa-check"></i> Formu Kaydet</button>
-                </div>
-
-            </form>
-        </div>
-    </div>
-
     <!-- SİSTEM AYARLARI MODALI -->
     <div id="settingsModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] px-4">
         <div class="glass-modal rounded-xl w-full max-w-[90vw] flex flex-col h-[80vh] modal-content border-0 shadow-2xl">
@@ -546,32 +446,32 @@
     <div id="aracVitriniModal" class="fixed inset-0 modal-overlay justify-center items-center z-[80] p-4">
         <div class="glass-modal rounded-2xl w-[96vw] max-w-[1400px] h-[85vh] flex flex-col modal-content overflow-hidden border-0 bg-slate-50 shadow-2xl">
             <!-- Üst Panel -->
-            <div class="flex flex-col md:flex-row justify-between items-center p-5 bg-white border-b border-slate-200 gap-4 shrink-0">
+            <div class="flex flex-col md:flex-row justify-between items-center p-4 bg-white border-b border-slate-200 gap-3 shrink-0">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-car text-indigo-600"></i> Araç Filosu Yönetimi</h3>
                 
                 <!-- Rozetler -->
                 <div class="flex flex-wrap justify-center gap-2">
-                    <span class="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-bold text-slate-600 flex items-center gap-1.5 shadow-sm"><i class="fas fa-list"></i> Toplam: <span id="vStatTotal" class="text-slate-800 text-xs">0</span></span>
-                    <span class="px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-[11px] font-bold text-emerald-600 flex items-center gap-1.5 shadow-sm"><i class="fas fa-check-circle"></i> Aktif: <span id="vStatAktif" class="text-emerald-700 text-xs">0</span></span>
-                    <span class="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] font-bold text-amber-600 flex items-center gap-1.5 shadow-sm"><i class="fas fa-parking"></i> Havuzda: <span id="vStatHavuz" class="text-amber-700 text-xs">0</span></span>
-                    <span class="px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-lg text-[11px] font-bold text-rose-600 flex items-center gap-1.5 shadow-sm"><i class="fas fa-wrench"></i> Sanayide: <span id="vStatAriza" class="text-rose-700 text-xs">0</span></span>
+                    <span class="px-2.5 py-1 bg-slate-100 border border-slate-200 rounded-lg text-[10px] font-bold text-slate-600 flex items-center gap-1.5 shadow-sm"><i class="fas fa-list"></i> Toplam: <span id="vStatTotal" class="text-slate-800 text-xs">0</span></span>
+                    <span class="px-2.5 py-1 bg-emerald-50 border border-emerald-200 rounded-lg text-[10px] font-bold text-emerald-600 flex items-center gap-1.5 shadow-sm"><i class="fas fa-check-circle"></i> Aktif: <span id="vStatAktif" class="text-emerald-700 text-xs">0</span></span>
+                    <span class="px-2.5 py-1 bg-amber-50 border border-amber-200 rounded-lg text-[10px] font-bold text-amber-600 flex items-center gap-1.5 shadow-sm"><i class="fas fa-parking"></i> Havuzda: <span id="vStatHavuz" class="text-amber-700 text-xs">0</span></span>
+                    <span class="px-2.5 py-1 bg-rose-50 border border-rose-200 rounded-lg text-[10px] font-bold text-rose-600 flex items-center gap-1.5 shadow-sm"><i class="fas fa-wrench"></i> Sanayide: <span id="vStatAriza" class="text-rose-700 text-xs">0</span></span>
                 </div>
 
                 <!-- Araç Çubuğu -->
                 <div class="flex items-center gap-2">
                     <div class="relative group">
-                        <i class="fas fa-search absolute left-3 top-[10px] text-slate-400 text-xs transition-colors group-focus-within:text-indigo-500"></i>
-                        <input type="text" id="aracSearchInput" placeholder="Plaka veya Marka Ara..." class="glass-input pl-8 pr-3 py-2 rounded-lg text-xs font-bold w-52 outline-none focus:border-indigo-500 uppercase force-upper shadow-sm" oninput="renderAracVitrini()">
+                        <i class="fas fa-search absolute left-3 top-[8px] text-slate-400 text-xs transition-colors group-focus-within:text-indigo-500"></i>
+                        <input type="text" id="aracSearchInput" placeholder="Plaka/Marka Ara..." class="glass-input pl-8 pr-3 py-1.5 rounded-lg text-xs font-bold w-48 outline-none focus:border-indigo-500 uppercase force-upper shadow-sm" oninput="renderAracVitrini()">
                     </div>
-                    <button onclick="exportAracToExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm"><i class="fas fa-file-excel text-emerald-600"></i> Excel</button>
-                    <button onclick="openAracForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-700 font-bold text-xs px-4 py-2 rounded-lg transition-all flex items-center gap-2 shadow-sm shadow-indigo-500/30"><i class="fas fa-plus"></i> Yeni Ekle</button>
-                    <div class="w-px h-6 bg-slate-200 mx-1"></div>
-                    <button onclick="closeModal('aracVitriniModal')" class="bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 w-9 h-9 rounded-lg transition-all flex justify-center items-center text-lg"><i class="fas fa-times"></i></button>
+                    <button onclick="exportAracToExcel()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm"><i class="fas fa-file-excel text-emerald-600"></i> Excel</button>
+                    <button onclick="openAracForm()" class="bg-indigo-600 hover:bg-indigo-700 text-white border border-indigo-700 font-bold text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 shadow-sm shadow-indigo-500/30"><i class="fas fa-plus"></i> Yeni Ekle</button>
+                    <div class="w-px h-5 bg-slate-200 mx-1"></div>
+                    <button onclick="closeModal('aracVitriniModal')" class="bg-white hover:bg-slate-100 text-slate-500 border border-slate-200 w-8 h-8 rounded-lg transition-all flex justify-center items-center text-sm"><i class="fas fa-times"></i></button>
                 </div>
             </div>
             
             <!-- Grid (Kartlar) Alanı -->
-            <div id="aracGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 p-6 overflow-y-auto flex-1 custom-scrollbar">
+            <div id="aracGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 p-5 overflow-y-auto flex-1 custom-scrollbar">
                 <!-- Araçlar buraya dinamik eklenecek -->
             </div>
         </div>
@@ -579,44 +479,44 @@
 
     <!-- ARAÇ EKLE / DÜZENLE MODALI -->
     <div id="aracFormModal" class="fixed inset-0 modal-overlay justify-center items-center z-[90] px-4">
-        <div class="glass-modal rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col modal-content border-0 bg-white overflow-hidden">
-            <div class="flex justify-between items-center border-b border-slate-200 p-5 bg-white shrink-0">
-                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2" id="aracFormTitle"><i class="fas fa-car text-indigo-600"></i> Araç Bilgileri</h3>
-                <button onclick="closeModal('aracFormModal')" class="text-slate-500 hover:text-slate-800 bg-white border border-slate-200 w-9 h-9 rounded-lg hover:bg-slate-50 flex items-center justify-center transition-all text-lg"><i class="fas fa-times"></i></button>
+        <div class="glass-modal rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col h-[85vh] modal-content border-0 bg-white overflow-hidden">
+            <div class="flex justify-between items-center border-b border-slate-200 p-4 bg-white shrink-0">
+                <h3 class="text-base font-bold text-slate-800 flex items-center gap-2" id="aracFormTitle"><i class="fas fa-car text-indigo-600"></i> Araç Bilgileri</h3>
+                <button onclick="closeModal('aracFormModal')" class="text-slate-500 hover:text-slate-800 bg-white border border-slate-200 w-8 h-8 rounded-lg hover:bg-slate-50 flex items-center justify-center transition-all text-sm"><i class="fas fa-times"></i></button>
             </div>
             
-            <form id="aracForm" class="flex-1 overflow-y-auto p-6 bg-slate-50 custom-scrollbar flex flex-col gap-5">
+            <form id="aracForm" class="flex-1 overflow-y-auto p-4 bg-slate-50 custom-scrollbar flex flex-col gap-4">
                 <input type="hidden" id="v_formId">
                 
-                <div class="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <img id="v_previewFoto" src="" class="w-24 h-16 rounded-lg object-cover border border-slate-300 bg-slate-100 shadow-sm">
+                <div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm shrink-0">
+                    <img id="v_previewFoto" src="" class="w-20 h-14 rounded-lg object-cover border border-slate-300 bg-slate-100 shadow-sm">
                     <div class="flex-1">
-                        <label class="block font-bold text-slate-600 mb-1.5 text-[11px] uppercase tracking-wide">Araç Fotoğrafı Yükle</label>
-                        <input type="file" id="v_fotoFile" accept="image/*" onchange="handleAracFotoUpload(event)" class="w-full text-xs file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer text-slate-500 transition-all">
+                        <label class="block font-bold text-slate-600 mb-1 text-[10px] uppercase tracking-wide">Araç Fotoğrafı Yükle</label>
+                        <input type="file" id="v_fotoFile" accept="image/*" onchange="handleAracFotoUpload(event)" class="w-full text-[11px] file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:font-semibold file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 cursor-pointer text-slate-500 transition-all">
                     </div>
                 </div>
 
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Plaka *</label><input type="text" id="v_plaka" class="w-full glass-input p-2.5 rounded-xl font-bold text-slate-800 text-sm uppercase force-upper" placeholder="06 ABC 123" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')" required></div>
-                    <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Marka / Model</label><input type="text" id="v_marka" class="w-full glass-input p-2.5 rounded-xl font-semibold text-sm uppercase force-upper" placeholder="Renault Megane" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
-                    <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Sürücü / Zimmet</label><select id="v_surucu" class="w-full glass-input p-2.5 rounded-xl font-bold text-indigo-700 text-sm uppercase force-upper"></select></div>
-                    <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Durum</label><select id="v_durum" class="w-full glass-input p-2.5 rounded-xl font-bold text-sm uppercase force-upper"><option value="Aktif">Aktif</option><option value="Havuzda">Havuzda</option><option value="Sanayide">Sanayide</option></select></div>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-2 gap-3 shrink-0">
+                    <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Plaka *</label><input type="text" id="v_plaka" class="w-full glass-input px-3 py-2 rounded-lg font-bold text-slate-800 text-xs uppercase force-upper" placeholder="06 ABC 123" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')" required></div>
+                    <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Marka / Model</label><input type="text" id="v_marka" class="w-full glass-input px-3 py-2 rounded-lg font-semibold text-xs uppercase force-upper" placeholder="Renault Megane" oninput="this.value = this.value.toLocaleUpperCase('tr-TR')"></div>
+                    <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Sürücü / Zimmet</label><select id="v_surucu" class="w-full glass-input px-3 py-2 rounded-lg font-bold text-indigo-700 text-xs uppercase force-upper"></select></div>
+                    <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Durum</label><select id="v_durum" class="w-full glass-input px-3 py-2 rounded-lg font-bold text-xs uppercase force-upper"><option value="Aktif">Aktif</option><option value="Havuzda">Havuzda</option><option value="Sanayide">Sanayide</option></select></div>
                     
-                    <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Kayıtlı Olduğu Şeflik</label><select id="v_seflik" class="w-full glass-input p-2.5 rounded-xl text-sm font-semibold uppercase force-upper"></select></div>
-                    <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Bağlı Olduğu Bina</label><select id="v_bina" class="w-full glass-input p-2.5 rounded-xl text-sm font-semibold uppercase force-upper"></select></div>
+                    <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Kayıtlı Olduğu Şeflik</label><select id="v_seflik" class="w-full glass-input px-3 py-2 rounded-lg text-xs font-semibold uppercase force-upper"></select></div>
+                    <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Bağlı Olduğu Bina</label><select id="v_bina" class="w-full glass-input px-3 py-2 rounded-lg text-xs font-semibold uppercase force-upper"></select></div>
                     
-                    <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Son Kilometre (KM)</label><input type="number" id="v_km" class="w-full glass-input p-2.5 rounded-xl font-bold text-slate-700 text-sm" placeholder="125000"></div>
-                    <div><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Muayene Bitiş Tarihi</label><input type="date" id="v_muayene" class="w-full glass-input p-2.5 rounded-xl text-sm font-semibold"></div>
+                    <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Son Kilometre (KM)</label><input type="number" id="v_km" class="w-full glass-input px-3 py-2 rounded-lg font-bold text-slate-700 text-xs" placeholder="125000"></div>
+                    <div><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Muayene Bitiş Tarihi</label><input type="date" id="v_muayene" class="w-full glass-input px-3 py-2 rounded-lg text-xs font-semibold"></div>
                     
-                    <div class="md:col-span-2"><label class="block font-semibold text-slate-500 mb-1.5 text-[11px] uppercase">Donanım / Demirbaş / Notlar</label><textarea id="v_notlar" rows="2" class="w-full glass-input p-3 rounded-xl text-sm font-semibold resize-none custom-scrollbar" placeholder="Araç içi donanımlar veya özel durumlar..."></textarea></div>
+                    <div class="md:col-span-2"><label class="block font-semibold text-slate-500 mb-1 text-[10px] uppercase">Donanım / Demirbaş / Notlar</label><textarea id="v_notlar" rows="2" class="w-full glass-input p-2 rounded-lg text-xs font-semibold resize-none custom-scrollbar" placeholder="Araç içi donanımlar veya özel durumlar..."></textarea></div>
                 </div>
             </form>
 
-            <div class="bg-white border-t border-slate-200 p-4 flex justify-between items-center shrink-0">
-                <button type="button" id="btnAracSil" onclick="deleteArac()" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-semibold transition-all items-center gap-2 shadow-sm text-xs" style="display:none;"><i class="fas fa-trash-alt"></i> Aracı Sil</button>
+            <div class="bg-white border-t border-slate-200 p-3 flex justify-between items-center shrink-0">
+                <button type="button" id="btnAracSil" onclick="deleteArac()" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg font-semibold transition-all items-center gap-1.5 shadow-sm text-xs" style="display:none;"><i class="fas fa-trash-alt"></i> Sil</button>
                 <div class="flex-1"></div>
-                <button type="button" onclick="closeModal('aracFormModal')" class="px-5 py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-semibold transition-all shadow-sm text-xs mr-3">İptal</button>
-                <button type="button" onclick="saveArac()" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-all flex items-center gap-2 shadow-md shadow-indigo-500/20 text-xs"><i class="fas fa-save"></i> Kaydet</button>
+                <button type="button" onclick="closeModal('aracFormModal')" class="px-4 py-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 rounded-lg font-semibold transition-all shadow-sm text-xs mr-2">İptal</button>
+                <button type="button" onclick="saveArac()" class="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold transition-all flex items-center gap-1.5 shadow-md shadow-indigo-500/20 text-xs"><i class="fas fa-save"></i> Kaydet</button>
             </div>
         </div>
     </div>
