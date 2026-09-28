@@ -252,7 +252,7 @@ function updateHeaderBadge() {
         badge.innerHTML = '🗓️ İZİN YÖNETİCİSİ';
     }
 
-    // Araç Vitrini yetki kontrolü - 1011 KULLANICISINA YETKİ VERİLDİ
+    // Araç Vitrini yetki kontrolü
     const btnArac = document.getElementById('btnAracVitrini');
     if (btnArac) {
         if (currentUserRole === 'admin' || currentUserRole === '1011') {
@@ -267,7 +267,10 @@ function updateHeaderBadge() {
 
 // OTURUMU KAPAT / KULLANICI DEĞİŞTİR: KUSURSUZ ÇÖZÜM
 function switchUserRole() {
-    if(confirm("Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?")) {
+    const isConfirmed = confirm("Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?");
+    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
+    
+    if(isConfirmed) {
         showSpinner("Oturum Kapatılıyor...");
         setTimeout(() => {
             // Eğer masaüstü uygulamasındaysak programı komple kapatıp baştan açar (Hataları %100 sıfırlar)
@@ -523,7 +526,9 @@ async function manualRefresh(silent = false) {
 }
 
 function logOut() {
-    if(confirm("Sistemden çıkış yapmak istediğinize emin misiniz?")) {
+    const isConfirmed = confirm("Sistemden çıkış yapmak istediğinize emin misiniz?");
+    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
+    if(isConfirmed) {
         showSpinner("Çıkış Yapılıyor...");
         setTimeout(() => { location.reload(); }, 500);
     }
@@ -1121,7 +1126,10 @@ function saveZimmet() {
 
 function deleteZimmet(id) { 
     try {
-        if(confirm("Silmek istediğinize emin misiniz?")) {
+        const isConfirmed = confirm("Silmek istediğinize emin misiniz?");
+        setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
+        
+        if(isConfirmed) {
             personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
             saveToDatabase(); 
             if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
@@ -1211,7 +1219,10 @@ function saveIzin() {
 
 function deleteIzin(id) { 
     try {
-        if(confirm("İzni silmek istediğinize emin misiniz?")) {
+        const isConfirmed = confirm("İzni silmek istediğinize emin misiniz?");
+        setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
+        
+        if(isConfirmed) {
             personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
             saveToDatabase(); 
             if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
@@ -1234,7 +1245,10 @@ function saveBulkIzin() {
     const formatBas = formatDateTR(bas);
     const formatBit = formatDateTR(bit);
 
-    if(!confirm(`DİKKAT: Sistemdeki tüm "Aktif" personellere ${formatBas} - ${formatBit} tarihleri arasında "${tur}" işlenecektir. Onaylıyor musunuz?`)) return;
+    const isConfirmed = confirm(`DİKKAT: Sistemdeki tüm "Aktif" personellere ${formatBas} - ${formatBit} tarihleri arasında "${tur}" işlenecektir. Onaylıyor musunuz?`);
+    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
+    
+    if(!isConfirmed) return;
 
     showSpinner("Toplu İzinler İşleniyor...");
     
@@ -1642,7 +1656,10 @@ function savePersonnel() {
 }
 
 function deletePersonnelFromProfile() { 
-    if(confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?")) { 
+    const isConfirmed = confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?");
+    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
+    
+    if(isConfirmed) { 
         personnelData = personnelData.filter(x=>x.id!==selectedUserId); 
         if(saveToDatabase()) {
             closeModal('profileModal'); setTimeout(applyFilters, 350); 
@@ -1860,7 +1877,11 @@ function saveArac() {
 function deleteArac() {
     const idVal = document.getElementById("v_formId").value;
     if (!idVal) return;
-    if (confirm("Bu aracı kalıcı olarak silmek istediğinize emin misiniz?")) {
+    
+    const isConfirmed = confirm("Bu aracı kalıcı olarak silmek istediğinize emin misiniz?");
+    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
+    
+    if (isConfirmed) {
         systemSettings.vehicles = systemSettings.vehicles.filter(x => x.id !== parseInt(idVal));
         saveSettingsToDatabase();
         renderAracVitrini();
