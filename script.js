@@ -1393,6 +1393,9 @@ function generateTimeline() {
     if(searchVal) {
         activeData = activeData.filter(p => p.adSoyad && p.adSoyad.toLocaleUpperCase('tr-TR').includes(searchVal));
     }
+    
+    // AKTİF PERSONELLERİ ALFABETİK SIRALAMA (A'DAN Z'YE)
+    activeData.sort((a, b) => (a.adSoyad || "").localeCompare(b.adSoyad || "", 'tr'));
 
     activeData.forEach(p => {
         html += `<div class="tl-row hover:bg-slate-50 transition bg-white"><div class="tl-name truncate text-blue-700 font-bold force-upper border-b border-slate-100 cursor-pointer hover:bg-blue-50 flex items-center justify-between pr-2 transition-colors w-[240px] min-w-[240px] shrink-0" title="${p.adSoyad} (Profili Görüntüle / İzin İşle)" onclick="openProfileModal(${p.id})"><span>${p.adSoyad}</span> <i class="fas fa-id-card opacity-50 text-[10px]"></i></div>`;
@@ -1648,6 +1651,7 @@ function deletePersonnelFromProfile() {
     } 
 }
 
+
 /* =========================================
    ARAÇ VİTRİNİ (FİLO YÖNETİMİ) MODÜLÜ
    ========================================= */
@@ -1673,7 +1677,7 @@ function renderAracVitrini() {
 
     document.getElementById("vStatTotal").innerText = (systemSettings.vehicles || []).length;
     document.getElementById("vStatAktif").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Aktif').length;
-    document.getElementById("vStatHavuz").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Havuzda').length;
+    document.getElementById("vStatHavuz").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Boşta').length;
     document.getElementById("vStatAriza").innerText = (systemSettings.vehicles || []).filter(v => v.durum === 'Sanayide').length;
 
     if (vList.length === 0) {
@@ -1704,8 +1708,8 @@ function renderAracVitrini() {
         }
 
         let durumColor = v.durum === 'Aktif' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                         (v.durum === 'Havuzda' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200');
-        let fIcon = v.durum === 'Aktif' ? 'fa-check-circle' : (v.durum === 'Havuzda' ? 'fa-parking' : 'fa-wrench');
+                         (v.durum === 'Boşta' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-rose-50 text-rose-700 border-rose-200');
+        let fIcon = v.durum === 'Aktif' ? 'fa-check-circle' : (v.durum === 'Boşta' ? 'fa-parking' : 'fa-wrench');
 
         html += `
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden cursor-pointer hover:shadow-lg hover:border-indigo-300 transition-all duration-300 hover:-translate-y-1 flex flex-col" onclick="openAracForm(${v.id})">
