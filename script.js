@@ -22,6 +22,61 @@ function showToast(msg, type = "success") {
     setTimeout(() => { toast.classList.remove("show"); setTimeout(() => toast.remove(), 400); }, 3000);
 }
 
+// -----------------------------------------------------
+// ÖZEL ONAY MODALI YÖNETİMİ (KLAVYE KİLİDİ ÇÖZÜMÜ)
+// -----------------------------------------------------
+let customConfirmCallback = null;
+
+function showCustomConfirm(title, message, typeStr, onConfirm) {
+    customConfirmCallback = onConfirm;
+    
+    const modal = document.getElementById('customConfirmModal');
+    const iconBox = document.getElementById('confirmIconBox');
+    const icon = document.getElementById('confirmIcon');
+    const titleEl = document.getElementById('confirmTitle');
+    const msgEl = document.getElementById('confirmMessage');
+    const acceptBtn = document.getElementById('btnConfirmAccept');
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+
+    // Sınıfları sıfırla
+    iconBox.className = "w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-4 shadow-inner border ";
+    acceptBtn.className = "flex-1 px-4 py-3 text-white rounded-xl text-sm font-bold shadow-md transition-all flex justify-center items-center gap-2 ";
+
+    if (typeStr === 'danger') {
+        iconBox.classList.add('bg-rose-50', 'text-rose-600', 'border-rose-200');
+        icon.className = "fas fa-trash-alt";
+        acceptBtn.classList.add('bg-rose-600', 'hover:bg-rose-700', 'shadow-rose-500/30');
+        acceptBtn.innerHTML = "Evet, Sil";
+    } else if (typeStr === 'logout') {
+        iconBox.classList.add('bg-amber-50', 'text-amber-600', 'border-amber-200');
+        icon.className = "fas fa-sign-out-alt";
+        acceptBtn.classList.add('bg-amber-600', 'hover:bg-amber-700', 'shadow-amber-500/30');
+        acceptBtn.innerHTML = "Evet, Çıkış Yap";
+    } else {
+        iconBox.classList.add('bg-blue-50', 'text-blue-600', 'border-blue-200');
+        icon.className = "fas fa-question";
+        acceptBtn.classList.add('bg-blue-600', 'hover:bg-blue-700', 'shadow-blue-500/30');
+        acceptBtn.innerHTML = "Evet, Onaylıyorum";
+    }
+
+    modal.style.display = 'flex';
+    setTimeout(() => modal.classList.add('show'), 10);
+}
+
+window.closeConfirmModal = function(isAccepted) {
+    const modal = document.getElementById('customConfirmModal');
+    modal.classList.remove('show');
+    setTimeout(() => { 
+        modal.style.display = 'none'; 
+        if (isAccepted && typeof customConfirmCallback === 'function') {
+            customConfirmCallback();
+        }
+    }, 300);
+}
+// -----------------------------------------------------
+
 function formatDateTR(dateString) {
     if (!dateString) return '';
     const parts = dateString.split('-');
@@ -265,23 +320,25 @@ function updateHeaderBadge() {
     }
 }
 
-// OTURUMU KAPAT / KULLANICI DEĞİŞTİR: KUSURSUZ ÇÖZÜM
+// YENİ CUSTOM CONFIRM İLE OTURUM KAPATMA
 function switchUserRole() {
-    const isConfirmed = confirm("Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?");
-    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
-    
-    if(isConfirmed) {
+    showCustomConfirm("Oturumu Kapat", "Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?", "logout", () => {
         showSpinner("Oturum Kapatılıyor...");
         setTimeout(() => {
-            // Eğer masaüstü uygulamasındaysak programı komple kapatıp baştan açar (Hataları %100 sıfırlar)
             if (typeof window.api !== 'undefined' && window.api.relaunchApp) {
                 window.api.relaunchApp();
             } else {
-                // Sadece tarayıcıdan giriliyorsa klasik sayfa yenileme yapar
                 location.reload(); 
             }
         }, 500);
-    }
+    });
+}
+
+function logOut() {
+    showCustomConfirm("Sistemden Çıkış", "Sistemden çıkış yapmak istediğinize emin misiniz?", "logout", () => {
+        showSpinner("Çıkış Yapılıyor...");
+        setTimeout(() => { location.reload(); }, 500);
+    });
 }
 
 async function checkLogin() {
@@ -525,15 +582,6 @@ async function manualRefresh(silent = false) {
     }
 }
 
-function logOut() {
-    const isConfirmed = confirm("Sistemden çıkış yapmak istediğinize emin misiniz?");
-    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
-    if(isConfirmed) {
-        showSpinner("Çıkış Yapılıyor...");
-        setTimeout(() => { location.reload(); }, 500);
-    }
-}
-
 function fetchDataFromLocalDB() {
     const statusText = document.getElementById('loginStatusText');
     const inputArea = document.getElementById('loginInputArea');
@@ -613,7 +661,6 @@ function fetchDataFromLocalDB() {
 
             if (window.api) window.api.maximizeWindow(); 
 
-            // BAĞLANTI BEKLENİYOR HATASI ÇÖZÜMÜ: İlk açılışta LED'i Yeşile ve yazıyı Bağlı'ya çeviriyoruz
             window.api.getDbStatus().then(status => {
                 const led = document.getElementById('led-indicator');
                 const dbStatusText = document.getElementById('db-status-text');
@@ -1126,16 +1173,13 @@ function saveZimmet() {
 
 function deleteZimmet(id) { 
     try {
-        const isConfirmed = confirm("Silmek istediğinize emin misiniz?");
-        setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
-        
-        if(isConfirmed) {
+        showCustomConfirm("Demirbaş Silinecek", "Bu demirbaşı silmek istediğinize emin misiniz?", "danger", () => {
             personnelData.find(x => x.id === selectedUserId).zimmetler = personnelData.find(x => x.id === selectedUserId).zimmetler.filter(z => z.id !== id); 
             saveToDatabase(); 
             if(document.getElementById("profileModal").classList.contains("show")) renderZimmetTable(); 
             applyFilters(); 
             showToast("Demirbaş silindi.", "success");
-        }
+        });
     } catch (error) { showToast("Demirbaş silinirken hata oluştu.", "error"); }
 }
 
@@ -1219,17 +1263,14 @@ function saveIzin() {
 
 function deleteIzin(id) { 
     try {
-        const isConfirmed = confirm("İzni silmek istediğinize emin misiniz?");
-        setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
-        
-        if(isConfirmed) {
+        showCustomConfirm("İzin Kaydı Silinecek", "İzni silmek istediğinize emin misiniz?", "danger", () => {
             personnelData.find(x => x.id === selectedUserId).izinler = personnelData.find(x => x.id === selectedUserId).izinler.filter(i => i.id !== id); 
             saveToDatabase(); 
             if(document.getElementById("profileModal").classList.contains("show")) renderIzinTable(); 
             applyFilters(); 
             if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline(); 
             showToast("İzin silindi.", "success");
-        }
+        });
     } catch (error) { showToast("İzin silinirken hata oluştu.", "error"); }
 }
 
@@ -1245,31 +1286,27 @@ function saveBulkIzin() {
     const formatBas = formatDateTR(bas);
     const formatBit = formatDateTR(bit);
 
-    const isConfirmed = confirm(`DİKKAT: Sistemdeki tüm "Aktif" personellere ${formatBas} - ${formatBit} tarihleri arasında "${tur}" işlenecektir. Onaylıyor musunuz?`);
-    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
-    
-    if(!isConfirmed) return;
+    showCustomConfirm("Toplu İzin Onayı", `DİKKAT: Sistemdeki tüm "Aktif" personellere ${formatBas} - ${formatBit} tarihleri arasında "${tur}" işlenecektir. Onaylıyor musunuz?`, "default", () => {
+        showSpinner("Toplu İzinler İşleniyor...");
+        setTimeout(() => {
+            let islenenPersonelSayisi = 0;
+            personnelData.forEach(p => {
+                if(p.durum === "Aktif" || p.durum === "AKTİF") {
+                    p.izinler = p.izinler || [];
+                    p.izinler.push({ id: Date.now() + Math.floor(Math.random()*10000), tur: tur, baslangic: bas, bitis: bit, aciklama: acik });
+                    islenenPersonelSayisi++;
+                }
+            });
 
-    showSpinner("Toplu İzinler İşleniyor...");
-    
-    setTimeout(() => {
-        let islenenPersonelSayisi = 0;
-        personnelData.forEach(p => {
-            if(p.durum === "Aktif" || p.durum === "AKTİF") {
-                p.izinler = p.izinler || [];
-                p.izinler.push({ id: Date.now() + Math.floor(Math.random()*10000), tur: tur, baslangic: bas, bitis: bit, aciklama: acik });
-                islenenPersonelSayisi++;
-            }
-        });
-
-        if(saveToDatabase()) {
-            applyFilters();
-            closeModal('addBulkIzinModal');
-            if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
-            hideSpinner();
-            showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
-        } else { hideSpinner(); }
-    }, 500);
+            if(saveToDatabase()) {
+                applyFilters();
+                closeModal('addBulkIzinModal');
+                if(document.getElementById("timelineModal").classList.contains("show")) generateTimeline();
+                hideSpinner();
+                showToast(`Toplam ${islenenPersonelSayisi} personele izin başarıyla işlendi.`, "success");
+            } else { hideSpinner(); }
+        }, 500);
+    });
 }
 
 function changeMonth(dir) {
@@ -1656,16 +1693,13 @@ function savePersonnel() {
 }
 
 function deletePersonnelFromProfile() { 
-    const isConfirmed = confirm("Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?");
-    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
-    
-    if(isConfirmed) { 
+    showCustomConfirm("Kalıcı Silme İşlemi", "Bu kaydı kalıcı olarak silmek istediğinize emin misiniz?", "danger", () => {
         personnelData = personnelData.filter(x=>x.id!==selectedUserId); 
         if(saveToDatabase()) {
             closeModal('profileModal'); setTimeout(applyFilters, 350); 
             showToast("Personel kaydı silindi.", "success");
         }
-    } 
+    });
 }
 
 /* =========================================
@@ -1878,16 +1912,13 @@ function deleteArac() {
     const idVal = document.getElementById("v_formId").value;
     if (!idVal) return;
     
-    const isConfirmed = confirm("Bu aracı kalıcı olarak silmek istediğinize emin misiniz?");
-    setTimeout(() => { window.focus(); document.body.focus(); }, 10); // Odak geri alma
-    
-    if (isConfirmed) {
+    showCustomConfirm("Araç Silinecek", "Bu aracı kalıcı olarak silmek istediğinize emin misiniz?", "danger", () => {
         systemSettings.vehicles = systemSettings.vehicles.filter(x => x.id !== parseInt(idVal));
         saveSettingsToDatabase();
         renderAracVitrini();
         closeModal('aracFormModal');
         showToast("Araç başarıyla silindi.", "success");
-    }
+    });
 }
 
 function exportAracToExcel() {
