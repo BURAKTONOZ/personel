@@ -252,10 +252,10 @@ function updateHeaderBadge() {
         badge.innerHTML = '🗓️ İZİN YÖNETİCİSİ';
     }
 
-    // Araç Vitrini yetki kontrolü
+    // Araç Vitrini yetki kontrolü - 1011 KULLANICISINA YETKİ VERİLDİ
     const btnArac = document.getElementById('btnAracVitrini');
     if (btnArac) {
-        if (currentUserRole === 'admin') {
+        if (currentUserRole === 'admin' || currentUserRole === '1011') {
             btnArac.classList.remove('hidden');
             btnArac.classList.add('flex');
         } else {
@@ -1650,7 +1650,6 @@ function deletePersonnelFromProfile() {
         }
     } 
 }
-
 
 /* =========================================
    ARAÇ VİTRİNİ (FİLO YÖNETİMİ) MODÜLÜ
