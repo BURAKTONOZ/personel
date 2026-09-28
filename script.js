@@ -62,12 +62,18 @@ function showCustomConfirm(title, message, typeStr, onConfirm) {
     }
 
     modal.style.display = 'flex';
-    setTimeout(() => modal.classList.add('show'), 10);
+    setTimeout(() => {
+        modal.classList.add('show');
+        const content = modal.querySelector('.modal-content');
+        if(content) content.classList.add('show');
+    }, 10);
 }
 
 window.closeConfirmModal = function(isAccepted) {
     const modal = document.getElementById('customConfirmModal');
     modal.classList.remove('show');
+    const content = modal.querySelector('.modal-content');
+    if(content) content.classList.remove('show');
     setTimeout(() => { 
         modal.style.display = 'none'; 
         if (isAccepted && typeof customConfirmCallback === 'function') {
@@ -320,7 +326,7 @@ function updateHeaderBadge() {
     }
 }
 
-// YENİ CUSTOM CONFIRM İLE OTURUM KAPATMA
+// CUSTOM CONFIRM İLE OTURUM KAPATMA
 function switchUserRole() {
     showCustomConfirm("Oturumu Kapat", "Oturumu kapatıp şifre ekranına dönmek istediğinize emin misiniz?", "logout", () => {
         showSpinner("Oturum Kapatılıyor...");
@@ -331,13 +337,6 @@ function switchUserRole() {
                 location.reload(); 
             }
         }, 500);
-    });
-}
-
-function logOut() {
-    showCustomConfirm("Sistemden Çıkış", "Sistemden çıkış yapmak istediğinize emin misiniz?", "logout", () => {
-        showSpinner("Çıkış Yapılıyor...");
-        setTimeout(() => { location.reload(); }, 500);
     });
 }
 
@@ -582,6 +581,13 @@ async function manualRefresh(silent = false) {
     }
 }
 
+function logOut() {
+    showCustomConfirm("Sistemden Çıkış", "Sistemden çıkış yapmak istediğinize emin misiniz?", "logout", () => {
+        showSpinner("Çıkış Yapılıyor...");
+        setTimeout(() => { location.reload(); }, 500);
+    });
+}
+
 function fetchDataFromLocalDB() {
     const statusText = document.getElementById('loginStatusText');
     const inputArea = document.getElementById('loginInputArea');
@@ -661,6 +667,7 @@ function fetchDataFromLocalDB() {
 
             if (window.api) window.api.maximizeWindow(); 
 
+            // BAĞLANTI BEKLENİYOR HATASI ÇÖZÜMÜ: İlk açılışta LED'i Yeşile ve yazıyı Bağlı'ya çeviriyoruz
             window.api.getDbStatus().then(status => {
                 const led = document.getElementById('led-indicator');
                 const dbStatusText = document.getElementById('db-status-text');
@@ -703,7 +710,11 @@ function saveSettingsToDatabase() {
 function openModal(id) {
     const m = document.getElementById(id);
     m.style.display = "flex";
-    setTimeout(() => { m.classList.add('show'); m.querySelector('.modal-content').classList.add('show'); }, 10);
+    setTimeout(() => { 
+        m.classList.add('show'); 
+        const content = m.querySelector('.modal-content');
+        if(content) content.classList.add('show'); 
+    }, 10);
     
     if(id === 'settingsModal') {
         buildSettingsMenu();
@@ -722,7 +733,8 @@ function openModal(id) {
 function closeModal(id) {
     const m = document.getElementById(id);
     m.classList.remove('show');
-    m.querySelector('.modal-content').classList.remove('show');
+    const content = m.querySelector('.modal-content');
+    if(content) content.classList.remove('show');
     setTimeout(() => { m.style.display = "none"; }, 300);
 }
 
