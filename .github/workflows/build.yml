@@ -7,7 +7,6 @@ on:
       - master
   workflow_dispatch:
 
-# 403 Hatasını çözen kritik izin bloğu:
 permissions:
   contents: write
 
@@ -48,7 +47,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: latest
-        name: "TonoLink Son Sürüm (Otomatik)"
+        name: "Numarataj Personel Yönetim Sistemi Son Sürüm"
         body: "Bu sürüm GitHub Actions tarafından otomatik olarak derlenmiştir."
         prerelease: false
         files: dist/*.exe
