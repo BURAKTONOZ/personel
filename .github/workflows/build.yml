@@ -39,3 +39,16 @@ jobs:
       with:
         name: Numarataj-Personel-Uygulamasi
         path: dist/*.exe
+
+    # --- YENİ EKLENEN KISIM: Otomatik Release Güncelleme ---
+    - name: Otomatik Release Güncelle
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: latest
+        name: "TonoLink Son Sürüm (Otomatik)"
+        body: "Bu sürüm GitHub Actions tarafından otomatik olarak derlenmiştir."
+        prerelease: false
+        files: dist/*.exe
+        fail_on_unmatched_files: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
