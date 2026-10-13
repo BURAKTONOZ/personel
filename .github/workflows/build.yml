@@ -7,6 +7,10 @@ on:
       - master
   workflow_dispatch:
 
+# 403 Hatasını çözen kritik izin bloğu:
+permissions:
+  contents: write
+
 env:
   ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
@@ -40,7 +44,6 @@ jobs:
         name: Numarataj-Personel-Uygulamasi
         path: dist/*.exe
 
-    # --- YENİ EKLENEN KISIM: Otomatik Release Güncelleme ---
     - name: Otomatik Release Güncelle
       uses: softprops/action-gh-release@v2
       with:
